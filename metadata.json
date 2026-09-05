@@ -1,0 +1,6 @@
+{
+  "name": "ViralScript AI - Gerador de Roteiros Virais",
+  "description": "Gerador inteligente de roteiros virais para TikTok, Instagram Reels, YouTube Shorts e motor de junção e concatenação de vídeos via FFmpeg.wasm com transições e padronização 1080x1920.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
