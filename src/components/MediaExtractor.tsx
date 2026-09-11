@@ -115,17 +115,32 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
 
       setProgressStatus('Enviando áudio otimizado para transcrição neural e análise...');
 
+      // Debug: log payload before sending
+      console.log('[MediaExtractor] Payload:', {
+        hasAudioBase64: !!audioResult.audioBase64,
+        audioBase64Length: audioResult.audioBase64?.length || 0,
+        mimeType: audioResult.mimeType,
+        fileName: file.name,
+        modelMode,
+        originalDurationSeconds: audioResult.durationSeconds,
+      });
+
+      if (!audioResult.audioBase64) {
+        throw new Error('Falha ao extrair áudio do arquivo. Tente novamente ou cole o texto manualmente.');
+      }
+
+      const payload = attachApiKeysPayload({
+        mediaBase64: audioResult.audioBase64,
+        mimeType: audioResult.mimeType,
+        fileName: file.name,
+        originalDurationSeconds: audioResult.durationSeconds,
+        modelMode,
+      });
+
       const res = await fetch('/api/transcribe-media', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(
-          attachApiKeysPayload({
-            mediaBase64: audioResult.audioBase64,
-            mimeType: audioResult.mimeType,
-            fileName: file.name,
-            originalDurationSeconds: audioResult.durationSeconds,
-          })
-        ),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {

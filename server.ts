@@ -15,7 +15,7 @@ const execFileAsync = promisify(execFile);
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = 3002;
 
 app.use(express.json({ limit: "200mb" }));
 app.use(express.urlencoded({ limit: "200mb", extended: true }));
@@ -1216,11 +1216,88 @@ Retorne em formato JSON:
 });
 
 // Endpoint: Transcribe Media & Identify Hook (Free extraction)
-app.post("/api/transcribe-media", async (req, res) => {
-  try {
-    const { textContent, fileName, mediaBase64, mimeType } = req.body;
-    const { groqInput, openRouterInput } = extractKeysFromBody(req.body);
+// Supports both JSON body (mediaBase64) and multipart/form-data (file upload)
+const audioUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 200 * 1024 * 1024 }, // 200MB max
+});
 
+app.post("/api/transcribe-media", audioUpload.single("file"), async (req, res) => {
+  // ALWAYS log what the server received — first thing
+  console.log("=========================================");
+  console.log("[transcribe-media] req.body:", JSON.stringify(req.body).substring(0, 500));
+  console.log("[transcribe-media] req.file:", req.file ? { name: req.file.originalname, size: req.file.size, mime: req.file.mimetype } : "UNDEFINED");
+  console.log("[transcribe-media] req.files:", req.files || "UNDEFINED");
+  console.log("=========================================");
+
+  try {
+    let textContent = "";
+    let fileName = "";
+    let mediaBase64 = "";
+    let mimeType = "";
+
+    // === CASE 1: multipart/form-data (file uploaded via multer) ===
+    if (req.file) {
+      try {
+        const audioBuffer = req.file.buffer;
+        mediaBase64 = audioBuffer.toString("base64");
+        fileName = req.file.originalname;
+        mimeType = req.file.mimetype || "audio/wav";
+        console.log(`[CASE 1 - MULTER] file=${fileName}, base64 length=${mediaBase64.length}`);
+      } catch (fileErr: any) {
+        console.error("[CASE 1 - MULTER] ERRO:", fileErr.message, fileErr.stack);
+        return res.status(500).json({ error: `Falha ao processar arquivo: ${fileErr.message}`, stack: fileErr.stack });
+      }
+    }
+
+    // === CASE 2: JSON body parsed by express.json() ===
+    if (!req.file && req.body && typeof req.body === "object" && Object.keys(req.body).length > 0) {
+      textContent = req.body.textContent || "";
+      fileName = req.body.fileName || "";
+      mediaBase64 = req.body.mediaBase64 || "";
+      mimeType = req.body.mimeType || "";
+      console.log(`[CASE 2 - JSON BODY] textContent=${!!textContent}, mediaBase64=${!!mediaBase64} (len=${mediaBase64.length}), fileName=${fileName}`);
+    }
+
+    // === CASE 3: Fallback — req.body is empty, try reading raw stream ===
+    if (!req.file && !mediaBase64 && !textContent) {
+      console.log("[CASE 3 - RAW FALLBACK] req.body is empty, trying raw stream...");
+      try {
+        const rawBody = await new Promise<string>((resolve, reject) => {
+          let data = "";
+          req.on("data", (chunk) => { data += chunk; });
+          req.on("end", () => resolve(data));
+          req.on("error", reject);
+        });
+        console.log(`[CASE 3 - RAW FALLBACK] raw body length: ${rawBody.length}`);
+        if (rawBody) {
+          const parsed = JSON.parse(rawBody);
+          textContent = parsed.textContent || "";
+          fileName = parsed.fileName || "";
+          mediaBase64 = parsed.mediaBase64 || "";
+          mimeType = parsed.mimeType || "";
+          console.log(`[CASE 3 - RAW FALLBACK] parsed: mediaBase64 len=${mediaBase64.length}`);
+        }
+      } catch (rawErr: any) {
+        console.error("[CASE 3 - RAW FALLBACK] ERRO:", rawErr.message, rawErr.stack);
+        return res.status(500).json({ error: `Falha ao ler body: ${rawErr.message}`, stack: rawErr.stack });
+      }
+    }
+
+    // === FINAL CHECK: did we get any data? ===
+    if (!textContent && !mediaBase64) {
+      console.error("[transcribe-media] FALHA FINAL: nenhum dado encontrado. req.body.keys:", Object.keys(req.body || {}));
+      return res.status(400).json({
+        error: "Arquivo de áudio/vídeo ou texto não fornecido.",
+        debug: {
+          bodyKeys: Object.keys(req.body || {}),
+          bodySize: JSON.stringify(req.body || {}).length,
+          hasFile: !!req.file,
+        },
+      });
+    }
+
+    const { groqInput, openRouterInput } = extractKeysFromBody(req.body || {});
     let sourceText = textContent || "";
 
     // If text was pasted directly, analyze it
@@ -1271,12 +1348,14 @@ Retorne no formato JSON:
 
     // If mediaBase64 was uploaded
     if (mediaBase64) {
-      const durationSec = Number(req.body.originalDurationSeconds) || 45;
+      console.log(`[transcribe-media] >>> Entrou no bloco mediaBase64. mediaBase64.length=${mediaBase64.length}`);
+      const durationSec = Number(req.body?.originalDurationSeconds) || 45;
       const formattedDur = durationSec < 60 
         ? `${durationSec}s` 
         : `${Math.floor(durationSec / 60)}m ${durationSec % 60 ? `${durationSec % 60}s` : ''}`.trim();
 
       const groqPool = normalizeKeyPool(groqInput, process.env.GROQ_API_KEY);
+      console.log(`[transcribe-media] >>> Groq pool size: ${groqPool.length}, Gemini key exists: ${!!process.env.GEMINI_API_KEY?.trim()}`);
       let transcribedText = "";
       let usedMethod = "";
 
@@ -1382,7 +1461,11 @@ Retorne no formato JSON:
 
       // 2. Multimodal Gemini Speech-to-Text with multi-model chain and automatic retry on 503/429
       const geminiKey = process.env.GEMINI_API_KEY?.trim();
-      if (geminiKey) {
+      if (!geminiKey) {
+        if (!transcribedText) {
+          throw new Error("Nenhum serviço de transcrição disponível. Adicione uma chave Groq ou Gemini nas Configurações.");
+        }
+      } else {
         const ai = new GoogleGenAI({ apiKey: geminiKey });
         const candidateAudioModels = [
           "gemini-2.5-flash",
@@ -1455,12 +1538,19 @@ Retorne no formato JSON:
           throw new Error(`Os modelos de áudio estão com alta demanda temporária no Google. Sugestão: adicione uma chave Groq gratuita em Configurações para transcrição Whisper instantânea ou tente novamente em alguns segundos.`);
         }
       }
+
+      // All transcription methods failed — return a clear error
+      console.error(`[transcribe-media] >>> Todos os métodos de transcrição falharam. Groq pool: ${groqPool.length}, Gemini: ${!!process.env.GEMINI_API_KEY?.trim()}`);
+      throw new Error("Não foi possível transcrever o áudio. Verifique se há chaves de API Groq ou Gemini configuradas e tente novamente.");
     }
 
+    // Neither textContent nor mediaBase64 was provided
+    console.error(`[transcribe-media] >>> Nenhum dado fornecido. textContent=${!!textContent}, mediaBase64=${!!mediaBase64}`);
     throw new Error("Arquivo de áudio/vídeo ou texto não fornecido.");
   } catch (error: any) {
-    console.error("Erro na transcrição:", error);
-    res.status(500).json({ error: error.message || "Falha ao processar e transcrever mídia." });
+    console.error("[transcribe-media] >>> ERRO GERAL:", error.message);
+    console.error("[transcribe-media] >>> STACK:", error.stack);
+    res.status(500).json({ error: error.message || "Falha ao processar e transcrever mídia.", stack: error.stack });
   }
 });
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import {
   Sparkles,
   Flame,
@@ -19,7 +19,14 @@ import {
   Plus,
   Minus,
   CheckCircle2,
+  Mic,
+  MicOff,
+  Loader2,
+  Download,
+  LayoutGrid,
+  History,
 } from 'lucide-react';
+import { LocalWhisperService, type WhisperModelId } from '../services/localWhisperService';
 import {
   PlatformType,
   VideoDuration,
@@ -27,6 +34,9 @@ import {
   ToneType,
   CtaGoal,
   ScriptRequest,
+  ViralScript,
+  ExtractedTranscript,
+  DownloadedMedia,
 } from '../types';
 import {
   NICHE_OPTIONS,
@@ -37,6 +47,10 @@ import {
   CTA_OPTIONS,
 } from '../data/presets';
 import { getDurationBreakdown, parseDurationToSeconds, formatDurationLabel } from '../utils/durationHelper';
+import { MediaExtractor } from './MediaExtractor';
+import { MediaDownloader } from './MediaDownloader';
+import { MediaGallery } from './MediaGallery';
+import { SavedScriptsList } from './SavedScriptsList';
 
 interface ScriptGeneratorFormProps {
   onGenerate: (data: ScriptRequest) => void;
@@ -45,6 +59,22 @@ interface ScriptGeneratorFormProps {
   sourceTranscript?: string;
   sourceVideoTitle?: string;
   attemptStatus?: string;
+  recentTranscripts?: ExtractedTranscript[];
+  onSelectRecentTranscript?: (t: ExtractedTranscript) => void;
+  onClearTranscriptHistory?: () => void;
+  onDeleteTranscript?: (id: string) => void;
+  onRemodelTranscript?: (text: string, title: string) => void;
+  downloadedMediaList?: DownloadedMedia[];
+  onDeleteMedia?: (id: string) => void;
+  onRemodelMedia?: (text: string, title: string) => void;
+  onToggleFavoriteMedia?: (id: string) => void;
+  onMediaDownloaded?: (media: DownloadedMedia, transcript: ExtractedTranscript) => void;
+  savedScripts?: ViralScript[];
+  onOpenSavedScript?: (script: ViralScript) => void;
+  onRemodelSavedScript?: (script: ViralScript) => void;
+  onDeleteSavedScript?: (id: string) => void;
+  onToggleFavorite?: (id: string) => void;
+  onNewScriptClick?: () => void;
 }
 
 export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
@@ -54,6 +84,22 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
   sourceTranscript = '',
   sourceVideoTitle = '',
   attemptStatus = '',
+  recentTranscripts = [],
+  onSelectRecentTranscript,
+  onClearTranscriptHistory,
+  onDeleteTranscript,
+  onRemodelTranscript,
+  downloadedMediaList = [],
+  onDeleteMedia,
+  onRemodelMedia,
+  onToggleFavoriteMedia,
+  onMediaDownloaded,
+  savedScripts = [],
+  onOpenSavedScript,
+  onRemodelSavedScript,
+  onDeleteSavedScript,
+  onToggleFavorite,
+  onNewScriptClick,
 }) => {
   const [topic, setTopic] = useState(initialTopic || sourceTranscript);
   const [selectedNiche, setSelectedNiche] = useState<string>('Finanças & Dinheiro');
@@ -70,6 +116,33 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
   const [extraDetails, setExtraDetails] = useState('');
   const [productOrBrand, setProductOrBrand] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Secondary toolbar state
+  const [subTab, setSubTab] = useState<'create' | 'transcribe' | 'download' | 'gallery' | 'history'>('create');
+
+  // Video objectives state (migrated from Nexia Video)
+  const objectives = [
+    { value: 'Converter em Vendas', label: 'Converter em Vendas', emoji: '🎯' },
+    { value: 'Atrair Seguidores', label: 'Atrair Seguidores', emoji: '👥' },
+    { value: 'Viralizar', label: 'Viralizar / Visualizações', emoji: '🚀' },
+    { value: 'Gerar Engajamento', label: 'Gerar Engajamento', emoji: '💬' },
+    { value: 'Educar', label: 'Educar / Ensinar', emoji: '📚' },
+    { value: 'Outros', label: 'Outros', emoji: '✏️' },
+  ];
+  const [selectedObjectives, setSelectedObjectives] = useState<string[]>([]);
+  const [customObjective, setCustomObjective] = useState('');
+
+  // AI variant generation state
+  const [quantity, setQuantity] = useState(3);
+  const [isGeneratingVariants, setIsGeneratingVariants] = useState(false);
+
+  // Voice recording states
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [recordingProgress, setRecordingProgress] = useState('');
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Sync state whenever props change (e.g. when clicking Remodelar on an extracted transcript)
   React.useEffect(() => {
@@ -129,6 +202,136 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
     setTopic(randomTopic);
   };
 
+  // Voice recording functions
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+          ? 'audio/webm;codecs=opus' 
+          : 'audio/webm',
+      });
+
+      audioChunksRef.current = [];
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        stream.getTracks().forEach(track => track.stop());
+        
+        // Start transcription
+        setIsTranscribing(true);
+        setRecordingProgress('Preparando áudio para transcrição...');
+        
+        try {
+          const audioFile = new File([audioBlob], 'recording.webm', { type: 'audio/webm' });
+          
+          abortControllerRef.current = new AbortController();
+          
+          const transcribedText = await LocalWhisperService.transcribeFile(
+            audioFile,
+            'Xenova/whisper-tiny' as WhisperModelId,
+            (pct, msg) => {
+              setRecordingProgress(msg);
+            },
+            abortControllerRef.current.signal
+          );
+
+          if (transcribedText && transcribedText.trim()) {
+            setTopic(prev => {
+              const newTopic = prev ? `${prev} ${transcribedText.trim()}` : transcribedText.trim();
+              return newTopic;
+            });
+          }
+        } catch (err: any) {
+          if (err.message !== 'Operacao cancelada pelo usuario.') {
+            console.error('Transcription error:', err);
+            setRecordingProgress('Erro na transcrição. Tente novamente.');
+            setTimeout(() => setRecordingProgress(''), 3000);
+          }
+        } finally {
+          setIsTranscribing(false);
+          setRecordingProgress('');
+          abortControllerRef.current = null;
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingProgress('Gravando... Fale agora!');
+    } catch (err: any) {
+      console.error('Microphone access error:', err);
+      setRecordingProgress('Erro ao acessar o microfone. Verifique as permissões.');
+      setTimeout(() => setRecordingProgress(''), 3000);
+    }
+  }, []);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  }, [isRecording]);
+
+  const cancelRecording = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      setIsTranscribing(false);
+      setRecordingProgress('');
+    }
+  }, [isRecording]);
+
+  const toggleObjective = (value: string) => {
+    setSelectedObjectives((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+    );
+  };
+
+  const getCleanObjectives = () => {
+    const hasCustom = selectedObjectives.includes('Outros');
+    const cleanObjectives = selectedObjectives.filter((v) => v !== 'Outros');
+    if (hasCustom && customObjective.trim()) {
+      cleanObjectives.push(customObjective.trim());
+    }
+    return cleanObjectives;
+  };
+
+  const handleGenerateVariants = async () => {
+    if (!topic.trim()) return;
+    setIsGeneratingVariants(true);
+    try {
+      const cleanObjectives = getCleanObjectives();
+      onGenerate({
+        topic: topic.trim(),
+        niche: selectedNiche,
+        platform,
+        duration: activeDurationString,
+        framework,
+        tone,
+        targetAudience,
+        ctaGoal,
+        extraDetails: extraDetails.trim() ? extraDetails.trim() : undefined,
+        productOrBrand: productOrBrand.trim() ? productOrBrand.trim() : undefined,
+        sourceTranscript: sourceTranscript || undefined,
+        sourceVideoTitle: sourceVideoTitle || undefined,
+        quantity,
+        objectives: cleanObjectives.length > 0 ? cleanObjectives : undefined,
+      });
+    } finally {
+      setIsGeneratingVariants(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!topic.trim() && !sourceTranscript) return;
@@ -151,6 +354,74 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Secondary Toolbar - Sub Tabs */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          type="button"
+          onClick={() => setSubTab('create')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+            subTab === 'create'
+              ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-600/30'
+              : 'bg-slate-900/90 border border-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-800/60'
+          }`}
+        >
+          <Sparkles className="w-4 h-4" />
+          Criar Roteiro
+        </button>
+        <button
+          type="button"
+          onClick={() => setSubTab('transcribe')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+            subTab === 'transcribe'
+              ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-600/30'
+              : 'bg-slate-900/90 border border-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-800/60'
+          }`}
+        >
+          <Mic className="w-4 h-4" />
+          Extrair de Vídeo/Áudio
+        </button>
+        <button
+          type="button"
+          onClick={() => setSubTab('download')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+            subTab === 'download'
+              ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-600/30'
+              : 'bg-slate-900/90 border border-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-800/60'
+          }`}
+        >
+          <Download className="w-4 h-4" />
+          Baixar Mídia
+        </button>
+        <button
+          type="button"
+          onClick={() => setSubTab('gallery')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+            subTab === 'gallery'
+              ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-600/30'
+              : 'bg-slate-900/90 border border-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-800/60'
+          }`}
+        >
+          <LayoutGrid className="w-4 h-4" />
+          Galeria
+        </button>
+        <button
+          type="button"
+          onClick={() => setSubTab('history')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+            subTab === 'history'
+              ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-600/30'
+              : 'bg-slate-900/90 border border-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-800/60'
+          }`}
+        >
+          <History className="w-4 h-4" />
+          Histórico
+        </button>
+      </div>
+
+      {/* Only show the create form when subTab is 'create' */}
+      {subTab === 'create' && (
+      <>
+
       {/* Hero Header for Form */}
       <div className="rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900/90 to-slate-950/90 p-5 sm:p-6 shadow-xl relative overflow-hidden">
         <div className="absolute -top-24 -right-24 h-48 w-48 rounded-full bg-rose-500/10 blur-3xl pointer-events-none" />
@@ -215,9 +486,53 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
               placeholder="Ex: Cole aqui a fala do vídeo, ideia ou tema para ser remodelado em um roteiro viral..."
               rows={topic.length > 180 ? 6 : 3}
               required={!sourceTranscript}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 transition-all focus:border-rose-500 focus:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-rose-500/20 leading-relaxed font-sans"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 transition-all focus:border-rose-500 focus:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-rose-500/20 leading-relaxed font-sans pr-12"
             />
+            
+            {/* Microphone Button */}
+            <div className="absolute right-2 top-2 flex items-center gap-1">
+              {isRecording && (
+                <button
+                  type="button"
+                  onClick={cancelRecording}
+                  className="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all"
+                  title="Cancelar gravação"
+                >
+                  <MicOff className="h-4 w-4" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={isRecording ? stopRecording : startRecording}
+                disabled={isTranscribing}
+                className={`p-2 rounded-lg transition-all ${
+                  isRecording
+                    ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/30'
+                    : isTranscribing
+                    ? 'bg-amber-500/20 text-amber-400 cursor-wait'
+                    : 'bg-slate-700/50 text-slate-400 hover:bg-rose-500/20 hover:text-rose-400'
+                }`}
+                title={isRecording ? 'Parar gravação' : 'Gravar áudio e transcrever'}
+              >
+                {isTranscribing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : isRecording ? (
+                  <Mic className="h-4 w-4" />
+                ) : (
+                  <Mic className="h-4 w-4" />
+                )}
+              </button>
+            </div>
           </div>
+          
+          {/* Recording Progress Indicator */}
+          {(isRecording || isTranscribing) && recordingProgress && (
+            <div className="flex items-center gap-2 text-xs text-amber-300 bg-amber-500/10 rounded-lg px-3 py-2 border border-amber-500/20">
+              {isRecording && <Mic className="h-3.5 w-3.5 text-red-400 animate-pulse" />}
+              {isTranscribing && <Loader2 className="h-3.5 w-3.5 text-amber-400 animate-spin" />}
+              <span>{recordingProgress}</span>
+            </div>
+          )}
         </div>
 
         {/* Dynamic 4-Part Structure Preview Badges (Updated live by chosen duration) */}
@@ -451,6 +766,52 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
           )}
         </div>
 
+        {/* Video Objectives Selector (migrated from Nexia Video) */}
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 sm:p-5 space-y-3">
+          <div>
+            <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-200">
+              <Target className="h-4 w-4 text-rose-400" />
+              Objetivo do Vídeo
+              {selectedObjectives.length > 0 && (
+                <span className="ml-1.5 text-rose-400 text-[11px]">
+                  {selectedObjectives.length} selecionado{selectedObjectives.length > 1 ? 's' : ''}
+                </span>
+              )}
+            </label>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Escolha o objetivo principal. Será considerado pela IA na geração do roteiro.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {objectives.map((obj) => {
+              const isSelected = selectedObjectives.includes(obj.value);
+              return (
+                <button
+                  key={obj.value}
+                  type="button"
+                  onClick={() => toggleObjective(obj.value)}
+                  className={`text-left px-3 py-2 rounded-full border text-xs font-semibold transition-all duration-200 ${
+                    isSelected
+                      ? 'bg-rose-500/15 border-rose-500/35 text-white shadow-sm shadow-rose-500/8'
+                      : 'bg-slate-950 border-slate-800/80 text-slate-400 hover:border-slate-700 hover:text-white'
+                  }`}
+                >
+                  <span className="mr-1">{obj.emoji}</span> {obj.label}
+                </button>
+              );
+            })}
+          </div>
+          {selectedObjectives.includes('Outros') && (
+            <input
+              type="text"
+              value={customObjective}
+              onChange={(e) => setCustomObjective(e.target.value)}
+              placeholder="Descreva o objetivo personalizado..."
+              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200 outline-none focus:border-rose-500 placeholder-slate-500"
+            />
+          )}
+        </div>
+
         {/* Niche and Platform Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Niche Selection */}
@@ -593,6 +954,108 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
             : `Gerar Roteiro de ${durationBreakdown.formattedDuration} (4 Partes)`}
         </span>
       </button>
+
+      {/* AI Variant Generation Section */}
+      <div className="rounded-2xl border border-purple-500/30 bg-gradient-to-b from-purple-950/40 to-slate-950/90 p-4 sm:p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/30">
+            <Wand2 className="h-3.5 w-3.5" />
+          </span>
+          <h3 className="text-sm font-bold text-white">Gerar Variantes com IA</h3>
+        </div>
+        <p className="text-[11px] text-slate-400 -mt-2">
+          Gere múltiplas variações do seu briefing de uma vez. A IA cria roteiros alternativos com abordagens diferentes.
+        </p>
+
+        {/* Quantity Selector */}
+        <div className="flex items-center gap-3">
+          <label className="text-xs font-bold text-slate-300">Quantidade:</label>
+          <div className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-950 p-0.5">
+            <button
+              type="button"
+              onClick={() => setQuantity(Math.max(1, quantity - 1))}
+              className="h-7 w-7 flex items-center justify-center rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            >
+              <Minus className="h-3.5 w-3.5" />
+            </button>
+            <span className="w-8 text-center text-sm font-bold text-white font-mono">{quantity}</span>
+            <button
+              type="button"
+              onClick={() => setQuantity(Math.min(20, quantity + 1))}
+              className="h-7 w-7 flex items-center justify-center rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <span className="text-[11px] text-slate-500">(máx. 20)</span>
+        </div>
+
+        {/* Generate Variants Button */}
+        <button
+          type="button"
+          onClick={handleGenerateVariants}
+          disabled={isGeneratingVariants || isLoading || !topic.trim()}
+          className="w-full py-3 px-4 rounded-2xl font-semibold text-white bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 shadow-lg shadow-purple-900/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
+        >
+          {isGeneratingVariants ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Iniciando...</span>
+            </>
+          ) : (
+            <>
+              <span>🤖</span>
+              <span>Gerar {quantity} Variantes com IA</span>
+            </>
+          )}
+        </button>
+        <p className="text-[11px] text-slate-500 text-center leading-relaxed">
+          Gera {quantity} roteiros alternativos a partir do seu briefing, cada um com uma abordagem diferente.
+        </p>
+      </div>
+
+      </> // End fragment for subTab === 'create'
+      )}
+
+      {/* Placeholder panels for other sub-tabs */}
+      {subTab === 'transcribe' && (
+        <MediaExtractor
+          onRemodelScript={(text, title) => onRemodelTranscript?.(text, title)}
+          recentTranscripts={recentTranscripts}
+          onSelectRecentTranscript={(t) => onSelectRecentTranscript?.(t)}
+          onClearHistory={() => onClearTranscriptHistory?.()}
+          onDeleteTranscript={(id) => onDeleteTranscript?.(id)}
+        />
+      )}
+      {subTab === 'download' && (
+        <MediaDownloader
+          onMediaDownloaded={(media, transcript) => onMediaDownloaded?.(media, transcript)}
+          onGoToGallery={() => setSubTab('gallery')}
+          onRemodelDirectly={(text, title) => onRemodelTranscript?.(text, title)}
+        />
+      )}
+      {subTab === 'gallery' && (
+        <MediaGallery
+          mediaList={downloadedMediaList}
+          onDeleteMedia={(id) => onDeleteMedia?.(id)}
+          onRemodelMedia={(text, title) => onRemodelMedia?.(text, title)}
+          onToggleFavoriteMedia={(id) => onToggleFavoriteMedia?.(id)}
+          onGoToDownloadTab={() => setSubTab('download')}
+        />
+      )}
+      {subTab === 'history' && (
+        <SavedScriptsList
+          savedScripts={savedScripts}
+          onOpenScript={(script) => onOpenSavedScript?.(script)}
+          onRemodelScript={(script) => onRemodelSavedScript?.(script)}
+          onDeleteScript={(id) => onDeleteSavedScript?.(id)}
+          onToggleFavorite={(id) => onToggleFavorite?.(id)}
+          onCreateNew={() => {
+            setSubTab('create');
+            onNewScriptClick?.();
+          }}
+        />
+      )}
     </form>
   );
 };

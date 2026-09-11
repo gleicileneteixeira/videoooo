@@ -524,6 +524,37 @@ export default function App() {
                     initialTopic={prefilledTopic}
                     sourceTranscript={sourceTranscript}
                     sourceVideoTitle={sourceVideoTitle}
+                    recentTranscripts={recentTranscripts}
+                    onSelectRecentTranscript={(t) => {
+                      setRecentTranscripts((prev) => [t, ...prev.filter((item) => item.id !== t.id)]);
+                    }}
+                    onClearTranscriptHistory={() => setRecentTranscripts([])}
+                    onDeleteTranscript={handleDeleteTranscript}
+                    onRemodelTranscript={(text, title) => {
+                      handleStartRemodelFromText(text, title);
+                    }}
+                    downloadedMediaList={downloadedMediaList}
+                    onDeleteMedia={handleDeleteMedia}
+                    onRemodelMedia={(text, title) => {
+                      handleStartRemodelFromText(text, title);
+                    }}
+                    onToggleFavoriteMedia={handleToggleFavoriteMedia}
+                    onMediaDownloaded={handleMediaDownloaded}
+                    savedScripts={savedScripts}
+                    onOpenSavedScript={(script) => {
+                      setCurrentScript(script);
+                    }}
+                    onRemodelSavedScript={(script) => {
+                      handleStartRemodelFromText(script.fullTeleprompterText, script.title);
+                    }}
+                    onDeleteSavedScript={handleDeleteScript}
+                    onToggleFavorite={handleToggleFavorite}
+                    onNewScriptClick={() => {
+                      setCurrentScript(null);
+                      setSourceTranscript('');
+                      setSourceVideoTitle('');
+                      setPrefilledTopic('');
+                    }}
                   />
                 )}
               </div>
