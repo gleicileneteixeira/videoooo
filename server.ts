@@ -9,16 +9,24 @@ import dotenv from "dotenv";
 import { ZipArchive } from "archiver";
 import { GoogleGenAI, Type } from "@google/genai";
 import { createServer as createViteServer } from "vite";
+import * as cheerio from "cheerio";
 
 const execFileAsync = promisify(execFile);
 
 dotenv.config();
 
 const app = express();
-const PORT = 3002;
+const PORT = 3000;
 
 app.use(express.json({ limit: "200mb" }));
 app.use(express.urlencoded({ limit: "200mb", extended: true }));
+
+// Serve downloaded media files statically with video range support
+const downloadsDir = path.join(process.cwd(), "public", "downloads");
+if (!fs.existsSync(downloadsDir)) {
+  fs.mkdirSync(downloadsDir, { recursive: true });
+}
+app.use("/downloads", express.static(downloadsDir));
 
 // Model Candidate definitions with free-tier order
 export interface CandidateModel {
@@ -833,6 +841,411 @@ function parseDurationMeta(durationStr: string) {
   };
 }
 
+function extractOriginalHookFromTranscript(transcript: string): string {
+  if (!transcript || !transcript.trim()) return "";
+  const cleaned = transcript.trim();
+  // Se contiver quebras de linha, pega a primeira linha não vazia
+  const lines = cleaned.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+  const firstLine = lines[0] || "";
+  // Tenta encontrar a primeira sentença pontuada
+  const sentenceMatch = firstLine.match(/^([^.!?]+[.!?]?)/);
+  if (sentenceMatch && sentenceMatch[1] && sentenceMatch[1].trim().length >= 10) {
+    return sentenceMatch[1].trim();
+  }
+  if (firstLine.length >= 10 && firstLine.length <= 160) {
+    return firstLine;
+  }
+  const words = cleaned.split(/\s+/);
+  if (words.length <= 15) {
+    return cleaned;
+  }
+  return words.slice(0, 15).join(" ") + "...";
+}
+
+// ==========================================
+// GERADOR ALGORÍTMICO HEURÍSTICO 100% SEM IA
+// (Custo Zero, Execução Instantânea e Contingência)
+// ==========================================
+function generateAlgorithmicScript(params: {
+  topic?: string;
+  niche?: string;
+  platform?: string;
+  duration?: string;
+  framework?: string;
+  tone?: string;
+  targetAudience?: string;
+  ctaGoal?: string;
+  extraDetails?: string;
+  productOrBrand?: string;
+  sourceTranscript?: string;
+  sourceVideoTitle?: string;
+  isFallback?: boolean;
+  fallbackReason?: string;
+  attemptLogs?: any[];
+  quantity?: number;
+}) {
+  const {
+    topic = "Como Dominar Esse Método Viral",
+    niche = "Geral",
+    platform = "tiktok",
+    duration = "45s",
+    framework = "hook_story_offer",
+    tone = "dinamico_acelerado",
+    targetAudience = "Criadores e pessoas que buscam resultados rápidos",
+    ctaGoal = "salvar",
+    extraDetails = "",
+    productOrBrand = "",
+    sourceTranscript = "",
+    sourceVideoTitle = "",
+    isFallback = false,
+    fallbackReason = "",
+    attemptLogs = [],
+    quantity = 3,
+  } = params;
+
+  const targetQuantity = Math.max(1, Math.min(5, Number(quantity) || 3));
+  const durMeta = parseDurationMeta(duration);
+  const cleanTitle = (topic || sourceVideoTitle || "Estratégia Viral Revelada").trim();
+  const brandMention = productOrBrand ? ` usando o ${productOrBrand}` : "";
+  const isRemodeling = !!(sourceTranscript && sourceTranscript.trim());
+  const originalHook = isRemodeling ? extractOriginalHookFromTranscript(sourceTranscript) : "";
+
+  // CTA Map
+  const ctaMap: Record<string, { spoken: string; action: string; onScreen: string }> = {
+    salvar: {
+      spoken: "Clica no ícone da bandeirinha e salva esse vídeo agora para consultar e aplicar quando precisar!",
+      action: "Salvar o vídeo nos favoritos",
+      onScreen: "SALVE PARA NÃO ESQUECER 📌",
+    },
+    comentar: {
+      spoken: "Qual a sua maior dificuldade com isso? Deixa aqui nos comentários que eu vou responder cada um!",
+      action: "Deixar dúvida ou opinião nos comentários",
+      onScreen: "COMENTA SUA DÚVIDA 👇",
+    },
+    seguir: {
+      spoken: "Clica no botão de seguir para não perder a parte dois e os próximos segredos que ninguém te conta!",
+      action: "Seguir o perfil para novos conteúdos",
+      onScreen: "SEGUE PARA A PARTE 2 🚀",
+    },
+    compartilhar: {
+      spoken: "Manda esse vídeo no direct daquela pessoa que precisa ver isso com urgência hoje mesmo!",
+      action: "Compartilhar com um amigo ou colega",
+      onScreen: "COMPARTILHE COM QUEM PRECISA ↗️",
+    },
+    link_bio: {
+      spoken: "O passo a passo detalhado e o material completo estão no link da minha bio. Corre lá antes que saia do ar!",
+      action: "Acessar o link na bio",
+      onScreen: "ACESSE O LINK NA BIO 🔗",
+    },
+  };
+  const chosenCta = ctaMap[ctaGoal] || ctaMap.salvar;
+
+  // 1. BLOCO 1: GANCHOS (HOOKS)
+  // Se for remodelagem: Gancho #1 é rigorosamente o gancho original do vídeo vencedor.
+  // Ganchos #2 a #5 mantêm rigorosamente a mesma ideia e gatilho psicológico com variações de palavras e ângulos.
+  let allHooks = [];
+  if (isRemodeling && originalHook) {
+    const hookBody = originalHook.replace(/^[A-ZÁÉÍÓÚÀÂÊÔÃÕÇ]/, (c) => c.toLowerCase());
+    allHooks = [
+      {
+        id: "hook_1",
+        category: "shock" as const,
+        spokenText: originalHook,
+        visualAction: "Aproximação rápida com zoom brusco mantendo o ritmo e a postura do vídeo original.",
+        textOnScreen: originalHook.slice(0, 45).toUpperCase(),
+        retentionTrigger: "Gancho original validado do vídeo de alta performance.",
+      },
+      {
+        id: "hook_2",
+        category: "curiosity" as const,
+        spokenText: `Presta muita atenção nisso: ${hookBody}`,
+        visualAction: "Gesto de alerta com dedo indicador e corte seco para a lente com iluminação frontal.",
+        textOnScreen: "PRESTA ATENÇÃO NISSO ⚠️",
+        retentionTrigger: "Mesma ideia do gancho original com gatilho de atenção direta.",
+      },
+      {
+        id: "hook_3",
+        category: "contrarian" as const,
+        spokenText: `Olha só o que quase ninguém percebe: ${hookBody}`,
+        visualAction: "Movimento assertivo de cabeça com transição rápida de corte.",
+        textOnScreen: "OLHA SÓ ISSO! 👀",
+        retentionTrigger: "Mesma ideia do gancho original com quebra de expectativa.",
+      },
+      {
+        id: "hook_4",
+        category: "problem" as const,
+        spokenText: `Se você ainda não reparou nisso: ${hookBody}`,
+        visualAction: "Aproximação digital focada nos olhos da audiência com expressão de seriedade.",
+        textOnScreen: "VOCÊ JÁ REPAROU? ⚡",
+        retentionTrigger: "Mesma ideia do gancho original com espelhamento reflexivo.",
+      },
+      {
+        id: "hook_5",
+        category: "story" as const,
+        spokenText: `Seja sincero com você mesmo: ${hookBody}`,
+        visualAction: "Pausa rápida de 0.5s e retorno à câmera com energia multiplicada.",
+        textOnScreen: "SEJA SINCERO COM VOCÊ 🧠",
+        retentionTrigger: "Mesma ideia do gancho original com chamada pessoal e conexão.",
+      },
+    ];
+  } else {
+    allHooks = [
+      {
+        id: "hook_1",
+        category: "shock" as const,
+        spokenText: `Se você ainda faz ${cleanTitle} do jeito tradicional, pare tudo agora antes que seja tarde.`,
+        visualAction: "Aproximação rápida com zoom brusco e expressão de alerta olhando fixamente para a lente.",
+        textOnScreen: `PARE AGORA: ${cleanTitle.toUpperCase()}`,
+        retentionTrigger: "Alerta de perda imediata e quebra brusca de padrão.",
+      },
+      {
+        id: "hook_2",
+        category: "curiosity" as const,
+        spokenText: `O que 99% das pessoas não sabem sobre ${cleanTitle} vai explodir a sua cabeça nos próximos segundos.`,
+        visualAction: "Gesto de segredo com dedo indicador e corte para tela preta e branca por 0.5s.",
+        textOnScreen: "O SEGREDO QUE NINGUÉM CONTA 🤫",
+        retentionTrigger: "Gap de curiosidade extrema e sensação de informação restrita.",
+      },
+      {
+        id: "hook_3",
+        category: "contrarian" as const,
+        spokenText: `Todo mundo te ensina a fazer ${cleanTitle} errado, e é exatamente por isso que você não tem resultados.`,
+        visualAction: "Movimento de 'não' com a cabeça e estalar de dedos com transição rápida de corte.",
+        textOnScreen: "ESTÃO TE ENGANANDO! ❌",
+        retentionTrigger: "Inimigo comum e contestação do senso comum.",
+      },
+      {
+        id: "hook_4",
+        category: "problem" as const,
+        spokenText: `Você já sentiu que está se esforçando ao máximo com ${cleanTitle}, mas parece que nada sai do lugar?`,
+        visualAction: "Expressão de frustração com mão na cabeça e corte dinâmico.",
+        textOnScreen: "CANSADO DE NÃO TER RESULTADOS? 😫",
+        retentionTrigger: "Espelhamento de dor e validação emocional imediata.",
+      },
+      {
+        id: "hook_5",
+        category: "story" as const,
+        spokenText: `Há 6 meses eu estava travado tentando resolver ${cleanTitle}, até o dia em que eu descobri este único método.`,
+        visualAction: "Mostra objeto ou tela do celular rapidamente e volta para a câmera com energia.",
+        textOnScreen: "COMO TUDO MUDOU EM 30 DIAS 📈",
+        retentionTrigger: "Jornada de transformação pessoal com gancho de autoridade.",
+      },
+    ];
+  }
+
+  // 2. BLOCO 2: DORES (PAINS) - Todos iniciados rigorosamente com o mesmo conector universal
+  const painConnector = "A grande questão é que";
+  const allPains = [
+    `${painConnector} a maioria das pessoas tenta resolver ${cleanTitle} de forma desorganizada e sem foco claro, perdendo tempo precioso sem sair do lugar.`,
+    `${painConnector} o método convencional ensinado sobre ${cleanTitle} foi feito para te sobrecarregar, consumindo a sua energia onde não gera nenhum resultado prático.`,
+    `${painConnector} quase ninguém te conta o erro invisível ao aplicar ${cleanTitle}: você foca no detalhe superficial e esquece o fundamento que realmente faz a diferença.`,
+    `${painConnector} a frustração com ${cleanTitle} surge quando você aplica técnicas ultrapassadas, acreditando erroneamente que a culpa é da sua capacidade.`,
+    `${painConnector} sem uma ordem lógica e prática de execução em ${cleanTitle}, qualquer esforço acaba diluído e você volta exatamente para a estaca zero.`,
+  ];
+
+  // 3. BLOCO 3: SOLUÇÕES (SOLUTIONS) - Todos iniciados rigorosamente com o mesmo conector de virada de chave
+  const solutionConnector = "E é exatamente por isso que";
+  const allSolutions = [
+    `${solutionConnector} você precisa aplicar este método em 3 etapas práticas${brandMention}: simplifique o processo, corte as distrações e execute o essencial todos os dias.`,
+    `${solutionConnector} a virada de chave definitiva para ${cleanTitle} consiste em inverter a ordem: foque primeiro no impacto imediato e só depois ajuste os detalhes secundários${brandMention}.`,
+    `${solutionConnector} quem domina ${cleanTitle} utiliza uma rotina estratégica de micro-ciclos rápidos${brandMention}, reduzindo o tempo pela metade e multiplicando a retenção.`,
+    `${solutionConnector} o segredo comprovado não é trabalhar mais horas em ${cleanTitle}, e sim utilizar a estrutura validada com direção clara e assertiva${brandMention}.`,
+    `${solutionConnector} ao estruturar ${cleanTitle} em blocos modulares e focados no resultado${brandMention}, o progresso real aparece logo nos primeiros testes práticos.`,
+  ];
+
+  // 4. BLOCO 4: CTAS - Todos iniciados rigorosamente com o mesmo conector de ação
+  const ctaConnector = "Então faz o seguinte:";
+  const allCtas = [
+    `${ctaConnector} clica na bandeirinha aqui embaixo e salva esse vídeo agora mesmo para consultar e aplicar quando precisar!`,
+    `${ctaConnector} comenta aqui embaixo qual o seu maior desafio com ${cleanTitle} que eu vou te responder com uma dica prática!`,
+    `${ctaConnector} toca no botão de seguir aqui do lado para acompanhar os próximos conteúdos e não perder as técnicas avançadas!`,
+    `${ctaConnector} manda esse vídeo no direct daquele amigo ou parceiro que precisa ver essa estratégia hoje mesmo!`,
+    `${ctaConnector} acessa o link direto na bio agora para conferir o material complementar completo antes que saia do ar!`,
+  ];
+
+  const selectedHooks = allHooks.slice(0, targetQuantity);
+  const selectedPains = allPains.slice(0, targetQuantity);
+  const selectedSolutions = allSolutions.slice(0, targetQuantity);
+  const selectedCtas = allCtas.slice(0, targetQuantity);
+
+  // Modular Matrix 4x4
+  const modularMatrix = {
+    quantity: targetQuantity,
+    totalCombinations: Math.pow(targetQuantity, 4),
+    standardConnectors: {
+      painConnector: `${painConnector}...`,
+      solutionConnector: `${solutionConnector}...`,
+      ctaConnector: `${ctaConnector}...`,
+    },
+    hooks: selectedHooks.map((h, i) => ({
+      id: `hook_${i + 1}`,
+      text: h.spokenText,
+      label: `Gancho #${i + 1}`,
+      visualCue: h.visualAction,
+      textOnScreen: h.textOnScreen,
+    })),
+    pains: selectedPains.map((p, i) => ({
+      id: `pain_${i + 1}`,
+      text: p,
+      label: `Dor #${i + 1}`,
+      visualCue: "Expressão séria com aproximação digital",
+      textOnScreen: "A GRANDE QUESTÃO",
+    })),
+    solutions: selectedSolutions.map((s, i) => ({
+      id: `solution_${i + 1}`,
+      text: s,
+      label: `Solução #${i + 1}`,
+      visualCue: "Demonstração prática dinâmica com B-roll",
+      textOnScreen: "A VIRADA DE CHAVE",
+    })),
+    ctas: selectedCtas.map((c, i) => ({
+      id: `cta_${i + 1}`,
+      text: c,
+      label: `CTA #${i + 1}`,
+      visualCue: "Gesto apontando para a tela e chamada firme",
+      textOnScreen: "AÇÃO IMEDIATA",
+    })),
+    selectedIndices: {
+      hookIndex: 0,
+      painIndex: 0,
+      solutionIndex: 0,
+      ctaIndex: 0,
+    },
+  };
+
+  // Construção do conteúdo das 4 partes ativas (Combinação inicial 0, 0, 0, 0)
+  let hookSpeech = selectedHooks[0].spokenText;
+  let painSpeech = selectedPains[0];
+  let devSpeech = selectedSolutions[0];
+  let ctaSpeech = selectedCtas[0];
+
+  if (sourceTranscript) {
+    const snippet = sourceTranscript.slice(0, 300).replace(/\n+/g, " ").trim();
+    painSpeech = `${painConnector} no conteúdo original o ponto central foi "${snippet.slice(0, 100)}...", mas a maioria das pessoas falha ao não transformar essa ideia em execução prática e focada.`;
+    devSpeech = `${solutionConnector} para superar esse formato original e reter 3x mais, estruturamos os passos em blocos dinâmicos sem pausas mortas${brandMention}.`;
+  }
+
+  const fourParts = {
+    hookPart: {
+      title: "Parte 1: Gancho Magnético",
+      timecode: durMeta.tc1,
+      audioScript: hookSpeech,
+      visualCue: selectedHooks[0].visualAction,
+      textOnScreen: selectedHooks[0].textOnScreen,
+      hookTrigger: selectedHooks[0].retentionTrigger,
+    },
+    storyPainPart: {
+      title: "Parte 2: A Dor da História",
+      timecode: durMeta.tc2,
+      audioScript: painSpeech,
+      visualCue: "Expressão séria com aproximação digital na câmera, demonstrando o erro invisível.",
+      textOnScreen: "O ERRO INVISÍVEL QUE TE TRAVA",
+      painPoint: `Frustração com falta de consistência em ${niche}`,
+    },
+    developmentPart: {
+      title: "Parte 3: Desenvolvimento & Revelação",
+      timecode: durMeta.tc3,
+      audioScript: devSpeech,
+      visualCue: "Inserção de B-roll rápido ou texto em tópicos na tela numerados de 1 a 3 com transições dinâmicas.",
+      textOnScreen: "MÉTODO DE 3 PASSOS NA PRÁTICA",
+      keyInsight: "Simplificação extrema com aplicabilidade imediata",
+    },
+    solutionCtaPart: {
+      title: "Parte 4: Solução & Chamada para Ação (CTA)",
+      timecode: durMeta.tc4,
+      audioScript: ctaSpeech,
+      visualCue: `${chosenCta.action} - Gesto apontando na tela com sorriso seguro e corte no último milissegundo.`,
+      textOnScreen: chosenCta.onScreen,
+      ctaAction: chosenCta.action,
+    },
+  };
+
+  const scenes = [
+    {
+      timecode: durMeta.tc1,
+      partNumber: 1 as const,
+      sectionName: "Parte 1: Gancho Magnético",
+      audioScript: fourParts.hookPart.audioScript,
+      visualCue: fourParts.hookPart.visualCue,
+      textOnScreen: fourParts.hookPart.textOnScreen,
+      audioMusicCue: "Efeito sonoro Whoosh ou Boom grave de impacto",
+    },
+    {
+      timecode: durMeta.tc2,
+      partNumber: 2 as const,
+      sectionName: "Parte 2: A Dor da História",
+      audioScript: fourParts.storyPainPart.audioScript,
+      visualCue: fourParts.storyPainPart.visualCue,
+      textOnScreen: fourParts.storyPainPart.textOnScreen,
+      audioMusicCue: "Trilha sonora com tensão sutil e batida contida",
+    },
+    {
+      timecode: durMeta.tc3,
+      partNumber: 3 as const,
+      sectionName: "Parte 3: Desenvolvimento",
+      audioScript: fourParts.developmentPart.audioScript,
+      visualCue: fourParts.developmentPart.visualCue,
+      textOnScreen: fourParts.developmentPart.textOnScreen,
+      audioMusicCue: "Batida crescente animada e envolvente (Lo-Fi acelerado ou Phonk sutil)",
+    },
+    {
+      timecode: durMeta.tc4,
+      partNumber: 4 as const,
+      sectionName: "Parte 4: Solução & CTA",
+      audioScript: fourParts.solutionCtaPart.audioScript,
+      visualCue: fourParts.solutionCtaPart.visualCue,
+      textOnScreen: fourParts.solutionCtaPart.textOnScreen,
+      audioMusicCue: "Acorde de resolução limpo com fade out rápido",
+    },
+  ];
+
+  const fullTeleprompterText = `[PAUSA 0.5s] ${hookSpeech} [ENFASE]
+
+[PAUSA 0.8s] ${painSpeech}
+
+[PAUSA 0.5s] ${devSpeech}
+
+[ENFASE] ${ctaSpeech}`;
+
+  const cleanNicheTag = niche.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  return {
+    title: cleanTitle,
+    fourParts,
+    hooks: selectedHooks,
+    scenes,
+    fullTeleprompterText,
+    modularMatrix,
+    viralityAnalysis: {
+      overallScore: 92,
+      hookStrengthScore: 94,
+      retentionPacingScore: 90,
+      shareabilityScore: 91,
+      commentTriggerScore: 93,
+      whyItGoesViral: [
+        "Quebra de padrão agressiva nos primeiros 3 segundos sem enrolação.",
+        "Estrutura psicológica de 4 partes com identificação de dor antes de entregar a solução.",
+        `Chamada para ação otimizada especificamente para o objetivo de ${ctaGoal}.`,
+      ],
+      retentionSecret: "Uso de cortes a cada 2.5 segundos e texto em caixa alta sincronizado com a fala.",
+      perfectLoopTip: `Conecte a última palavra ('${ctaSpeech.split(" ").slice(-1)[0] || "hoje"}') com a primeira frase do gancho para criar um looping infinito no feed.`,
+    },
+    bestPostingTimes: ["11:30 - 13:00", "17:30 - 19:30", "21:00 - 22:30"],
+    hashtags: {
+      megaViral: ["#viral", "#fyp", "#foryou", "#trending"],
+      nicheSpecific: [`#${cleanNicheTag || "conteudoviral"}`, `#dicasde${cleanNicheTag || "sucesso"}`, "#criadoresdeconteudo"],
+      lowCompetition: [`#comofazer${cleanNicheTag || "viral"}`, "#metodoviral", "#roteiropratico"],
+    },
+    captionAndPost: {
+      headline: `🚨 Salve antes que saia do ar: ${cleanTitle}`,
+      captionBody: `A maioria das pessoas comete o mesmo erro na hora de aplicar ${cleanTitle}. Assista até o final para entender a estrutura de 4 partes que realmente funciona no algoritmo.\n\n👇 Me conta nos comentários o que achou!`,
+      callToAction: chosenCta.spoken,
+      coverTitleIdea: cleanTitle.toUpperCase(),
+      coverVisualPrompt: `Close-up de alta intensidade, iluminação cinematográfica de estúdio, expressão focada com fundo escuro e iluminação neon ciano e magenta.`,
+    },
+  };
+}
+
 // Endpoint: Generate Full 4-Part Viral Script with Dynamic Multi-Model Fallback
 app.post("/api/generate-script", async (req, res) => {
   try {
@@ -849,6 +1262,8 @@ app.post("/api/generate-script", async (req, res) => {
       productOrBrand,
       sourceTranscript,
       sourceVideoTitle,
+      useAi = true,
+      quantity = 3,
     } = req.body;
 
     const { groqInput, openRouterInput } = extractKeysFromBody(req.body);
@@ -857,138 +1272,184 @@ app.post("/api/generate-script", async (req, res) => {
       return res.status(400).json({ error: "O tema do roteiro ou a transcrição de origem é obrigatória." });
     }
 
+    const targetQuantity = Math.max(1, Math.min(5, Number(quantity) || 3));
+
+    // Se o usuário optou por NÃO usar IA (geração 100% algorítmica gratuita instantânea)
+    if (useAi === false) {
+      const algorithmicData = generateAlgorithmicScript({
+        topic,
+        niche,
+        platform,
+        duration,
+        framework,
+        tone,
+        targetAudience,
+        ctaGoal,
+        extraDetails,
+        productOrBrand,
+        sourceTranscript,
+        sourceVideoTitle,
+        isFallback: false,
+        quantity: targetQuantity,
+      });
+
+      const completeScript = {
+        id: "script_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7),
+        ...algorithmicData,
+        niche: niche || "Geral",
+        platform: platform || "tiktok",
+        duration: duration || "45s",
+        framework: framework || "hook_story_offer",
+        tone: tone || "dinamico_acelerado",
+        targetAudience: targetAudience || "Geral",
+        ctaGoal: ctaGoal || "salvar",
+        selectedHookIndex: 0,
+        createdAt: new Date().toISOString(),
+        status: "ideia",
+        isFavorite: false,
+        isRemodeled: !!sourceTranscript,
+        generationMode: "algorithmic" as const,
+        isFallbackAlgorithmic: false,
+        generationMetadata: {
+          generationMode: "algorithmic" as const,
+          isFallbackAlgorithmic: false,
+          usedProvider: "algoritmo_heuristico",
+          usedModel: "motor_regras_virais_v2",
+          attemptsLogs: [
+            {
+              provider: "Algoritmo sem IA",
+              model: "Motor Heurístico de Retenção",
+              status: "success" as const,
+              durationMs: 5,
+            },
+          ],
+          fallbackChain: ["algoritmo_heuristico"],
+        },
+      };
+
+      return res.json(completeScript);
+    }
+
     const durMeta = parseDurationMeta(duration);
 
+    // Gerar fallback heurístico baseline com quantidade exata
+    const baseline = generateAlgorithmicScript({
+      topic,
+      niche,
+      platform,
+      duration,
+      framework,
+      tone,
+      targetAudience,
+      ctaGoal,
+      extraDetails,
+      productOrBrand,
+      sourceTranscript,
+      sourceVideoTitle,
+      isFallback: false,
+      quantity: targetQuantity,
+    });
+
     const systemPrompt = `Você é um dos maiores diretores de criação e roteiristas de vídeos virais do mundo (TikTok, Reels, Shorts e YouTube).
-Você escreve roteiros com 100% de retenção e estrutura psicológica rigorosa de 4 PARTES em PORTUGUÊS DO BRASIL.
-Você ajusta com precisão matemática o tamanho do texto falado para corresponder exatamente à DURAÇÃO SOLICITADA.
-Você SEMPRE responde em formato JSON puro e válido.`;
+Você é especialista na criação de MATRIZ A/B MODULAR INTERCAMBIÁVEL (4 partes: Gancho, Dor, Solução, CTA) em PORTUGUÊS DO BRASIL.
+Sua missão é gerar exatamente ${targetQuantity} opções para CADA um dos 4 blocos de modo que funcionem como um quebra-cabeça perfeito: qualquer Gancho se conecta a qualquer Dor, que se conecta a qualquer Solução, finalizando em qualquer CTA (${targetQuantity} x ${targetQuantity} x ${targetQuantity} x ${targetQuantity} = ${Math.pow(targetQuantity, 4)} combinações possíveis sem nenhuma quebra de sentido ou coesão).
+Você SEMPRE responde estritamente em formato JSON puro e válido.`;
+
+    const detectedOriginalHook = sourceTranscript ? extractOriginalHookFromTranscript(sourceTranscript) : "";
 
     const prompt = `
-Crie um roteiro viral magnético e ultra persuasivo em PORTUGUÊS DO BRASIL.
+🚨 IMPLEMENTAÇÃO DO GERADOR DE ROTEIROS MODULARES (MATRIZ A/B 4x4 INTERCAMBIÁVEL)
+
+Crie EXATAMENTE ${targetQuantity} variações de cada um dos 4 blocos estruturais em PORTUGUÊS DO BRASIL para formar um quebra-cabeça de ${targetQuantity} x ${targetQuantity} x ${targetQuantity} x ${targetQuantity} = ${Math.pow(targetQuantity, 4)} combinações possíveis!
 
 DADOS DA SOLICITAÇÃO:
 - Tema Principal: ${topic || sourceVideoTitle || "Geral"}
 - Nicho: ${niche || "Geral / Conteúdo Viral"}
 - Plataforma Alvo: ${platform || "tiktok"}
-- DURAÇÃO EXATA SOLICITADA: ${duration || "45s"} (${durMeta.label})
-- TAMANHO ALVO DO TEXTO FALADO: Aproximadamente ${durMeta.targetWords}
+- DURAÇÃO ALVO: ${duration || "45s"} (${durMeta.label})
+- TAMANHO ALVO DO TEXTO FALADO TOTAL: Aproximadamente ${durMeta.targetWords}
 - Framework: ${framework || "hook_story_offer"}
 - Tom de Voz: ${tone || "dinamico_acelerado"}
 - Público Alvo: ${targetAudience || "Geral"}
 - Objetivo da Chamada para Ação (CTA): ${ctaGoal || "salvar"}
 ${extraDetails ? `- Detalhes Extras: ${extraDetails}` : ""}
 ${productOrBrand ? `- Marca / Produto: ${productOrBrand}` : ""}
-${sourceTranscript ? `- TRANSCRIÇÃO ORIGINAL PARA REMODELAR (Não plagie, remodele com mais retenção): ${sourceTranscript}` : ""}
+${sourceTranscript ? `
+🔥 ESTRATÉGIA OBRIGATÓRIA DE REMODELAGEM DE VÍDEO VIRAL:
+Você está remodelando a fala/áudio original extraída deste vídeo:
+"""
+${sourceTranscript}
+"""
+${detectedOriginalHook ? `[GANCHO ORIGINAL RECONHECIDO NO VÍDEO]: "${detectedOriginalHook}"` : ""}
 
-ESTRUTURA OBRIGATÓRIA DE 4 PARTES DO ROTEIRO (CALIBRADA PARA ${durMeta.label}):
-1. PARTE 1 - GANCHO (${durMeta.tc1}):
-   - Frase curta, magnética e chocante sem enrolação (nada de "olá pessoal").
-   - Ação visual específica de quebra de padrão nos primeiros segundos.
-   - Texto de alto impacto na tela.
-   - Forneça também 5 opções alternativas de ganchos (Choque, Curiosidade, Contrariano, Dor e Storytelling).
+REGRAS RÍGIDAS DE GANCHOS PARA REMODELAGEM (OBRIGATÓRIO):
+1. GANCHO #1 (hook_1): DEVE COMEÇAR COM EXATAMENTE O MESMO GANCHO ORIGINAL DO VÍDEO (a frase inicial que capturou as visualizações no vídeo original: "${detectedOriginalHook || 'o início da fala'}"). Mantenha as mesmas palavras e o mesmo impacto que fizeram o vídeo viralizar!
+2. DEMAIS GANCHOS (hook_2 até hook_${targetQuantity}): DEVEM MANTER RIGOROSAMENTE A MESMA IDEIA CENTRAL, O MESMO SENTIDO E O MESMO GATILHO DO GANCHO ORIGINAL!
+   - Você pode variar a ordem das palavras, usar sinônimos ou testar pequenas palavras de ênfase ("Presta atenção nisso...", "Olha só isso..."), MAS O SENTIDO E O OBJETIVO DEVEM SER 100% OS MESMOS.
+   - NUNCA invente outro assunto ou promessa diferente para os ganchos. Todas as ${targetQuantity} versões devem partir do mesmo gancho validado!
 
-2. PARTE 2 - A DOR DA HISTÓRIA (${durMeta.tc2}):
-   - Apresente a dor real, a frustração, o erro invisível ou o inimigo comum que o público enfrenta.
-   - Crie identificação imediata para ninguém rolar o vídeo.
+REGRAS PARA O DESENVOLVIMENTO (DORES, SOLUÇÕES E CTAS):
+- Aqui sim você DEVE remodelar o conteúdo: troque palavras, termos e analogias em ${targetQuantity} variações ricas para que o criador possa gravar takes diferentes e testar até ${Math.pow(targetQuantity, 4)} combinações!
+` : ""}
 
-3. PARTE 3 - DESENVOLVIMENTO & REVELAÇÃO (${durMeta.tc3}):
-   - O desenvolvimento dinâmico da história / o método prático passo a passo / a revelação do segredo com ritmo acelerado.
-   - Quebras de padrão visual frequentes com B-roll e gestos.
+REGRAS DE CONECTORES E INTERCAMBIABILIDADE OBRIGATÓRIAS:
+1. BLOCO 1 - GANCHOS (HOOKS) [Gere EXATAMENTE ${targetQuantity} variações]:
+   - Frases magnéticas que agarram a atenção nos primeiros 3 segundos.
+   - Regra de término: Sintaticamente fechado, termina abrindo a curiosidade sem exigir uma palavra gramatical exata no bloco seguinte.
 
-4. PARTE 4 - SOLUÇÃO & CHAMADA PARA AÇÃO (CTA) (${durMeta.tc4}):
-   - A solução final clara e a Chamada para Ação irresistível alinhada ao objetivo (${ctaGoal}).
-   - Dica de Looping Infinito conectando a última palavra à primeira.
+2. BLOCO 2 - DORES (PAINS) [Gere EXATAMENTE ${targetQuantity} variações]:
+   - Apresenta a dor real, a frustração ou o erro invisível que a audiência enfrenta.
+   - REGRA DO CONECTOR DE ENTRADA OBRIGATÓRIA: TODOS os ${targetQuantity} blocos de Dor DEVEM começar com EXATAMENTE o mesmo conector contextual: "A grande questão é que..."
 
-TIMELINE CRONOLÓGICA (Cenas numeradas correspondendo exatamente às 4 partes):
-Cena 1 (${durMeta.tc1}: Gancho), Cena 2 (${durMeta.tc2}: A Dor da História), Cena 3 (${durMeta.tc3}: Desenvolvimento), Cena 4 (${durMeta.tc4}: Solução & CTA).
+3. BLOCO 3 - SOLUÇÕES (SOLUTIONS) [Gere EXATAMENTE ${targetQuantity} variações]:
+   - Apresenta a virada de chave, o método em etapas ou a solução prática simplificada.
+   - REGRA DO CONECTOR DE ENTRADA OBRIGATÓRIA: TODOS os ${targetQuantity} blocos de Solução DEVEM começar com EXATAMENTE o mesmo conector de virada de chave: "E é exatamente por isso que..."
 
-Retorne ESTRITAMENTE o JSON com os campos:
+4. BLOCO 4 - CTAS [Gere EXATAMENTE ${targetQuantity} variações]:
+   - Chamada para ação clara e irresistível alinhada ao objetivo de ${ctaGoal}.
+   - REGRA DO CONECTOR DE ENTRADA OBRIGATÓRIA: TODOS os ${targetQuantity} blocos de CTA DEVEM começar com EXATAMENTE o mesmo conector de ação: "Então faz o seguinte:..."
+
+REGRAS DE PROIBIÇÃO E COESÃO:
+- ❌ PROIBIDO iniciar os blocos 2, 3 ou 4 com pronomes relativos ou demonstrativos soltos ("Ele...", "Por causa disso...", "Esse teste...").
+- ❌ PROIBIDO citar cidades ou especificidades regionais desconectadas.
+- ✔️ OBRIGATÓRIO: Nomear a entidade/conceito principal de forma explícita e autônoma em todos os blocos.
+
+FORMATO DE RETORNO JSON:
 {
-  "title": "string",
-  "fourParts": {
-    "hookPart": {
-      "title": "Parte 1: Gancho Magnético",
-      "timecode": "${durMeta.tc1}",
-      "audioScript": "string",
-      "visualCue": "string",
-      "textOnScreen": "string",
-      "hookTrigger": "string"
-    },
-    "storyPainPart": {
-      "title": "Parte 2: A Dor da História",
-      "timecode": "${durMeta.tc2}",
-      "audioScript": "string",
-      "visualCue": "string",
-      "textOnScreen": "string",
-      "painPoint": "string"
-    },
-    "developmentPart": {
-      "title": "Parte 3: Desenvolvimento & Revelação",
-      "timecode": "${durMeta.tc3}",
-      "audioScript": "string",
-      "visualCue": "string",
-      "textOnScreen": "string",
-      "keyInsight": "string"
-    },
-    "solutionCtaPart": {
-      "title": "Parte 4: Solução & Chamada para Ação (CTA)",
-      "timecode": "${durMeta.tc4}",
-      "audioScript": "string",
-      "visualCue": "string",
-      "textOnScreen": "string",
-      "ctaAction": "string"
-    }
-  },
+  "title": "Título magnético do roteiro",
   "hooks": [
     {
       "id": "hook_1",
-      "category": "shock",
-      "spokenText": "string",
-      "visualAction": "string",
-      "textOnScreen": "string",
-      "retentionTrigger": "string"
+      "spokenText": "Texto do gancho 1...",
+      "visualAction": "Aproximação rápida com zoom brusco",
+      "textOnScreen": "TEXTO NA TELA",
+      "retentionTrigger": "Quebra de padrão visual"
     }
   ],
-  "scenes": [
+  "pains": [
     {
-      "timecode": "${durMeta.tc1}",
-      "partNumber": 1,
-      "sectionName": "Parte 1: Gancho Magnético",
-      "audioScript": "string",
-      "visualCue": "string",
-      "textOnScreen": "string",
-      "audioMusicCue": "string"
-    },
-    {
-      "timecode": "${durMeta.tc2}",
-      "partNumber": 2,
-      "sectionName": "Parte 2: A Dor da História",
-      "audioScript": "string",
-      "visualCue": "string",
-      "textOnScreen": "string",
-      "audioMusicCue": "string"
-    },
-    {
-      "timecode": "${durMeta.tc3}",
-      "partNumber": 3,
-      "sectionName": "Parte 3: Desenvolvimento",
-      "audioScript": "string",
-      "visualCue": "string",
-      "textOnScreen": "string",
-      "audioMusicCue": "string"
-    },
-    {
-      "timecode": "${durMeta.tc4}",
-      "partNumber": 4,
-      "sectionName": "Parte 4: Solução & CTA",
-      "audioScript": "string",
-      "visualCue": "string",
-      "textOnScreen": "string",
-      "audioMusicCue": "string"
+      "id": "pain_1",
+      "spokenText": "A grande questão é que...",
+      "visualAction": "Expressão séria com aproximação digital",
+      "textOnScreen": "O PROBLEMA REAL"
     }
   ],
-  "fullTeleprompterText": "string com [PAUSA] e ENFASE",
+  "solutions": [
+    {
+      "id": "solution_1",
+      "spokenText": "E é exatamente por isso que...",
+      "visualAction": "Demonstração prática dinâmica com B-roll",
+      "textOnScreen": "A SOLUÇÃO"
+    }
+  ],
+  "ctas": [
+    {
+      "id": "cta_1",
+      "spokenText": "Então faz o seguinte:...",
+      "visualAction": "Gesto apontando para a tela",
+      "textOnScreen": "AÇÃO IMEDIATA"
+    }
+  ],
   "viralityAnalysis": {
     "overallScore": 95,
     "hookStrengthScore": 98,
@@ -996,8 +1457,8 @@ Retorne ESTRITAMENTE o JSON com os campos:
     "shareabilityScore": 94,
     "commentTriggerScore": 96,
     "whyItGoesViral": ["motivo 1", "motivo 2", "motivo 3"],
-    "retentionSecret": "string",
-    "perfectLoopTip": "string"
+    "retentionSecret": "segredo de retenção",
+    "perfectLoopTip": "dica de looping"
   },
   "bestPostingTimes": ["12:00 - 13:30", "18:00 - 19:30", "21:00 - 22:30"],
   "hashtags": {
@@ -1006,26 +1467,273 @@ Retorne ESTRITAMENTE o JSON com os campos:
     "lowCompetition": ["#subnicho1", "#subnicho2"]
   },
   "captionAndPost": {
-    "headline": "string",
-    "captionBody": "string",
-    "callToAction": "string",
-    "coverTitleIdea": "string",
-    "coverVisualPrompt": "string"
+    "headline": "Título para post",
+    "captionBody": "Legenda completa",
+    "callToAction": "Chamada para ação",
+    "coverTitleIdea": "Ideia para capa",
+    "coverVisualPrompt": "Prompt visual de capa"
   }
 }
 `;
 
-    const { data: parsed, usedProvider, usedModel, usedKeyName, logs } = await executeWithDynamicFallback(
-      groqInput,
-      openRouterInput,
-      prompt,
-      systemPrompt
+    let parsed: any;
+    let usedProvider = "groq";
+    let usedModel = "llama-3.3-70b";
+    let usedKeyName = "";
+    let logs: any[] = [];
+    let isFallbackAlgorithmic = false;
+    let fallbackReason = "";
+
+    try {
+      const aiResponse = await executeWithDynamicFallback(
+        groqInput,
+        openRouterInput,
+        prompt,
+        systemPrompt
+      );
+      parsed = aiResponse.data;
+      usedProvider = aiResponse.usedProvider;
+      usedModel = aiResponse.usedModel;
+      usedKeyName = aiResponse.usedKeyName;
+      logs = aiResponse.logs;
+    } catch (aiError: any) {
+      console.warn("⚠️ Todas as IAs externas gratuitas falharam ou estão indisponíveis. Ativando Modo Algorítmico Heurístico de Contingência:", aiError.message);
+      isFallbackAlgorithmic = true;
+      fallbackReason = aiError.message || "Modelos de IA externa indisponíveis ou esgotados";
+      logs = aiError.attemptsLogs || [];
+
+      // GERAÇÃO GARANTIDA 100% SEM IA
+      parsed = generateAlgorithmicScript({
+        topic,
+        niche,
+        platform,
+        duration,
+        framework,
+        tone,
+        targetAudience,
+        ctaGoal,
+        extraDetails,
+        productOrBrand,
+        sourceTranscript,
+        sourceVideoTitle,
+        isFallback: true,
+        fallbackReason,
+        attemptLogs: logs,
+        quantity: targetQuantity,
+      });
+
+      usedProvider = "algoritmo_contingencia";
+      usedModel = "motor_regras_virais_v2";
+    }
+
+    // Normalizar matriz modular A/B garantindo que tenha exatamente targetQuantity blocos
+    const extractBlockList = (
+      aiList: any,
+      fallbackList: any[],
+      prefix: string,
+      defaultConnector: string,
+      defaultCue: string,
+      defaultScreen: string
+    ) => {
+      const list = Array.isArray(aiList) ? aiList : [];
+      const result = [];
+      for (let i = 0; i < targetQuantity; i++) {
+        const item = list[i];
+        let text = "";
+        let cue = defaultCue;
+        let onScreen = defaultScreen;
+
+        if (typeof item === "string") {
+          text = item.trim();
+        } else if (item && typeof item === "object") {
+          text = (item.spokenText || item.text || item.audioScript || item.content || "").trim();
+          cue = item.visualAction || item.visualCue || cue;
+          onScreen = item.textOnScreen || onScreen;
+        }
+
+        const fallbackItem = fallbackList[i] || fallbackList[0];
+        if (!text && fallbackItem) {
+          text = (fallbackItem.text || fallbackItem.spokenText || fallbackItem).trim();
+          cue = fallbackItem.visualCue || fallbackItem.visualAction || cue;
+          onScreen = fallbackItem.textOnScreen || onScreen;
+        }
+
+        // Garantir conector padronizado se especificado
+        if (defaultConnector) {
+          const lowerCon = defaultConnector.toLowerCase().slice(0, 14);
+          if (!text.toLowerCase().startsWith(lowerCon)) {
+            text = `${defaultConnector} ${text.charAt(0).toLowerCase() + text.slice(1)}`;
+          }
+        }
+
+        result.push({
+          id: `${prefix}_${i + 1}`,
+          text: text || `${defaultConnector || prefix} variação ${i + 1}`,
+          label: `${prefix === "hook" ? "Gancho" : prefix === "pain" ? "Dor" : prefix === "solution" ? "Solução" : "CTA"} #${i + 1}`,
+          visualCue: cue,
+          textOnScreen: onScreen,
+        });
+      }
+      return result;
+    };
+
+    const normalizedHooks = extractBlockList(
+      parsed.hooks,
+      baseline.modularMatrix.hooks,
+      "hook",
+      "",
+      "Aproximação rápida com zoom brusco e expressão de alerta",
+      `ATENÇÃO: ${(topic || "DICA VIRAL").toUpperCase()}`
     );
+
+    const normalizedPains = extractBlockList(
+      parsed.pains,
+      baseline.modularMatrix.pains,
+      "pain",
+      "A grande questão é que",
+      "Expressão séria com aproximação digital na câmera",
+      "O ERRO INVISÍVEL"
+    );
+
+    const normalizedSolutions = extractBlockList(
+      parsed.solutions,
+      baseline.modularMatrix.solutions,
+      "solution",
+      "E é exatamente por isso que",
+      "Demonstração prática dinâmica em tópicos numerados com B-roll",
+      "MÉTODO NA PRÁTICA"
+    );
+
+    const normalizedCtas = extractBlockList(
+      parsed.ctas,
+      baseline.modularMatrix.ctas,
+      "cta",
+      "Então faz o seguinte:",
+      "Gesto apontando para a tela com sorriso seguro e corte ágil",
+      "SALVE OU COMPARTILHE"
+    );
+
+    const modularMatrix = {
+      quantity: targetQuantity,
+      totalCombinations: Math.pow(targetQuantity, 4),
+      standardConnectors: {
+        painConnector: "A grande questão é que...",
+        solutionConnector: "E é exatamente por isso que...",
+        ctaConnector: "Então faz o seguinte:...",
+      },
+      hooks: normalizedHooks,
+      pains: normalizedPains,
+      solutions: normalizedSolutions,
+      ctas: normalizedCtas,
+      selectedIndices: {
+        hookIndex: 0,
+        painIndex: 0,
+        solutionIndex: 0,
+        ctaIndex: 0,
+      },
+    };
+
+    // Montar fourParts primárias com a combinação ativa (0, 0, 0, 0)
+    const fourParts = {
+      hookPart: {
+        title: "Parte 1: Gancho Magnético",
+        timecode: durMeta.tc1,
+        audioScript: normalizedHooks[0].text,
+        visualCue: normalizedHooks[0].visualCue,
+        textOnScreen: normalizedHooks[0].textOnScreen,
+        hookTrigger: "Alerta de curiosidade e quebra imediata de padrão.",
+      },
+      storyPainPart: {
+        title: "Parte 2: A Dor da História",
+        timecode: durMeta.tc2,
+        audioScript: normalizedPains[0].text,
+        visualCue: normalizedPains[0].visualCue,
+        textOnScreen: normalizedPains[0].textOnScreen,
+        painPoint: `Frustração com falta de consistência em ${niche || "geral"}`,
+      },
+      developmentPart: {
+        title: "Parte 3: Desenvolvimento & Revelação",
+        timecode: durMeta.tc3,
+        audioScript: normalizedSolutions[0].text,
+        visualCue: normalizedSolutions[0].visualCue,
+        textOnScreen: normalizedSolutions[0].textOnScreen,
+        keyInsight: "Simplificação extrema com aplicabilidade imediata",
+      },
+      solutionCtaPart: {
+        title: "Parte 4: Solução & Chamada para Ação (CTA)",
+        timecode: durMeta.tc4,
+        audioScript: normalizedCtas[0].text,
+        visualCue: normalizedCtas[0].visualCue,
+        textOnScreen: normalizedCtas[0].textOnScreen,
+        ctaAction: "Ação de fechamento e conversão de engajamento",
+      },
+    };
+
+    const scenes = [
+      {
+        timecode: durMeta.tc1,
+        partNumber: 1 as const,
+        sectionName: "Parte 1: Gancho Magnético",
+        audioScript: fourParts.hookPart.audioScript,
+        visualCue: fourParts.hookPart.visualCue,
+        textOnScreen: fourParts.hookPart.textOnScreen,
+        audioMusicCue: "Efeito sonoro Whoosh ou Boom grave de impacto",
+      },
+      {
+        timecode: durMeta.tc2,
+        partNumber: 2 as const,
+        sectionName: "Parte 2: A Dor da História",
+        audioScript: fourParts.storyPainPart.audioScript,
+        visualCue: fourParts.storyPainPart.visualCue,
+        textOnScreen: fourParts.storyPainPart.textOnScreen,
+        audioMusicCue: "Trilha sonora com tensão sutil e batida contida",
+      },
+      {
+        timecode: durMeta.tc3,
+        partNumber: 3 as const,
+        sectionName: "Parte 3: Desenvolvimento",
+        audioScript: fourParts.developmentPart.audioScript,
+        visualCue: fourParts.developmentPart.visualCue,
+        textOnScreen: fourParts.developmentPart.textOnScreen,
+        audioMusicCue: "Batida crescente animada e envolvente (Lo-Fi acelerado ou Phonk sutil)",
+      },
+      {
+        timecode: durMeta.tc4,
+        partNumber: 4 as const,
+        sectionName: "Parte 4: Solução & CTA",
+        audioScript: fourParts.solutionCtaPart.audioScript,
+        visualCue: fourParts.solutionCtaPart.visualCue,
+        textOnScreen: fourParts.solutionCtaPart.textOnScreen,
+        audioMusicCue: "Acorde de resolução limpo com fade out rápido",
+      },
+    ];
+
+    const fullTeleprompterText = `[PAUSA 0.5s] ${fourParts.hookPart.audioScript} [ENFASE]\n\n[PAUSA 0.8s] ${fourParts.storyPainPart.audioScript}\n\n[PAUSA 0.5s] ${fourParts.developmentPart.audioScript}\n\n[ENFASE] ${fourParts.solutionCtaPart.audioScript}`;
+
+    // Lista de ganchos retrocompatível
+    const legacyHooks = normalizedHooks.map((h, idx) => ({
+      id: h.id,
+      category: (idx === 0 ? "shock" : idx === 1 ? "curiosity" : idx === 2 ? "contrarian" : idx === 3 ? "problem" : "story") as any,
+      spokenText: h.text,
+      visualAction: h.visualCue,
+      textOnScreen: h.textOnScreen,
+      retentionTrigger: "Gatilho de curiosidade e retenção imediata",
+    }));
 
     // Formatted complete script object
     const completeScript = {
       id: "script_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7),
       ...parsed,
+      title: parsed.title || baseline.title,
+      fourParts,
+      hooks: legacyHooks,
+      scenes,
+      fullTeleprompterText,
+      modularMatrix,
+      viralityAnalysis: parsed.viralityAnalysis || baseline.viralityAnalysis,
+      bestPostingTimes: parsed.bestPostingTimes || baseline.bestPostingTimes,
+      hashtags: parsed.hashtags || baseline.hashtags,
+      captionAndPost: parsed.captionAndPost || baseline.captionAndPost,
       niche: niche || "Geral",
       platform: platform || "tiktok",
       duration: duration || "45s",
@@ -1038,7 +1746,12 @@ Retorne ESTRITAMENTE o JSON com os campos:
       status: "ideia",
       isFavorite: false,
       isRemodeled: !!sourceTranscript,
+      generationMode: isFallbackAlgorithmic ? ("algorithmic" as const) : ("ai" as const),
+      isFallbackAlgorithmic,
       generationMetadata: {
+        generationMode: isFallbackAlgorithmic ? ("algorithmic" as const) : ("ai" as const),
+        isFallbackAlgorithmic,
+        fallbackReason: isFallbackAlgorithmic ? fallbackReason : undefined,
         usedProvider,
         usedModel,
         usedKeyName,
@@ -1049,10 +1762,309 @@ Retorne ESTRITAMENTE o JSON com os campos:
 
     res.json(completeScript);
   } catch (error: any) {
-    console.error("Erro ao gerar roteiro:", error);
-    res.status(500).json({
-      error: error.message || "Falha ao gerar roteiro após percorrer os modelos disponíveis.",
-      attemptsLogs: error.attemptsLogs || [],
+    console.error("Erro crítico ao gerar roteiro:", error);
+    // Última linha de defesa: gera algorítmico mesmo em caso de erro inesperado
+    try {
+      const emergencyScript = generateAlgorithmicScript({
+        topic: req.body.topic,
+        niche: req.body.niche,
+        platform: req.body.platform,
+        duration: req.body.duration,
+        isFallback: true,
+        fallbackReason: error.message,
+      });
+      return res.json({
+        id: "script_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7),
+        ...emergencyScript,
+        createdAt: new Date().toISOString(),
+        generationMode: "algorithmic",
+        isFallbackAlgorithmic: true,
+      });
+    } catch {
+      res.status(500).json({
+        error: error.message || "Falha ao processar roteiro.",
+        attemptsLogs: error.attemptsLogs || [],
+      });
+    }
+  }
+});
+
+// Helper: Backend Algorithmic SEO Generator
+function generateBackendAlgorithmicSeo(params: {
+  title?: string;
+  hook?: string;
+  summary?: string;
+  fullText?: string;
+  keyPoints?: string[];
+  count?: number;
+}) {
+  const { title = '', hook = '', summary = '', fullText = '', keyPoints = [], count = 5 } = params;
+
+  // Stop words and technical file junk filters
+  const stopWords = new Set([
+    'para', 'pra', 'com', 'sem', 'mais', 'menos', 'como', 'quando', 'onde', 'esse', 'essa',
+    'este', 'esta', 'isso', 'isto', 'voce', 'você', 'voces', 'vocês', 'video', 'vídeo',
+    'fazer', 'pode', 'sobre', 'muito', 'tambem', 'também', 'aqui', 'ali', 'tipo', 'coisa',
+    'gente', 'olha', 'sabe', 'quer', 'então', 'assim', 'porque', 'tudo', 'nada', 'qual'
+  ]);
+
+  const technicalJunkRegex = /^(document|audio|video|recording|rec|file|img|image|whatsapp|tiktok|youtube|yt|tmp|temp|track|download|\d+|[a-f0-9-]{8,})/i;
+
+  const isTechnicalFile = (t?: string) => {
+    if (!t) return true;
+    const clean = t.trim();
+    if (clean.length < 3) return true;
+    if (technicalJunkRegex.test(clean)) return true;
+    if (/\.(mp4|mp3|wav|m4a|mov|avi|webm)$/i.test(clean)) return true;
+    if (/^\d+$/.test(clean.replace(/[\s_-]/g, ''))) return true;
+    return false;
+  };
+
+  const combined = `${fullText}`.toLowerCase();
+  const rawWords = combined.replace(/[^\w\s\u00C0-\u017F]/g, ' ').split(/\s+/).filter(Boolean);
+
+  // Bigram frequency to detect real topics (e.g., "livro completo", "material gratuito", "fazer simulado")
+  const bigramFreq = new Map<string, number>();
+  for (let i = 0; i < rawWords.length - 1; i++) {
+    const w1 = rawWords[i];
+    const w2 = rawWords[i + 1];
+    if (w1.length > 3 && w2.length > 3 && !stopWords.has(w1) && !stopWords.has(w2) && !technicalJunkRegex.test(w1) && !technicalJunkRegex.test(w2)) {
+      const b = `${w1} ${w2}`;
+      bigramFreq.set(b, (bigramFreq.get(b) || 0) + 1);
+    }
+  }
+
+  const wordFreq = new Map<string, number>();
+  for (const w of rawWords) {
+    if (w.length > 3 && !stopWords.has(w) && !technicalJunkRegex.test(w)) {
+      wordFreq.set(w, (wordFreq.get(w) || 0) + 1);
+    }
+  }
+
+  const sortedBigrams = Array.from(bigramFreq.entries()).sort((a, b) => b[1] - a[1]);
+  const sortedWords = Array.from(wordFreq.entries()).sort((a, b) => b[1] - a[1]).map((e) => e[0]);
+
+  // Determine true spoken topic
+  let mainTopic = '';
+  if (!isTechnicalFile(title) && title && title.trim().length > 3) {
+    mainTopic = title.trim();
+  } else if (sortedBigrams.length > 0) {
+    mainTopic = sortedBigrams[0][0];
+  } else if (sortedWords.length > 0) {
+    mainTopic = sortedWords.slice(0, 2).join(' ');
+  } else {
+    mainTopic = 'esta estratégia prática';
+  }
+
+  const kw1 = sortedWords[0] ? sortedWords[0].toUpperCase() : 'ISSO';
+  const kw2 = sortedWords[1] || 'estratégia';
+  const kw3 = sortedWords[2] || 'resultado';
+
+  const cleanHook = hook && hook.trim().length > 10 && !technicalJunkRegex.test(hook)
+    ? hook.trim().replace(/[.,;]+$/, '')
+    : `O que você precisa saber sobre ${mainTopic}`;
+
+  let cleanSummary = summary && summary.trim().length > 15
+    ? summary.trim()
+    : fullText.slice(0, 220).replace(/^(se você quer|basicamente|então|olha só|aqui|fala galera)\s*/i, '').trim();
+  cleanSummary = cleanSummary.replace(/[,;:\-\s]+$/, '');
+  if (!cleanSummary.endsWith('.')) cleanSummary += '.';
+
+  // Generate clean targeted hashtags (avoiding technical filenames)
+  const tagWords = [
+    mainTopic.replace(/[^\w]/g, '').toLowerCase(),
+    kw2.replace(/[^\w]/g, '').toLowerCase(),
+    kw3.replace(/[^\w]/g, '').toLowerCase(),
+    'dicas',
+    'viral',
+    'foryou'
+  ].filter(t => t.length > 2 && !technicalJunkRegex.test(t));
+
+  const tags = Array.from(new Set(tagWords.map(t => `#${t}`))).slice(0, 5);
+
+  const headlineTemplates = [
+    () => `O segredo sobre ${mainTopic} que quase ninguém te conta`,
+    () => `Você ainda faz isso? O método certo para dominar ${mainTopic}`,
+    () => `Como ter acesso a ${mainTopic} passo a passo (sem perder tempo)`,
+    () => `PARE de errar com ${kw1}: o método comprovado para ter mais ${kw2}`,
+    () => `A verdade sobre ${mainTopic}: o que você precisa saber antes de começar`,
+    () => `3 coisas fundamentais sobre ${mainTopic} que você precisa aplicar hoje`,
+    () => `O método simples e prático para destravar seus resultados com ${mainTopic}`,
+    () => `Guia rápido: tudo o que você precisa entender sobre ${mainTopic}`,
+    () => `Se você busca resultados com ${mainTopic}, preste muita atenção nisso!`,
+    () => `O checklist essencial sobre ${mainTopic} para facilitar sua vida`,
+  ];
+
+  const packages = [];
+  const targetCount = Math.min(Math.max(count || 5, 1), 10);
+  for (let i = 0; i < targetCount; i++) {
+    const fnH = headlineTemplates[i % headlineTemplates.length];
+    const headline = fnH();
+    const description = `🔥 ${headline}\n\n${cleanSummary}\n\n📌 O que você aprende neste vídeo:\n• ${cleanHook}\n• Foco prático em ${kw2} e ${kw3}\n• Aplicação imediata para quem busca consistência\n\n💡 DICA DE OURO: Toque na bandeirinha e salve este post para consultar sempre que precisar!\n\n👇 Comente aqui se você já conhecia essa estratégia.\n\n${tags.join(' ')}`;
+    packages.push({
+      id: `seo_${Date.now()}_${i + 1}`,
+      index: i + 1,
+      headline,
+      description,
+      hashtags: tags,
+      fullFormattedText: `=== OPÇÃO ${i + 1} ===\n\n📌 HEADLINE:\n${headline}\n\n📝 DESCRIÇÃO SEO:\n${description}\n\n🏷️ HASHTAGS:\n${tags.join(' ')}`,
+    });
+  }
+  return packages;
+}
+
+// Endpoint: Generate SEO Descriptions & Viral Headlines (with AI or Algorithmic Fallback)
+app.post("/api/generate-seo", async (req, res) => {
+  try {
+    const {
+      title = "",
+      hook = "",
+      summary = "",
+      fullText = "",
+      keyPoints = [],
+      count = 5,
+      useAi = false,
+    } = req.body;
+
+    const { groqInput, openRouterInput } = extractKeysFromBody(req.body);
+
+    if (!fullText && !title && !summary) {
+      return res.status(400).json({ error: "Texto, título ou resumo obrigatório." });
+    }
+
+    // MODO ALGORÍTMICO (SEM IA)
+    if (useAi === false) {
+      const packages = generateBackendAlgorithmicSeo({
+        title,
+        hook,
+        summary,
+        fullText,
+        keyPoints,
+        count,
+      });
+
+      return res.json({
+        generationMode: "algorithmic",
+        isFallback: false,
+        packages,
+        usedProvider: "algoritmo_heuristico",
+        usedModel: "motor_seo_v1",
+      });
+    }
+
+    // Identifica se o título recebido é um nome de arquivo técnico (ex: "document 494...", "audio.mp3")
+    const isTechnicalTitle = /^(document|audio|video|recording|rec|file|img|image|whatsapp|tiktok|youtube|yt|tmp|\d+|[a-f0-9-]{8,})/i.test(title.trim()) || /\.(mp4|mp3|wav|m4a|mov|avi)$/i.test(title.trim());
+    const effectiveContextTitle = isTechnicalTitle ? "Não informado (deduzir do áudio falado)" : title;
+
+    // MODO COM IA (Groq / OpenRouter)
+    const systemPrompt = `Você é o maior especialista em SEO para algoritmos de busca e recomendação do TikTok (TikTok Search), Instagram Reels e YouTube Shorts.
+Sua missão é extrair O QUE ESTÁ SENDO REALMENTE FALADO NO VÍDEO e criar Headlines virais de alta conversão e Descrições de Feed perfeitamente estruturadas para o algoritmo.
+
+REGRAS CRÍTICAS DE QUALIDADE DE ALGORITMO:
+1. FOCO TOTAL NO QUE FOI FALADO: Analise com profundidade o que a pessoa está dizendo na transcrição. Entenda o assunto real (ex: material de estudos, simulados de prova, negócios, saúde, finanças, dicas práticas).
+2. NUNCA USE NOMES DE ARQUIVO: Se houver palavras como "document", "audio", "video" ou números aleatórios de ID de arquivo, IGNORE-OS completamente! Jamais coloque nomes de arquivo como tema ou em hashtags!
+3. HEADLINES MAGNÉTICAS (CTR ALTO): Crie títulos curtos e impactantes no estilo dos vídeos mais virais das redes, despertando curiosidade genuína e quebrando objeções.
+4. DESCRIÇÃO PERFEITA PARA O ALGORITMO DO TIKTOK/REELS:
+   - Linha 1: Frase gancho de busca (Search Intent) com palavras-chave que as pessoas realmente pesquisam.
+   - Parágrafo de Contexto: Resumo do conteúdo em português natural, fluido e gramaticalmente impecável (sem transcrições cruas quebradas).
+   - 3 Marcadores com emojis: Os aprendizados mais valiosos do corte.
+   - Chamada para Ação (CTA): Incentivar a SALVAR o post (fator de maior peso no algoritmo para distribuição orgânica).
+   - 3 a 5 Hashtags: Específicas do nicho falado no vídeo + 1 de engajamento (#viral, #foryou). Nunca hashtags sem sentido!
+
+Responda EXCLUSIVAMENTE em formato JSON estrito, sem nenhum texto introdutório ou explicativo fora do JSON.`;
+
+    const prompt = `
+Com base na transcrição real do vídeo abaixo, crie EXATAMENTE ${count} opções variadas de Headline Viral e Descrição SEO estruturada com 3 a 5 hashtags estratégicas cada.
+
+--- CONTEXTO DO ÁUDIO FALADO ---
+Título Original: ${effectiveContextTitle}
+Gancho Inicial: ${hook || 'Não identificado'}
+Resumo Prévia: ${summary || 'Não informado'}
+Transcrição do que é falado no vídeo:
+${(fullText || '').slice(0, 3500)}
+
+--- FORMATO DE RETORNO ESPERADO (JSON ESTRITO) ---
+{
+  "packages": [
+    {
+      "id": "seo_1",
+      "index": 1,
+      "headline": "Título viral magnético sobre o tema falado no vídeo",
+      "description": "Legenda completa com linha 1 de busca, resumo do que foi falado, marcadores com emojis, CTA para salvar e as hashtags no final",
+      "hashtags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5"]
+    }
+  ]
+}
+`;
+
+    let packages: any[] = [];
+    let usedProvider = "groq";
+    let usedModel = "llama-3.3-70b";
+    let isFallback = false;
+    let fallbackReason = "";
+
+    try {
+      const aiResponse = await executeWithDynamicFallback(
+        groqInput,
+        openRouterInput,
+        prompt,
+        systemPrompt
+      );
+
+      const parsed = aiResponse.data;
+      if (Array.isArray(parsed.packages) && parsed.packages.length > 0) {
+        packages = parsed.packages.map((pkg: any, idx: number) => ({
+          id: pkg.id || `seo_${idx + 1}`,
+          index: idx + 1,
+          headline: pkg.headline || `Variação ${idx + 1}`,
+          description: pkg.description || "",
+          hashtags: Array.isArray(pkg.hashtags) ? pkg.hashtags : ["#viral", "#dicas"],
+          fullFormattedText: `=== OPÇÃO ${idx + 1} ===\n\n📌 HEADLINE:\n${pkg.headline}\n\n📝 DESCRIÇÃO SEO:\n${pkg.description}\n\n🏷️ HASHTAGS:\n${(Array.isArray(pkg.hashtags) ? pkg.hashtags : []).join(" ")}`,
+        }));
+        usedProvider = aiResponse.usedProvider;
+        usedModel = aiResponse.usedModel;
+      } else {
+        throw new Error("Formato de resposta da IA inválido.");
+      }
+    } catch (aiErr: any) {
+      console.warn("⚠️ IA de SEO falhou. Ativando fallback algorítmico:", aiErr.message);
+      isFallback = true;
+      fallbackReason = aiErr.message || "Modelos de IA indisponíveis no momento";
+
+      packages = generateBackendAlgorithmicSeo({
+        title,
+        hook,
+        summary,
+        fullText,
+        keyPoints,
+        count,
+      });
+      usedProvider = "algoritmo_contingencia";
+      usedModel = "motor_seo_v1";
+    }
+
+    res.json({
+      generationMode: isFallback ? "algorithmic" : "ai",
+      isFallback,
+      fallbackReason: isFallback ? fallbackReason : undefined,
+      usedProvider,
+      usedModel,
+      packages,
+    });
+  } catch (error: any) {
+    console.error("Erro no /api/generate-seo:", error);
+    const fallbackPackages = generateBackendAlgorithmicSeo({
+      title: req.body.title,
+      hook: req.body.hook,
+      summary: req.body.summary,
+      fullText: req.body.fullText,
+      count: req.body.count || 5,
+    });
+    res.json({
+      generationMode: "algorithmic",
+      isFallback: true,
+      fallbackReason: error.message,
+      packages: fallbackPackages,
     });
   }
 });
@@ -1210,6 +2222,59 @@ Retorne em formato JSON:
     console.error("Erro ao gerar ideias virais:", error);
     res.status(500).json({
       error: error.message || "Falha ao gerar ideias virais.",
+      attemptsLogs: error.attemptsLogs || [],
+    });
+  }
+});
+
+// Endpoint: Synthesize Long Text / News for Visual Post Factory
+app.post("/api/synthesize-news-post", async (req, res) => {
+  try {
+    const { rawText, category } = req.body;
+    const { groqInput, openRouterInput } = extractKeysFromBody(req.body);
+
+    if (!rawText || !rawText.trim()) {
+      return res.status(400).json({ error: "Texto da notícia é obrigatório." });
+    }
+
+    const systemPrompt = `Você é um editor sênior de redes sociais e design de notícias. Sua função é transformar matérias, notícias e textos longos em posts visuais de alto impacto e legendas completas para o Instagram e TikTok. Responda ESTRITAMENTE em formato JSON válido.`;
+
+    const prompt = `
+Analise o seguinte texto/notícia e gere 4 variações distintas de posts prontos:
+TEXTO/NOTÍCIA:
+"""${rawText.slice(0, 4000)}"""
+
+REGRAS ESTRITAS DE SÍNTESE:
+1. "headline": Manchete curta para arte visual (MÁXIMO 12 PALAVRAS, em caixa alta/destaque, impactante, direta). NUNCA coloque parágrafos ou textos longos na headline!
+2. "badge": Categoria ou etiqueta curta de 1 a 3 palavras (ex: "URGENTE", "DECISÃO", "DIREITO TRABALHISTA", "ATENÇÃO", "SENADO FEDERAL", "ECONOMIA", "ALERTA").
+3. "searchKeywords": Array com 2 a 3 palavras-chave em inglês para buscar fotos de estoque relevantes (ex: ["government", "senate", "protest"] ou ["workers", "office", "labor"]).
+4. "caption": Legenda completa do post formatada com parágrafos bem espaçados, emojis atrativos, tópicos com os pontos principais ("📌 O QUE VOCÊ PRECISA SABER:"), chamada para comentários e 5 a 8 hashtags SEO (#noticias #direitodotrabalhador etc).
+
+Retorne em formato JSON:
+{
+  "variations": [
+    {
+      "headline": "APROVADO NA CCJ: O QUE MUDA COM A NOVA PEC?",
+      "badge": "URGENTE",
+      "searchKeywords": ["government", "voting", "senate"],
+      "caption": "🚨 URGENTE: A proposta acaba de avançar...\n\n📌 O QUE VOCÊ PRECISA SABER:\n- Ponto 1...\n- Ponto 2...\n\n💬 O que você acha dessa decisão? Deixe sua opinião nos comentários!\n\n#noticias #brasil #senadofederal"
+    }
+  ]
+}
+`;
+
+    const { data: parsed } = await executeWithDynamicFallback(
+      groqInput,
+      openRouterInput,
+      prompt,
+      systemPrompt
+    );
+
+    res.json(parsed);
+  } catch (error: any) {
+    console.error("Erro ao sintetizar notícia:", error);
+    res.status(500).json({
+      error: error.message || "Falha ao sintetizar notícia.",
       attemptsLogs: error.attemptsLogs || [],
     });
   }
@@ -1554,82 +2619,510 @@ Retorne no formato JSON:
   }
 });
 
-// Endpoint: Download & Extract Video from Links (TikTok, Reels, Shorts)
+// Endpoint: Download & Extract Video from Links (TikTok, Instagram, Facebook, YouTube Shorts, X)
 app.post("/api/download-media", async (req, res) => {
   try {
     const { url } = req.body;
     const { groqInput, openRouterInput } = extractKeysFromBody(req.body);
 
-    if (!url) {
+    if (!url || typeof url !== "string") {
       return res.status(400).json({ error: "O link do vídeo é obrigatório." });
     }
 
+    const cleanUrl = url.trim();
+
     // Determine platform
-    let platform = "tiktok";
-    if (url.includes("instagram.com")) platform = "instagram";
-    else if (url.includes("youtube.com") || url.includes("youtu.be")) platform = "youtube";
-    else if (url.includes("twitter.com") || url.includes("x.com")) platform = "twitter";
-
-    // Free extraction simulation & AI content analysis based on public URL metadata
-    const systemPrompt = `Você é um extrator de conteúdo e transcritor de vídeos curtos. Dado um link de vídeo do ${platform}, infira ou simule uma transcrição viral realista de alta performance baseada nos padrões virais atuais da plataforma. Responda em JSON.`;
-    const prompt = `
-O usuário forneceu o link de vídeo: "${url}" (${platform}).
-
-Gere a análise completa da mídia extraída:
-1. title: Título viral de impacto correspondente ao nicho provável do vídeo
-2. author: @nome.criador realista
-3. transcript: O texto completo da fala falada no vídeo (30 a 60 segundos de fala corrida em português)
-4. hookIdentified: A primeira frase impactante de 3 segundos
-5. summary: O que o vídeo ensina
-6. keyPoints: 3 insights principais
-
-Retorne no formato JSON:
-{
-  "title": "string",
-  "author": "@criador",
-  "transcript": "string",
-  "hookIdentified": "string",
-  "summary": "string",
-  "keyPoints": ["ponto 1", "ponto 2", "ponto 3"]
-}
-`;
-
-    const { data: analysis } = await executeWithDynamicFallback(
-      groqInput,
-      openRouterInput,
-      prompt,
-      systemPrompt
-    );
+    let platform: "tiktok" | "instagram" | "facebook" | "youtube" | "twitter" | "other" = "other";
+    if (cleanUrl.includes("tiktok.com")) platform = "tiktok";
+    else if (cleanUrl.includes("instagram.com")) platform = "instagram";
+    else if (cleanUrl.includes("facebook.com") || cleanUrl.includes("fb.watch") || cleanUrl.includes("fb.com")) platform = "facebook";
+    else if (cleanUrl.includes("youtube.com") || cleanUrl.includes("youtu.be")) platform = "youtube";
+    else if (cleanUrl.includes("twitter.com") || cleanUrl.includes("x.com")) platform = "twitter";
 
     const videoId = "media_" + Date.now();
+    const downloadDir = path.join(process.cwd(), "public", "downloads");
+    if (!fs.existsSync(downloadDir)) {
+      fs.mkdirSync(downloadDir, { recursive: true });
+    }
+
+    const videoOutPath = path.join(downloadDir, `${videoId}.mp4`);
+    const audioOutPath = path.join(downloadDir, `${videoId}.wav`);
+
+    let videoDownloaded = false;
+    let extractedTitle = `Vídeo ${platform.toUpperCase()}`;
+    let extractedAuthor = `@criador.${platform}`;
+    let extractedThumbnail = "";
+    let extractedDuration = "30s";
+    let extractedFileSize = "3.5 MB";
+    let extractedTranscript = "";
+
+    console.log(`[download-media] Iniciando download para plataforma [${platform}]: ${cleanUrl}`);
+
+    // Helper: Stream direct URL to file with timeout and size check
+    const streamToFile = async (sourceUrl: string, destPath: string, headers?: Record<string, string>): Promise<boolean> => {
+      try {
+        const streamRes = await fetch(sourceUrl, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            ...(headers || {})
+          },
+          signal: AbortSignal.timeout(45000),
+        });
+        if (!streamRes.ok) return false;
+        const arrayBuffer = await streamRes.arrayBuffer();
+        if (arrayBuffer.byteLength < 5000) return false;
+        fs.writeFileSync(destPath, Buffer.from(arrayBuffer));
+        return true;
+      } catch (err: any) {
+        console.warn(`[download-media:streamToFile] Erro ao gravar stream de ${sourceUrl}:`, err.message);
+        return false;
+      }
+    };
+
+    // 1. TIKTOK PIPELINE (TikWM -> SnapSave -> Btch -> yt-dlp)
+    if (platform === "tiktok" && !videoDownloaded) {
+      // 1.1 TikWM API (grátis, sem marca d'água)
+      try {
+        console.log(`[download-media] Tentando TikWM API para TikTok...`);
+        const tikwmRes = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(cleanUrl)}`, {
+          signal: AbortSignal.timeout(15000),
+        });
+        if (tikwmRes.ok) {
+          const tikData = await tikwmRes.json();
+          if (tikData.code === 0 && tikData.data?.play) {
+            extractedTitle = tikData.data.title || extractedTitle;
+            extractedAuthor = tikData.data.author?.unique_id ? `@${tikData.data.author.unique_id}` : (tikData.data.author?.nickname || extractedAuthor);
+            extractedThumbnail = tikData.data.cover || extractedThumbnail;
+            extractedDuration = tikData.data.duration ? `${tikData.data.duration}s` : extractedDuration;
+
+            const saved = await streamToFile(tikData.data.play, videoOutPath);
+            if (saved) {
+              videoDownloaded = true;
+              console.log(`[download-media] TikTok baixado via TikWM com sucesso!`);
+            }
+          }
+        }
+      } catch (tikErr: any) {
+        console.warn("[download-media] TikWM falhou:", tikErr.message);
+      }
+
+      // 1.2 SnapSave Fallback para TikTok
+      if (!videoDownloaded) {
+        try {
+          console.log(`[download-media] Tentando SnapSave para TikTok...`);
+          const { snapsave } = await import("snapsave-media-downloader");
+          const snapRes = await snapsave(cleanUrl);
+          if (snapRes?.success && Array.isArray(snapRes.data?.media) && snapRes.data.media.length > 0) {
+            const vid = snapRes.data.media.find((m: any) => m.type === "video" || m.url?.includes(".mp4")) || snapRes.data.media[0];
+            if (vid?.url) {
+              const saved = await streamToFile(vid.url, videoOutPath);
+              if (saved) {
+                videoDownloaded = true;
+                if (snapRes.data.preview) extractedThumbnail = snapRes.data.preview;
+                console.log(`[download-media] TikTok baixado via SnapSave com sucesso!`);
+              }
+            }
+          }
+        } catch (snapErr: any) {
+          console.warn("[download-media] SnapSave TikTok falhou:", snapErr.message);
+        }
+      }
+
+      // 1.3 Btch ttdl Fallback
+      if (!videoDownloaded) {
+        try {
+          const btch = require("btch-downloader");
+          if (typeof btch.ttdl === "function") {
+            const btchRes = await btch.ttdl(cleanUrl);
+            const ttUrl = btchRes?.video?.[0];
+            if (ttUrl) {
+              const saved = await streamToFile(ttUrl, videoOutPath);
+              if (saved) {
+                videoDownloaded = true;
+                if (btchRes.title) extractedTitle = btchRes.title;
+                console.log(`[download-media] TikTok baixado via Btch com sucesso!`);
+              }
+            }
+          }
+        } catch (btchErr: any) {
+          console.warn("[download-media] Btch TikTok falhou:", btchErr.message);
+        }
+      }
+    }
+
+    // 2. INSTAGRAM PIPELINE (SnapSave -> SaveInsta Token Scraper -> Btch igdl -> yt-dlp)
+    if (platform === "instagram" && !videoDownloaded) {
+      // 2.1 SnapSave para Instagram
+      try {
+        console.log(`[download-media] Tentando SnapSave para Instagram...`);
+        const { snapsave } = await import("snapsave-media-downloader");
+        const snapRes = await snapsave(cleanUrl);
+        if (snapRes?.success && Array.isArray(snapRes.data?.media) && snapRes.data.media.length > 0) {
+          const vid = snapRes.data.media.find((m: any) => m.type === "video" || m.url?.includes(".mp4")) || snapRes.data.media[0];
+          if (vid?.url) {
+            const saved = await streamToFile(vid.url, videoOutPath);
+            if (saved) {
+              videoDownloaded = true;
+              extractedTitle = snapRes.data.description?.slice(0, 100) || "Vídeo Instagram Reel";
+              if (snapRes.data.preview || vid.thumbnail) extractedThumbnail = snapRes.data.preview || vid.thumbnail;
+              console.log(`[download-media] Instagram baixado via SnapSave com sucesso!`);
+            }
+          }
+        }
+      } catch (snapErr: any) {
+        console.warn("[download-media] SnapSave Instagram falhou:", snapErr.message);
+      }
+
+      // 2.2 SaveInsta Token Pipeline para Instagram
+      if (!videoDownloaded) {
+        try {
+          console.log(`[download-media] Tentando SaveInsta API para Instagram...`);
+          const res1 = await fetch("https://saveinsta.to/en/highlights", {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+              "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            },
+            signal: AbortSignal.timeout(10000),
+          });
+          const html1 = await res1.text();
+          const k_exp = html1.match(/k_exp\s*=\s*"([^"]+)"/)?.[1];
+          const k_token = html1.match(/k_token\s*=\s*"([^"]+)"/)?.[1];
+
+          if (k_exp && k_token) {
+            const res2 = await fetch("https://saveinsta.to/api/userverify", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                "Origin": "https://saveinsta.to",
+                "Referer": "https://saveinsta.to/en/video",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "X-Requested-With": "XMLHttpRequest",
+              },
+              body: new URLSearchParams({ url: cleanUrl }).toString(),
+              signal: AbortSignal.timeout(10000),
+            });
+            const cfData = await res2.json();
+
+            if (cfData?.token) {
+              const res3 = await fetch("https://saveinsta.to/api/ajaxSearch", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                  "Origin": "https://saveinsta.to",
+                  "Referer": "https://saveinsta.to/en/highlights",
+                  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+                  "X-Requested-With": "XMLHttpRequest",
+                },
+                body: new URLSearchParams({
+                  k_exp,
+                  k_token,
+                  q: cleanUrl,
+                  t: "media",
+                  lang: "en",
+                  v: "v2",
+                  cftoken: cfData.token,
+                }).toString(),
+                signal: AbortSignal.timeout(15000),
+              });
+              const finalData = await res3.json();
+
+              if (finalData?.data) {
+                const $ = cheerio.load(finalData.data);
+                const downloadUrl = $("ul.download-box li .download-items__btn a[href]").first().attr("href");
+                const thumbUrl = $("ul.download-box li .download-items__thumb img").first().attr("src");
+
+                if (downloadUrl) {
+                  const saved = await streamToFile(downloadUrl, videoOutPath);
+                  if (saved) {
+                    videoDownloaded = true;
+                    if (thumbUrl) extractedThumbnail = thumbUrl;
+                    console.log(`[download-media] Instagram baixado via SaveInsta com sucesso!`);
+                  }
+                }
+              }
+            }
+          }
+        } catch (siErr: any) {
+          console.warn("[download-media] SaveInsta falhou:", siErr.message);
+        }
+      }
+
+      // 2.3 Btch igdl Fallback
+      if (!videoDownloaded) {
+        try {
+          const btch = require("btch-downloader");
+          if (typeof btch.igdl === "function") {
+            const igRes = await btch.igdl(cleanUrl);
+            const igUrl = igRes?.result?.[0]?.url || igRes?.url?.[0];
+            if (igUrl) {
+              const saved = await streamToFile(igUrl, videoOutPath);
+              if (saved) {
+                videoDownloaded = true;
+                console.log(`[download-media] Instagram baixado via Btch com sucesso!`);
+              }
+            }
+          }
+        } catch (btchErr: any) {
+          console.warn("[download-media] Btch Instagram falhou:", btchErr.message);
+        }
+      }
+    }
+
+    // 3. FACEBOOK PIPELINE (SnapSave -> Btch fbdown -> yt-dlp)
+    if (platform === "facebook" && !videoDownloaded) {
+      // 3.1 SnapSave para Facebook
+      try {
+        console.log(`[download-media] Tentando SnapSave para Facebook...`);
+        const { snapsave } = await import("snapsave-media-downloader");
+        const snapRes = await snapsave(cleanUrl);
+        if (snapRes?.success && Array.isArray(snapRes.data?.media) && snapRes.data.media.length > 0) {
+          const vid = snapRes.data.media.find((m: any) => m.type === "video" || m.url?.includes(".mp4")) || snapRes.data.media[0];
+          if (vid?.url) {
+            const saved = await streamToFile(vid.url, videoOutPath);
+            if (saved) {
+              videoDownloaded = true;
+              extractedTitle = snapRes.data.description?.slice(0, 100) || "Vídeo Facebook";
+              if (snapRes.data.preview || vid.thumbnail) extractedThumbnail = snapRes.data.preview || vid.thumbnail;
+              console.log(`[download-media] Facebook baixado via SnapSave com sucesso!`);
+            }
+          }
+        }
+      } catch (snapErr: any) {
+        console.warn("[download-media] SnapSave Facebook falhou:", snapErr.message);
+      }
+
+      // 3.2 Btch fbdown Fallback
+      if (!videoDownloaded) {
+        try {
+          const btch = require("btch-downloader");
+          if (typeof btch.fbdown === "function") {
+            const fbRes = await btch.fbdown(cleanUrl);
+            const fbUrl = fbRes?.result?.[0]?.url || fbRes?.Normal_video || fbRes?.HD;
+            if (fbUrl) {
+              const saved = await streamToFile(fbUrl, videoOutPath);
+              if (saved) {
+                videoDownloaded = true;
+                console.log(`[download-media] Facebook baixado via Btch com sucesso!`);
+              }
+            }
+          }
+        } catch (btchErr: any) {
+          console.warn("[download-media] Btch Facebook falhou:", btchErr.message);
+        }
+      }
+    }
+
+    // 4. TWITTER / X PIPELINE (SnapSave -> yt-dlp)
+    if (platform === "twitter" && !videoDownloaded) {
+      try {
+        const { snapsave } = await import("snapsave-media-downloader");
+        const snapRes = await snapsave(cleanUrl);
+        if (snapRes?.success && Array.isArray(snapRes.data?.media) && snapRes.data.media.length > 0) {
+          const vid = snapRes.data.media[0];
+          if (vid?.url) {
+            const saved = await streamToFile(vid.url, videoOutPath);
+            if (saved) {
+              videoDownloaded = true;
+              if (snapRes.data.preview) extractedThumbnail = snapRes.data.preview;
+              console.log(`[download-media] Twitter/X baixado via SnapSave com sucesso!`);
+            }
+          }
+        }
+      } catch (snapErr: any) {
+        console.warn("[download-media] SnapSave Twitter falhou:", snapErr.message);
+      }
+    }
+
+    // 5. YT-DLP FALLBACK (Para YouTube Shorts e fallback geral)
+    if (!videoDownloaded) {
+      try {
+        console.log(`[download-media] Tentando yt-dlp fallback para link: ${cleanUrl}`);
+        
+        // Pega metadados primeiro
+        try {
+          const metaResult = await execFileAsync("yt-dlp", [
+            "--dump-json",
+            "--no-playlist",
+            "--no-warnings",
+            "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            cleanUrl,
+          ], { timeout: 25000 });
+
+          if (metaResult.stdout) {
+            const meta = JSON.parse(metaResult.stdout);
+            if (meta.title) extractedTitle = meta.title;
+            if (meta.uploader || meta.channel) extractedAuthor = `@${meta.uploader || meta.channel}`;
+            if (meta.thumbnail) extractedThumbnail = meta.thumbnail;
+            if (meta.duration) {
+              extractedDuration = meta.duration < 60 ? `${Math.round(meta.duration)}s` : `${Math.floor(meta.duration / 60)}m ${Math.round(meta.duration % 60)}s`;
+            }
+          }
+        } catch (metaErr) {
+          console.warn("[download-media] Falha ao extrair metadados JSON via yt-dlp:", metaErr);
+        }
+
+        // Baixa o vídeo real
+        const dlArgs = [
+          "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+          "--no-playlist",
+          "--no-warnings",
+          "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "-o", videoOutPath,
+          cleanUrl,
+        ];
+        await execFileAsync("yt-dlp", dlArgs, { timeout: 60000 });
+
+        if (fs.existsSync(videoOutPath) && fs.statSync(videoOutPath).size > 10000) {
+          videoDownloaded = true;
+          console.log(`[download-media] Vídeo baixado com sucesso via yt-dlp!`);
+        }
+      } catch (ytdlpErr: any) {
+        console.warn("[download-media] yt-dlp falhou:", ytdlpErr.message);
+      }
+    }
+
+    // Se o vídeo não pôde ser baixado por nenhum motor:
+    if (!videoDownloaded || !fs.existsSync(videoOutPath) || fs.statSync(videoOutPath).size < 5000) {
+      return res.status(400).json({
+        error: `Não foi possível extrair a mídia de "${cleanUrl}". Verifique se o perfil ou publicação é público e se o link pertence ao TikTok, Instagram ou Facebook.`
+      });
+    }
+
+    const sizeMb = (fs.statSync(videoOutPath).size / (1024 * 1024)).toFixed(1);
+    extractedFileSize = `${sizeMb} MB`;
+    console.log(`[download-media] Vídeo salvo com sucesso: ${sizeMb} MB no caminho ${videoOutPath}`);
+
+    // 6. EXTRAIR ÁUDIO E TRANSCREVER
+    try {
+      // Extrai áudio WAV 16kHz mono via ffmpeg
+      await execFileAsync("ffmpeg", [
+        "-i", videoOutPath,
+        "-ar", "16000",
+        "-ac", "1",
+        "-vn",
+        "-y",
+        audioOutPath,
+      ], { timeout: 30000 });
+
+      if (fs.existsSync(audioOutPath) && fs.statSync(audioOutPath).size > 1000) {
+        // 6.1 Tentativa com Groq Whisper gratuito
+        const groqPool = normalizeKeyPool(groqInput, process.env.GROQ_API_KEY);
+        for (const key of groqPool) {
+          try {
+            const audioBuffer = fs.readFileSync(audioOutPath);
+            const boundary = "----WebKitFormBoundary" + Math.random().toString(36).substring(2);
+            const formDataParts = [
+              `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="audio.wav"\r\nContent-Type: audio/wav\r\n\r\n`,
+              audioBuffer,
+              `\r\n--${boundary}\r\nContent-Disposition: form-data; name="model"\r\n\r\nwhisper-large-v3\r\n`,
+              `--${boundary}\r\nContent-Disposition: form-data; name="response_format"\r\n\r\njson\r\n`,
+              `--${boundary}\r\nContent-Disposition: form-data; name="language"\r\n\r\npt\r\n`,
+              `--${boundary}--\r\n`,
+            ];
+
+            const totalLength = formDataParts.reduce((acc, part) => acc + (typeof part === "string" ? Buffer.byteLength(part) : part.length), 0);
+            const fullBody = Buffer.concat(formDataParts.map(part => typeof part === "string" ? Buffer.from(part) : part), totalLength);
+
+            const groqRes = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${key}`,
+                "Content-Type": `multipart/form-data; boundary=${boundary}`,
+              },
+              body: fullBody,
+            });
+
+            if (groqRes.ok) {
+              const groqData = await groqRes.json();
+              if (groqData.text) {
+                extractedTranscript = groqData.text.trim();
+                console.log(`[download-media] Áudio transcrito com Groq Whisper gratuito (${extractedTranscript.length} chars)`);
+                break;
+              }
+            }
+          } catch (wErr) {
+            console.warn("[download-media] Groq Whisper falhou:", wErr);
+          }
+        }
+
+        // 6.2 Tentativa de transcrição com Gemini Audio (se Whisper não transcreveu)
+        if (!extractedTranscript && process.env.GEMINI_API_KEY) {
+          try {
+            console.log("[download-media] Transcrevendo áudio com Gemini 2.5 Flash...");
+            const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+            const audioBuffer = fs.readFileSync(audioOutPath);
+            const base64Audio = audioBuffer.toString("base64");
+
+            const geminiAudioRes = await ai.models.generateContent({
+              model: "gemini-2.5-flash",
+              contents: [
+                {
+                  role: "user",
+                  parts: [
+                    { inlineData: { mimeType: "audio/wav", data: base64Audio } },
+                    { text: "Transcreva todo o áudio falado neste vídeo em português do Brasil com fidelidade máxima. Se houver falas, transcreva cada palavra. Retorne apenas o texto transcrito, sem introduções ou observações." }
+                  ]
+                }
+              ]
+            });
+
+            if (geminiAudioRes.text) {
+              extractedTranscript = geminiAudioRes.text.trim();
+              console.log(`[download-media] Áudio transcrito com Gemini 2.5 Flash (${extractedTranscript.length} chars)`);
+            }
+          } catch (geminiAudioErr: any) {
+            console.warn("[download-media] Gemini Audio transcription falhou:", geminiAudioErr.message);
+          }
+        }
+      }
+    } catch (audioErr: any) {
+      console.warn("[download-media] Falha ao extrair/transcrever áudio:", audioErr.message);
+    }
+
+    // 7. FALLBACK CASO O VÍDEO NÃO TENHA FALA IDENTIFICADA
+    if (!extractedTranscript) {
+      extractedTranscript = `Este vídeo aborda: ${extractedTitle}. Veja a mídia salva e use as ideias centrais para criar seu novo roteiro remodelado.`;
+    }
+
+    const words = extractedTranscript.split(/\s+/).filter(Boolean);
+    const sentences = extractedTranscript.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 5);
+    const hookIdentified = sentences[0] || extractedTitle;
+    const summary = sentences.slice(0, 3).join(". ") || extractedTitle;
+    const keyPoints = sentences.slice(0, 4).length >= 2 
+      ? sentences.slice(0, 4) 
+      : ["Gancho inicial do vídeo original", "Tópico central identificado", "Conclusão e chamada para ação"];
+
+    const publicMediaUrl = `/downloads/${path.basename(videoOutPath)}`;
+    const publicThumbUrl = extractedThumbnail || "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=600&auto=format&fit=crop&q=80";
+
     const mediaObj = {
       id: videoId,
-      title: analysis.title || "Vídeo Extraído por Link",
-      author: analysis.author || "@creator.viral",
-      originalUrl: url,
+      title: extractedTitle,
+      author: extractedAuthor,
+      originalUrl: cleanUrl,
       platform,
-      mediaUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-      thumbnailUrl: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=600&auto=format&fit=crop&q=80",
-      duration: "48s",
-      fileSize: "5.8 MB",
-      transcript: analysis.transcript,
+      mediaUrl: publicMediaUrl,
+      thumbnailUrl: publicThumbUrl,
+      duration: extractedDuration,
+      fileSize: extractedFileSize,
+      transcript: extractedTranscript,
       createdAt: new Date().toISOString(),
       status: "ideia",
     };
 
     const transcriptObj = {
       id: "transc_link_" + Date.now(),
-      title: analysis.title,
-      fullText: analysis.transcript,
-      summary: analysis.summary,
-      keyPoints: analysis.keyPoints,
-      hookIdentified: analysis.hookIdentified,
-      originalDuration: "48s",
-      wordCount: analysis.transcript.split(/\s+/).filter(Boolean).length,
+      title: extractedTitle,
+      fullText: extractedTranscript,
+      summary,
+      keyPoints,
+      hookIdentified,
+      originalDuration: extractedDuration,
+      wordCount: words.length,
       sourceType: "download_link",
-      sourceUrl: url,
-      mediaUrl: mediaObj.mediaUrl,
-      thumbnailUrl: mediaObj.thumbnailUrl,
+      sourceUrl: cleanUrl,
+      mediaUrl: publicMediaUrl,
+      thumbnailUrl: publicThumbUrl,
       createdAt: new Date().toISOString(),
     };
 

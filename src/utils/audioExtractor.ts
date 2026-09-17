@@ -15,6 +15,51 @@ export interface ExtractedAudioResult {
 }
 
 /**
+ * Extracts raw 16kHz mono Float32Array audio samples from a video or audio file.
+ * This is the exact format required by the local Whisper WebAssembly model (Transformers.js).
+ */
+export async function extractAudioFloat32Mono(
+  file: File | Blob,
+  targetSampleRate = 16000
+): Promise<{ samples: Float32Array; duration: number }> {
+  const arrayBuffer = await file.arrayBuffer();
+  const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
+  const audioCtx = new AudioCtxClass();
+
+  const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+  const numChannels = audioBuffer.numberOfChannels;
+  let monoSamples: Float32Array;
+
+  if (numChannels > 1) {
+    monoSamples = new Float32Array(audioBuffer.length);
+    for (let c = 0; c < numChannels; c++) {
+      const cData = audioBuffer.getChannelData(c);
+      for (let i = 0; i < audioBuffer.length; i++) {
+        monoSamples[i] += cData[i] / numChannels;
+      }
+    }
+  } else {
+    monoSamples = audioBuffer.getChannelData(0);
+  }
+
+  // Resample to 16kHz if necessary
+  if (audioBuffer.sampleRate === targetSampleRate) {
+    return { samples: monoSamples, duration: audioBuffer.duration };
+  }
+
+  const ratio = audioBuffer.sampleRate / targetSampleRate;
+  const newLength = Math.round(monoSamples.length / ratio);
+  const resampled = new Float32Array(newLength);
+
+  for (let i = 0; i < newLength; i++) {
+    const srcIndex = Math.floor(i * ratio);
+    resampled[i] = monoSamples[srcIndex] || 0;
+  }
+
+  return { samples: resampled, duration: audioBuffer.duration };
+}
+
+/**
  * Encodes an AudioBuffer into standard 16-bit PCM WAV format.
  */
 function encodeWav(audioBuffer: AudioBuffer, targetSampleRate = 16000): Blob {

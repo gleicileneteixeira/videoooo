@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import {
   Sparkles,
@@ -27,6 +27,12 @@ import {
   Cpu,
   CheckCircle2,
   AlertTriangle,
+  Grid3X3,
+  Shuffle,
+  Film,
+  Mic,
+  ArrowRight,
+  ListVideo,
 } from 'lucide-react';
 import { ViralScript, ScriptHook, ScriptScene, ExtractedTranscript } from '../types';
 import { TeleprompterModal } from './TeleprompterModal';
@@ -39,6 +45,7 @@ interface ScriptViewerProps {
   isRemixing: boolean;
   onSelectAnotherHook: (hookIndex: number) => void;
   onNewScriptClick: () => void;
+  onNavigateToMerger?: () => void;
 }
 
 export const ScriptViewer: React.FC<ScriptViewerProps> = ({
@@ -48,28 +55,133 @@ export const ScriptViewer: React.FC<ScriptViewerProps> = ({
   isRemixing,
   onSelectAnotherHook,
   onNewScriptClick,
+  onNavigateToMerger,
 }) => {
-  const [activeTab, setActiveTab] = useState<'four_parts' | 'timeline' | 'hooks' | 'post_kit' | 'prompter_text' | 'engine_logs'>('four_parts');
+  const [activeTab, setActiveTab] = useState<'matrix' | 'four_parts' | 'timeline' | 'hooks' | 'post_kit' | 'prompter_text' | 'engine_logs'>(
+    script.modularMatrix && script.modularMatrix.quantity > 1 ? 'matrix' : 'four_parts'
+  );
   const [isTeleprompterOpen, setIsTeleprompterOpen] = useState(false);
   const [isSeoModalOpen, setIsSeoModalOpen] = useState(false);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
   const [currentStatus, setCurrentStatus] = useState(script.status || 'ideia');
   const [isFav, setIsFav] = useState(script.isFavorite || false);
 
-  const selectedHook = script.hooks[script.selectedHookIndex || 0] || script.hooks[0];
+  // Modular Matrix active selection state
+  const [selectedMatrixIndices, setSelectedMatrixIndices] = useState({
+    hookIndex: script.modularMatrix?.selectedIndices?.hookIndex ?? (script.selectedHookIndex || 0),
+    painIndex: script.modularMatrix?.selectedIndices?.painIndex ?? 0,
+    solutionIndex: script.modularMatrix?.selectedIndices?.solutionIndex ?? 0,
+    ctaIndex: script.modularMatrix?.selectedIndices?.ctaIndex ?? 0,
+  });
+
+  // Sync state whenever script prop updates
+  useEffect(() => {
+    setSelectedMatrixIndices({
+      hookIndex: script.modularMatrix?.selectedIndices?.hookIndex ?? (script.selectedHookIndex || 0),
+      painIndex: script.modularMatrix?.selectedIndices?.painIndex ?? 0,
+      solutionIndex: script.modularMatrix?.selectedIndices?.solutionIndex ?? 0,
+      ctaIndex: script.modularMatrix?.selectedIndices?.ctaIndex ?? 0,
+    });
+    if (script.modularMatrix && script.modularMatrix.quantity > 1) {
+      setActiveTab('matrix');
+    }
+  }, [script.id]);
+
+  const selectedHook = script.hooks[selectedMatrixIndices.hookIndex] || script.hooks[0];
+
+  // Active modular blocks based on current selection
+  const activeHook = script.modularMatrix?.hooks[selectedMatrixIndices.hookIndex] || {
+    id: 'hook_0',
+    text: selectedHook?.spokenText || script.fourParts?.hookPart?.audioScript || '',
+    visualCue: selectedHook?.visualAction || script.fourParts?.hookPart?.visualCue || 'Olhar fixo na câmera com corte rápido',
+    textOnScreen: selectedHook?.textOnScreen || script.fourParts?.hookPart?.textOnScreen || '',
+  };
+
+  const activePain = script.modularMatrix?.pains[selectedMatrixIndices.painIndex] || {
+    id: 'pain_0',
+    text: script.fourParts?.storyPainPart?.audioScript || script.scenes[1]?.audioScript || '',
+    visualCue: script.fourParts?.storyPainPart?.visualCue || script.scenes[1]?.visualCue || 'Expressão séria, aproximação de zoom digital',
+    textOnScreen: script.fourParts?.storyPainPart?.textOnScreen || script.scenes[1]?.textOnScreen || 'O PROBLEMA REAL',
+  };
+
+  const activeSolution = script.modularMatrix?.solutions[selectedMatrixIndices.solutionIndex] || {
+    id: 'solution_0',
+    text: script.fourParts?.developmentPart?.audioScript || script.scenes[2]?.audioScript || '',
+    visualCue: script.fourParts?.developmentPart?.visualCue || script.scenes[2]?.visualCue || 'B-roll na tela / demonstração prática',
+    textOnScreen: script.fourParts?.developmentPart?.textOnScreen || script.scenes[2]?.textOnScreen || 'O MÉTODO PRÁTICO',
+  };
+
+  const activeCta = script.modularMatrix?.ctas[selectedMatrixIndices.ctaIndex] || {
+    id: 'cta_0',
+    text: script.fourParts?.solutionCtaPart?.audioScript || script.scenes[3]?.audioScript || '',
+    visualCue: script.fourParts?.solutionCtaPart?.visualCue || script.scenes[3]?.visualCue || 'Apontar para o botão de salvar / texto em destaque',
+    textOnScreen: script.fourParts?.solutionCtaPart?.textOnScreen || script.scenes[3]?.textOnScreen || 'SALVE AGORA',
+  };
+
+  const activeFullTeleprompterText = useMemo(() => {
+    return `[PAUSA 0.5s] ${activeHook.text} [ENFASE]\n\n[PAUSA 0.8s] ${activePain.text}\n\n[PAUSA 0.5s] ${activeSolution.text}\n\n[ENFASE] ${activeCta.text}`;
+  }, [activeHook.text, activePain.text, activeSolution.text, activeCta.text]);
+
+  const fourParts = useMemo(() => {
+    return {
+      hookPart: {
+        title: 'Parte 1: Gancho Magnético',
+        timecode: script.fourParts?.hookPart?.timecode || '00:00 - 00:03',
+        audioScript: activeHook.text,
+        visualCue: activeHook.visualCue || 'Olhar fixo na câmera com corte rápido',
+        textOnScreen: activeHook.textOnScreen || '',
+        hookTrigger: 'Quebra de padrão visual e curiosidade extrema',
+      },
+      storyPainPart: {
+        title: 'Parte 2: A Dor da História',
+        timecode: script.fourParts?.storyPainPart?.timecode || '00:03 - 00:15',
+        audioScript: activePain.text,
+        visualCue: activePain.visualCue || 'Expressão séria, aproximação de zoom digital',
+        textOnScreen: activePain.textOnScreen || 'O ERRO QUE VOCÊ COMETE',
+        painPoint: 'Identificação imediata com o problema',
+      },
+      developmentPart: {
+        title: 'Parte 3: Desenvolvimento & Revelação',
+        timecode: script.fourParts?.developmentPart?.timecode || '00:15 - 00:35',
+        audioScript: activeSolution.text,
+        visualCue: activeSolution.visualCue || 'B-roll na tela / demonstração prática',
+        textOnScreen: activeSolution.textOnScreen || 'O PASSO A PASSO',
+        keyInsight: 'Método simplificado de fácil aplicação',
+      },
+      solutionCtaPart: {
+        title: 'Parte 4: Solução & Chamada para Ação (CTA)',
+        timecode: script.fourParts?.solutionCtaPart?.timecode || '00:35 - 00:50',
+        audioScript: activeCta.text,
+        visualCue: activeCta.visualCue || 'Apontar para o botão de salvar / texto em destaque',
+        textOnScreen: activeCta.textOnScreen || 'SALVE PARA NÃO ESQUECER',
+        ctaAction: 'Salvar o vídeo e deixar opinião nos comentários',
+      },
+    };
+  }, [activeHook, activePain, activeSolution, activeCta, script.fourParts]);
+
+  // Teleprompter assembled script object reflecting active puzzle configuration
+  const assembledScriptForTeleprompter: ViralScript = useMemo(() => {
+    return {
+      ...script,
+      selectedHookIndex: selectedMatrixIndices.hookIndex,
+      fourParts,
+      fullTeleprompterText: activeFullTeleprompterText,
+    };
+  }, [script, selectedMatrixIndices, fourParts, activeFullTeleprompterText]);
 
   const transcriptForSeo: ExtractedTranscript = {
     id: `viewer_${script.id}`,
     title: script.title,
-    fullText: script.fullTeleprompterText || script.title,
+    fullText: activeFullTeleprompterText || script.fullTeleprompterText || script.title,
     summary: script.captionAndPost?.captionBody || `Roteiro viral para ${script.platform} sobre ${script.niche}.`,
-    hookIdentified: selectedHook?.spokenText || script.title,
-    wordCount: (script.fullTeleprompterText || '').split(/\s+/).filter(Boolean).length,
+    hookIdentified: activeHook.text || selectedHook?.spokenText || script.title,
+    wordCount: (activeFullTeleprompterText || '').split(/\s+/).filter(Boolean).length,
     sourceType: 'upload_video',
     keyPoints: [
-      `Gancho: ${selectedHook?.spokenText || ''}`,
-      `Tema: ${script.title}`,
-      `Nicho: ${script.niche}`,
+      `Gancho: ${activeHook.text}`,
+      `Dor: ${activePain.text}`,
+      `Solução: ${activeSolution.text}`,
+      `CTA: ${activeCta.text}`,
     ],
     createdAt: script.createdAt,
   };
@@ -85,73 +197,179 @@ export const ScriptViewer: React.FC<ScriptViewerProps> = ({
     const content = `
 === ${script.title.toUpperCase()} ===
 Plataforma: ${script.platform.toUpperCase()} | Duração: ${script.duration} | Nicho: ${script.niche}
+Combinação Montada na Matriz: Gancho #${selectedMatrixIndices.hookIndex + 1} + Dor #${selectedMatrixIndices.painIndex + 1} + Solução #${selectedMatrixIndices.solutionIndex + 1} + CTA #${selectedMatrixIndices.ctaIndex + 1}
 
 ESTRUTURA DE 4 PARTES:
 1. GANCHO (0-3s):
-Fala: "${selectedHook ? selectedHook.spokenText : ''}"
-Ação Visual: ${selectedHook ? selectedHook.visualAction : ''}
-Texto na Tela: ${selectedHook ? selectedHook.textOnScreen : ''}
+Fala: "${activeHook.text}"
+Ação Visual: ${activeHook.visualCue || ''}
+Texto na Tela: ${activeHook.textOnScreen || ''}
 
 2. A DOR DA HISTÓRIA (3-15s):
-${script.fourParts?.storyPainPart?.audioScript || script.scenes[1]?.audioScript || ''}
+${activePain.text}
 
 3. DESENVOLVIMENTO (15-35s):
-${script.fourParts?.developmentPart?.audioScript || script.scenes[2]?.audioScript || ''}
+${activeSolution.text}
 
 4. SOLUÇÃO & CTA (35-50s):
-${script.fourParts?.solutionCtaPart?.audioScript || script.scenes[3]?.audioScript || ''}
+${activeCta.text}
 
 --- TEXTO COMPLETO PARA TELEPROMPTER ---
-${script.fullTeleprompterText}
+${activeFullTeleprompterText}
 
 --- LEGENDA & HASHTAGS ---
-${script.captionAndPost.headline}
-${script.captionAndPost.captionBody}
-${script.captionAndPost.callToAction}
+${script.captionAndPost?.headline || ''}
+${script.captionAndPost?.captionBody || ''}
+${script.captionAndPost?.callToAction || ''}
 
-${[...script.hashtags.megaViral, ...script.hashtags.nicheSpecific, ...script.hashtags.lowCompetition].join(' ')}
+${[...(script.hashtags?.megaViral || []), ...(script.hashtags?.nicheSpecific || []), ...(script.hashtags?.lowCompetition || [])].join(' ')}
 `;
 
     handleCopy(content.trim(), 'full_script');
   };
 
-  const fourParts = script.fourParts || {
-    hookPart: {
-      title: 'Parte 1: Gancho Magnético',
-      timecode: '00:00 - 00:03',
-      audioScript: selectedHook?.spokenText || script.scenes[0]?.audioScript || '',
-      visualCue: selectedHook?.visualAction || script.scenes[0]?.visualCue || 'Olhar fixo na câmera com corte rápido',
-      textOnScreen: selectedHook?.textOnScreen || script.scenes[0]?.textOnScreen || '',
-      hookTrigger: selectedHook?.retentionTrigger || 'Quebra de padrão visual e curiosidade extrema',
-    },
-    storyPainPart: {
-      title: 'Parte 2: A Dor da História',
-      timecode: '00:03 - 00:15',
-      audioScript: script.scenes[1]?.audioScript || 'Apresentação do erro invisível e a dor real sentida pela audiência.',
-      visualCue: script.scenes[1]?.visualCue || 'Expressão séria, aproximação de zoom digital',
-      textOnScreen: script.scenes[1]?.textOnScreen || 'O ERRO QUE VOCÊ COMETE',
-      painPoint: 'Identificação imediata com o problema',
-    },
-    developmentPart: {
-      title: 'Parte 3: Desenvolvimento & Revelação',
-      timecode: '00:15 - 00:35',
-      audioScript: script.scenes[2]?.audioScript || 'O método prático em passos rápidos sem enrolação.',
-      visualCue: script.scenes[2]?.visualCue || 'B-roll na tela / demonstração prática',
-      textOnScreen: script.scenes[2]?.textOnScreen || 'O PASSO A PASSO',
-      keyInsight: 'Método simplificado de fácil aplicação',
-    },
-    solutionCtaPart: {
-      title: 'Parte 4: Solução & Chamada para Ação (CTA)',
-      timecode: '00:35 - 00:50',
-      audioScript: script.scenes[3]?.audioScript || 'A conclusão poderosa com chamada irresistível para salvar/comentar.',
-      visualCue: script.scenes[3]?.visualCue || 'Apontar para o botão de salvar / texto em destaque',
-      textOnScreen: script.scenes[3]?.textOnScreen || 'SALVE PARA NÃO ESQUECER',
-      ctaAction: 'Salvar o vídeo e deixar opinião nos comentários',
-    },
+  // State to hold target text and title when opening the teleprompter
+  const [teleprompterTarget, setTeleprompterTarget] = useState<{ text: string; title: string }>({
+    text: '',
+    title: '',
+  });
+
+  const allVariationsTeleprompterText = useMemo(() => {
+    if (!script.modularMatrix) return activeFullTeleprompterText;
+    const { hooks, pains, solutions, ctas } = script.modularMatrix;
+    let out = `=== GRAVAÇÃO DE TODAS AS PEÇAS DO ROTEIRO ===\nTema: ${script.title}\nTotal: ${hooks.length} Ganchos • ${pains.length} Dores • ${solutions.length} Soluções • ${ctas.length} CTAs\n\n`;
+
+    out += `==============================================\n`;
+    out += `1. BLOCO DE GANCHOS MAGNÉTICOS (0-3s)\n`;
+    out += `(Grave cada opção com corte rápido olhando fixo para a câmera)\n`;
+    out += `==============================================\n\n`;
+    hooks.forEach((h, i) => {
+      out += `[GANCHO #${i + 1}] Visual: ${h.visualCue || 'Corte rápido'}\n`;
+      out += `"${h.text}"\n\n`;
+    });
+
+    out += `==============================================\n`;
+    out += `2. BLOCO A DOR DA HISTÓRIA (3-15s)\n`;
+    out += `(Grave cada opção com tom sério e identificação imediata)\n`;
+    out += `==============================================\n\n`;
+    pains.forEach((p, i) => {
+      out += `[DOR #${i + 1}] Expressão: ${p.visualCue || 'Expressão séria'}\n`;
+      out += `${p.text}\n\n`;
+    });
+
+    out += `==============================================\n`;
+    out += `3. BLOCO DESENVOLVIMENTO & SOLUÇÃO (15-35s)\n`;
+    out += `(Grave cada opção com energia e clareza prática)\n`;
+    out += `==============================================\n\n`;
+    solutions.forEach((s, i) => {
+      out += `[SOLUÇÃO #${i + 1}] B-roll: ${s.visualCue || 'Demonstração prática'}\n`;
+      out += `${s.text}\n\n`;
+    });
+
+    out += `==============================================\n`;
+    out += `4. BLOCO SOLUÇÃO & CTA (35-50s)\n`;
+    out += `(Grave cada opção apontando ou chamando para ação firme)\n`;
+    out += `==============================================\n\n`;
+    ctas.forEach((c, i) => {
+      out += `[CTA #${i + 1}] Gesto: ${c.visualCue || 'Apontar para o botão'}\n`;
+      out += `"${c.text}"\n\n`;
+    });
+
+    out += `=== FIM DA GRAVAÇÃO: LEVE OS VÍDEOS GRAVADOS PARA A ABA JUNÇÃO DE VÍDEOS ===\n`;
+    return out;
+  }, [script, activeFullTeleprompterText]);
+
+  const openTeleprompterWith = (text?: string, title?: string) => {
+    setTeleprompterTarget({
+      text: text || activeFullTeleprompterText,
+      title: title || script.title,
+    });
+    setIsTeleprompterOpen(true);
   };
+
+  const handleRandomizeCombination = () => {
+    if (!script.modularMatrix) return;
+    const hCount = script.modularMatrix.hooks.length;
+    const pCount = script.modularMatrix.pains.length;
+    const sCount = script.modularMatrix.solutions.length;
+    const cCount = script.modularMatrix.ctas.length;
+
+    const newIndices = {
+      hookIndex: Math.floor(Math.random() * hCount),
+      painIndex: Math.floor(Math.random() * pCount),
+      solutionIndex: Math.floor(Math.random() * sCount),
+      ctaIndex: Math.floor(Math.random() * cCount),
+    };
+    setSelectedMatrixIndices(newIndices);
+    onSelectAnotherHook(newIndices.hookIndex);
+    confetti({ particleCount: 50, spread: 70, origin: { y: 0.7 } });
+  };
+
+  const isGeneratedWithAi =
+    script.generationMode === 'ai' ||
+    (!script.generationMode &&
+      script.generationMetadata?.usedProvider &&
+      !script.generationMetadata.usedProvider.includes('algoritmo'));
+  const isFallback = !!(script.isFallbackAlgorithmic || script.generationMetadata?.isFallbackAlgorithmic);
 
   return (
     <div className="space-y-6">
+      {/* Top Banner: Status de Geração (Verde com IA vs Amarelo com Atenção sem IA) */}
+      {isGeneratedWithAi ? (
+        <div className="rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/60 via-slate-950 to-slate-950 p-4 sm:p-5 shadow-lg flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-sm shadow-emerald-500/20">
+              <Sparkles className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-black uppercase tracking-wider text-emerald-400">
+                  ⚡ GERADO COM INTELIGÊNCIA ARTIFICIAL
+                </span>
+                <span className="rounded-md bg-emerald-500/20 px-2 py-0.5 text-[10px] font-extrabold text-emerald-300 border border-emerald-500/30">
+                  {script.generationMetadata?.usedProvider ? script.generationMetadata.usedProvider.toUpperCase() : 'IA ATIVA'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-1">
+                Roteiro gerado e calibrado com sucesso por inteligência artificial
+                {script.generationMetadata?.usedModel && (
+                  <strong className="text-emerald-300 font-mono"> ({script.generationMetadata.usedModel})</strong>
+                )} com foco em máxima retenção para {script.platform.toUpperCase()}.
+              </p>
+            </div>
+          </div>
+          <div className="text-[11px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/30 px-3 py-1.5 rounded-xl shadow-inner">
+            IA Otimizada ✨
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-amber-500/50 bg-gradient-to-r from-amber-950/60 via-slate-950 to-slate-950 p-4 sm:p-5 shadow-lg flex items-start sm:items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-sm shadow-amber-500/20">
+              <AlertTriangle className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-black uppercase tracking-wider text-amber-400">
+                  ⚠️ GERADO SEM IA (MODO ALGORITMO HEURÍSTICO)
+                </span>
+                {isFallback && (
+                  <span className="rounded-md bg-amber-500/20 px-2.5 py-0.5 text-[10px] font-extrabold text-amber-300 border border-amber-500/30 animate-pulse">
+                    Contingência Automática
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-amber-200/90 mt-1 leading-relaxed max-w-2xl">
+                <strong>Atenção para revisão:</strong> Este roteiro foi gerado por algoritmos heurísticos sem inteligência artificial{isFallback ? ' (ativado automaticamente como contingência de segurança porque os servidores de IA externa estavam indisponíveis no momento)' : ''}. <strong>Recomendamos ler e conferir os detalhes com atenção para verificar se fazem 100% de sentido para o seu nicho antes de gravar!</strong>
+              </p>
+            </div>
+          </div>
+          <div className="text-[11px] font-extrabold text-amber-400 bg-amber-950/80 border border-amber-500/30 px-3.5 py-1.5 rounded-xl shadow-inner">
+            Revisão Recomendada 🧐
+          </div>
+        </div>
+      )}
+
       {/* Top Header / Meta / Badges */}
       <div className="rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900/95 to-slate-950/95 p-5 sm:p-6 shadow-2xl relative overflow-hidden">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -273,21 +491,36 @@ ${[...script.hashtags.megaViral, ...script.hashtags.nicheSpecific, ...script.has
 
       {/* Navigation Tabs */}
       <div className="flex items-center gap-1.5 border-b border-slate-800 pb-2 overflow-x-auto">
+        {script.modularMatrix && (
+          <button
+            onClick={() => setActiveTab('matrix')}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-black transition relative shrink-0 ${
+              activeTab === 'matrix'
+                ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-lg shadow-indigo-600/30'
+                : 'text-indigo-300 bg-indigo-950/40 border border-indigo-500/30 hover:bg-indigo-900/50 hover:text-white'
+            }`}
+          >
+            <Grid3X3 className="h-4 w-4" />
+            <span>🧩 Matriz Quebra-Cabeça ({script.modularMatrix.totalCombinations || Math.pow(script.modularMatrix.quantity, 4)} Combinações)</span>
+            <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse absolute -top-0.5 -right-0.5" />
+          </button>
+        )}
+
         <button
           onClick={() => setActiveTab('four_parts')}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition ${
+          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition shrink-0 ${
             activeTab === 'four_parts'
               ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30'
               : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
           }`}
         >
           <Layers className="h-4 w-4" />
-          <span>Estrutura 4 Partes (Obrigatório)</span>
+          <span>Estrutura 4 Partes (Ativa)</span>
         </button>
 
         <button
           onClick={() => setActiveTab('timeline')}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition ${
+          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition shrink-0 ${
             activeTab === 'timeline'
               ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30'
               : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
@@ -299,7 +532,7 @@ ${[...script.hashtags.megaViral, ...script.hashtags.nicheSpecific, ...script.has
 
         <button
           onClick={() => setActiveTab('hooks')}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition ${
+          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition shrink-0 ${
             activeTab === 'hooks'
               ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30'
               : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
@@ -311,7 +544,7 @@ ${[...script.hashtags.megaViral, ...script.hashtags.nicheSpecific, ...script.has
 
         <button
           onClick={() => setActiveTab('post_kit')}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition ${
+          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition shrink-0 ${
             activeTab === 'post_kit'
               ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30'
               : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
@@ -323,7 +556,7 @@ ${[...script.hashtags.megaViral, ...script.hashtags.nicheSpecific, ...script.has
 
         <button
           onClick={() => setActiveTab('prompter_text')}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition ${
+          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition shrink-0 ${
             activeTab === 'prompter_text'
               ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30'
               : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
@@ -336,7 +569,7 @@ ${[...script.hashtags.megaViral, ...script.hashtags.nicheSpecific, ...script.has
         {script.generationMetadata?.attemptsLogs && script.generationMetadata.attemptsLogs.length > 0 && (
           <button
             onClick={() => setActiveTab('engine_logs')}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition ${
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition shrink-0 ${
               activeTab === 'engine_logs'
                 ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
@@ -347,6 +580,560 @@ ${[...script.hashtags.megaViral, ...script.hashtags.nicheSpecific, ...script.has
           </button>
         )}
       </div>
+
+      {/* TAB: MODULAR PUZZLE MATRIX (Matriz A/B Intercambiável 4x4) */}
+      {activeTab === 'matrix' && script.modularMatrix && (
+        <div className="space-y-6">
+          {/* Header Bar with Combination Stats & Randomizer */}
+          <div className="rounded-2xl border border-indigo-500/40 bg-gradient-to-r from-indigo-950/60 via-purple-950/40 to-slate-950 p-5 shadow-xl">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                    <Grid3X3 className="h-4 w-4" />
+                  </span>
+                  <h3 className="text-base font-black text-white">
+                    Matriz A/B Modular Intercambiável (Quebra-Cabeça Viral)
+                  </h3>
+                  <span className="rounded-full bg-indigo-500/20 px-3 py-0.5 text-xs font-mono font-bold text-indigo-300 border border-indigo-500/30">
+                    {script.modularMatrix.quantity}×{script.modularMatrix.quantity}×{script.modularMatrix.quantity}×{script.modularMatrix.quantity} = {script.modularMatrix.totalCombinations || Math.pow(script.modularMatrix.quantity, 4)} combinações
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-1.5 leading-relaxed max-w-3xl">
+                  Monte seu roteiro como um quebra-cabeça: clique em qualquer opção nos 4 blocos abaixo. Graças aos conectores sintáticos universais (<em>"A grande questão é que..."</em>, <em>"E é exatamente por isso que..."</em>, <em>"Então faz o seguinte:..."</em>), qualquer combinação faz sentido gramatical e persuasivo perfeito!
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleRandomizeCombination}
+                  className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 px-3.5 py-2.5 text-xs font-bold text-white shadow-lg shadow-orange-500/25 hover:from-amber-400 hover:to-rose-400 transition active:scale-95"
+                  title="Sorteia aleatoriamente 1 Gancho + 1 Dor + 1 Desenvolvimento + 1 CTA das variações abaixo"
+                >
+                  <Shuffle className="h-4 w-4" />
+                  <span>🎲 Sortear Combinação</span>
+                </button>
+                {onNavigateToMerger && (
+                  <button
+                    type="button"
+                    onClick={onNavigateToMerger}
+                    className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-indigo-600/30 hover:from-indigo-500 hover:to-purple-500 transition active:scale-95"
+                    title="Ir para a aba de Junção de Vídeo para combinar e mesclar os vídeos gravados"
+                  >
+                    <Film className="h-4 w-4" />
+                    <span>🎬 Ir para Junção de Vídeos</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => openTeleprompterWith(activeFullTeleprompterText, `Gravação Roteiro: ${script.title}`)}
+                  className="flex items-center gap-1.5 rounded-xl border border-rose-500/40 bg-rose-600/20 px-3.5 py-2.5 text-xs font-bold text-rose-300 hover:bg-rose-600 hover:text-white transition"
+                  title="Abrir teleprompter com a combinação ativa"
+                >
+                  <Play className="h-3.5 w-3.5 fill-rose-300" />
+                  <span>Gravar Versão Ativa</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openTeleprompterWith(allVariationsTeleprompterText, `Gravação de Todas as Peças: ${script.title}`)}
+                  className="flex items-center gap-1.5 rounded-xl border border-purple-500/40 bg-purple-600/20 px-3 py-2.5 text-xs font-bold text-purple-300 hover:bg-purple-600 hover:text-white transition"
+                  title="Abrir teleprompter com todas as variações em sequência para gravar tudo de uma vez"
+                >
+                  <ListVideo className="h-3.5 w-3.5" />
+                  <span>Gravar Todas as Peças</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Active Combination Indicator */}
+            <div className="mt-4 pt-3 border-t border-indigo-500/20 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 flex-wrap font-mono">
+                <span className="text-slate-400">Combinação Ativa:</span>
+                <span className="px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500/30 text-rose-300 font-bold">
+                  Gancho #{selectedMatrixIndices.hookIndex + 1}
+                </span>
+                <span className="text-slate-600">+</span>
+                <span className="px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/30 text-amber-300 font-bold">
+                  Dor #{selectedMatrixIndices.painIndex + 1}
+                </span>
+                <span className="text-slate-600">+</span>
+                <span className="px-2 py-0.5 rounded bg-blue-500/20 border border-blue-500/30 text-blue-300 font-bold">
+                  Solução #{selectedMatrixIndices.solutionIndex + 1}
+                </span>
+                <span className="text-slate-600">+</span>
+                <span className="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-bold">
+                  CTA #{selectedMatrixIndices.ctaIndex + 1}
+                </span>
+              </div>
+
+              <span className="text-[11px] text-slate-400">
+                Clique nos blocos para alternar em tempo real
+              </span>
+            </div>
+          </div>
+
+          {/* Workflow Guide Notice: 1st Record takes -> 2nd Combine in Video Merger */}
+          <div className="rounded-2xl border border-indigo-500/30 bg-gradient-to-r from-indigo-950/40 via-purple-950/20 to-slate-900/80 p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs shadow-md">
+            <div className="flex items-start gap-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-sm shrink-0 mt-0.5">
+                🎬
+              </span>
+              <div className="space-y-1">
+                <div className="font-bold text-white text-xs sm:text-sm">
+                  Fluxo de Produção: 1º Gravar todas as partes ➔ 2º Combinar na aba Junção de Vídeos
+                </div>
+                <p className="text-slate-300 text-[11px] sm:text-xs leading-relaxed max-w-2xl">
+                  Grave primeiro cada um dos <strong>{script.modularMatrix.quantity} ganchos</strong>, as <strong>{script.modularMatrix.quantity} dores</strong>, os <strong>{script.modularMatrix.quantity} desenvolvimentos</strong> e os <strong>{script.modularMatrix.quantity} CTAs</strong>. Depois que todos os vídeos estiverem gravados, acesse a aba <strong>Junção de Vídeos</strong> para importar os clipes e gerar as combinações finais!
+                </p>
+              </div>
+            </div>
+
+            {onNavigateToMerger && (
+              <button
+                type="button"
+                onClick={onNavigateToMerger}
+                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 px-4 py-2.5 font-bold text-white text-xs shadow-lg shadow-indigo-600/30 transition shrink-0 self-start md:self-center active:scale-95"
+              >
+                <Film className="h-4 w-4" />
+                <span>Abrir Junção de Vídeos</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* 4 Interactive Columns Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            {/* Bloco 1: Ganchos */}
+            <div className="rounded-2xl border border-rose-500/30 bg-slate-900/90 p-4 space-y-3 flex flex-col">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-rose-500 text-white font-bold text-xs">
+                    1
+                  </span>
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-rose-400">Ganchos Magnéticos</h4>
+                    <span className="text-[10px] text-slate-400 font-mono">0-3 segundos</span>
+                  </div>
+                </div>
+                <span className="text-[11px] font-bold text-rose-300 bg-rose-950/60 px-2 py-0.5 rounded border border-rose-500/20">
+                  {script.modularMatrix.hooks.length} opções
+                </span>
+              </div>
+
+              <div className="space-y-2.5 flex-1">
+                {script.modularMatrix.hooks.map((hook, idx) => {
+                  const isSelected = selectedMatrixIndices.hookIndex === idx;
+                  return (
+                    <div
+                      key={hook.id || idx}
+                      onClick={() => {
+                        setSelectedMatrixIndices((prev) => ({ ...prev, hookIndex: idx }));
+                        onSelectAnotherHook(idx);
+                      }}
+                      className={`rounded-xl p-3.5 cursor-pointer transition-all border ${
+                        isSelected
+                          ? 'border-rose-500 bg-rose-950/40 shadow-md shadow-rose-500/20 ring-1 ring-rose-500/50'
+                          : 'border-slate-800 bg-slate-950/80 hover:border-slate-700 hover:bg-slate-950'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-rose-300 font-mono">
+                          Opção #{idx + 1}
+                        </span>
+                        {isSelected && (
+                          <span className="flex items-center gap-1 text-[10px] font-bold text-rose-400">
+                            <CheckCircle2 className="h-3 w-3" />
+                            <span>Ativo</span>
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs sm:text-sm font-semibold text-white leading-relaxed">
+                        "{hook.text}"
+                      </p>
+                      {hook.visualCue && (
+                        <div className="mt-2 pt-2 border-t border-slate-800/60 text-[10px] text-slate-400">
+                          <strong className="text-slate-300">👁️ Visual:</strong> {hook.visualCue}
+                        </div>
+                      )}
+
+                      <div className="mt-2.5 pt-2 border-t border-slate-800/60 flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openTeleprompterWith(`[GANCHO #${idx + 1}]\n"${hook.text}"`, `Gravação Gancho #${idx + 1}`);
+                          }}
+                          className="flex items-center gap-1 text-[10px] font-bold text-rose-300 hover:text-white bg-rose-950/60 hover:bg-rose-900/80 px-2 py-1 rounded-md border border-rose-500/30 transition"
+                          title="Gravar este take no teleprompter"
+                        >
+                          <Mic className="h-3 w-3" />
+                          <span>Gravar Take</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopy(hook.text, `hook_${idx}`);
+                          }}
+                          className="text-[10px] text-slate-400 hover:text-slate-200 p-1"
+                          title="Copiar texto do gancho"
+                        >
+                          {copiedSection === `hook_${idx}` ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Bloco 2: A Dor da História */}
+            <div className="rounded-2xl border border-amber-500/30 bg-slate-900/90 p-4 space-y-3 flex flex-col">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-500 text-slate-950 font-bold text-xs">
+                    2
+                  </span>
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-amber-400">A Dor da História</h4>
+                    <span className="text-[10px] text-slate-400 font-mono">3-15 segundos</span>
+                  </div>
+                </div>
+                <span className="text-[11px] font-bold text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-500/20">
+                  {script.modularMatrix.pains.length} opções
+                </span>
+              </div>
+
+              <div className="space-y-2.5 flex-1">
+                {script.modularMatrix.pains.map((pain, idx) => {
+                  const isSelected = selectedMatrixIndices.painIndex === idx;
+                  return (
+                    <div
+                      key={pain.id || idx}
+                      onClick={() => setSelectedMatrixIndices((prev) => ({ ...prev, painIndex: idx }))}
+                      className={`rounded-xl p-3.5 cursor-pointer transition-all border ${
+                        isSelected
+                          ? 'border-amber-500 bg-amber-950/40 shadow-md shadow-amber-500/20 ring-1 ring-amber-500/50'
+                          : 'border-slate-800 bg-slate-950/80 hover:border-slate-700 hover:bg-slate-950'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300 font-mono">
+                          Opção #{idx + 1}
+                        </span>
+                        {isSelected && (
+                          <span className="flex items-center gap-1 text-[10px] font-bold text-amber-400">
+                            <CheckCircle2 className="h-3 w-3" />
+                            <span>Ativo</span>
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
+                        {pain.text}
+                      </p>
+                      {pain.visualCue && (
+                        <div className="mt-2 pt-2 border-t border-slate-800/60 text-[10px] text-slate-400">
+                          <strong className="text-slate-300">👁️ Expressão:</strong> {pain.visualCue}
+                        </div>
+                      )}
+
+                      <div className="mt-2.5 pt-2 border-t border-slate-800/60 flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openTeleprompterWith(`[DOR #${idx + 1}]\n${pain.text}`, `Gravação Dor #${idx + 1}`);
+                          }}
+                          className="flex items-center gap-1 text-[10px] font-bold text-amber-300 hover:text-white bg-amber-950/60 hover:bg-amber-900/80 px-2 py-1 rounded-md border border-amber-500/30 transition"
+                          title="Gravar este take no teleprompter"
+                        >
+                          <Mic className="h-3 w-3" />
+                          <span>Gravar Take</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopy(pain.text, `pain_${idx}`);
+                          }}
+                          className="text-[10px] text-slate-400 hover:text-slate-200 p-1"
+                          title="Copiar texto da dor"
+                        >
+                          {copiedSection === `pain_${idx}` ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Bloco 3: Desenvolvimento / Solução */}
+            <div className="rounded-2xl border border-blue-500/30 bg-slate-900/90 p-4 space-y-3 flex flex-col">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-500 text-white font-bold text-xs">
+                    3
+                  </span>
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-blue-400">Desenvolvimento</h4>
+                    <span className="text-[10px] text-slate-400 font-mono">15-35 segundos</span>
+                  </div>
+                </div>
+                <span className="text-[11px] font-bold text-blue-300 bg-blue-950/60 px-2 py-0.5 rounded border border-blue-500/20">
+                  {script.modularMatrix.solutions.length} opções
+                </span>
+              </div>
+
+              <div className="space-y-2.5 flex-1">
+                {script.modularMatrix.solutions.map((sol, idx) => {
+                  const isSelected = selectedMatrixIndices.solutionIndex === idx;
+                  return (
+                    <div
+                      key={sol.id || idx}
+                      onClick={() => setSelectedMatrixIndices((prev) => ({ ...prev, solutionIndex: idx }))}
+                      className={`rounded-xl p-3.5 cursor-pointer transition-all border ${
+                        isSelected
+                          ? 'border-blue-500 bg-blue-950/40 shadow-md shadow-blue-500/20 ring-1 ring-blue-500/50'
+                          : 'border-slate-800 bg-slate-950/80 hover:border-slate-700 hover:bg-slate-950'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300 font-mono">
+                          Opção #{idx + 1}
+                        </span>
+                        {isSelected && (
+                          <span className="flex items-center gap-1 text-[10px] font-bold text-blue-400">
+                            <CheckCircle2 className="h-3 w-3" />
+                            <span>Ativo</span>
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
+                        {sol.text}
+                      </p>
+                      {sol.visualCue && (
+                        <div className="mt-2 pt-2 border-t border-slate-800/60 text-[10px] text-slate-400">
+                          <strong className="text-slate-300">👁️ B-Roll:</strong> {sol.visualCue}
+                        </div>
+                      )}
+
+                      <div className="mt-2.5 pt-2 border-t border-slate-800/60 flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openTeleprompterWith(`[DESENVOLVIMENTO #${idx + 1}]\n${sol.text}`, `Gravação Desenvolvimento #${idx + 1}`);
+                          }}
+                          className="flex items-center gap-1 text-[10px] font-bold text-blue-300 hover:text-white bg-blue-950/60 hover:bg-blue-900/80 px-2 py-1 rounded-md border border-blue-500/30 transition"
+                          title="Gravar este take no teleprompter"
+                        >
+                          <Mic className="h-3 w-3" />
+                          <span>Gravar Take</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopy(sol.text, `sol_${idx}`);
+                          }}
+                          className="text-[10px] text-slate-400 hover:text-slate-200 p-1"
+                          title="Copiar texto do desenvolvimento"
+                        >
+                          {copiedSection === `sol_${idx}` ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Bloco 4: CTAs */}
+            <div className="rounded-2xl border border-emerald-500/30 bg-slate-900/90 p-4 space-y-3 flex flex-col">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs">
+                    4
+                  </span>
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-emerald-400">Solução & CTA</h4>
+                    <span className="text-[10px] text-slate-400 font-mono">35-50 segundos</span>
+                  </div>
+                </div>
+                <span className="text-[11px] font-bold text-emerald-300 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/20">
+                  {script.modularMatrix.ctas.length} opções
+                </span>
+              </div>
+
+              <div className="space-y-2.5 flex-1">
+                {script.modularMatrix.ctas.map((cta, idx) => {
+                  const isSelected = selectedMatrixIndices.ctaIndex === idx;
+                  return (
+                    <div
+                      key={cta.id || idx}
+                      onClick={() => setSelectedMatrixIndices((prev) => ({ ...prev, ctaIndex: idx }))}
+                      className={`rounded-xl p-3.5 cursor-pointer transition-all border ${
+                        isSelected
+                          ? 'border-emerald-500 bg-emerald-950/40 shadow-md shadow-emerald-500/20 ring-1 ring-emerald-500/50'
+                          : 'border-slate-800 bg-slate-950/80 hover:border-slate-700 hover:bg-slate-950'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300 font-mono">
+                          Opção #{idx + 1}
+                        </span>
+                        {isSelected && (
+                          <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400">
+                            <CheckCircle2 className="h-3 w-3" />
+                            <span>Ativo</span>
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs sm:text-sm font-semibold text-white leading-relaxed">
+                        {cta.text}
+                      </p>
+                      {cta.visualCue && (
+                        <div className="mt-2 pt-2 border-t border-slate-800/60 text-[10px] text-slate-400">
+                          <strong className="text-slate-300">👁️ Gesto:</strong> {cta.visualCue}
+                        </div>
+                      )}
+
+                      <div className="mt-2.5 pt-2 border-t border-slate-800/60 flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openTeleprompterWith(`[CTA #${idx + 1}]\n"${cta.text}"`, `Gravação CTA #${idx + 1}`);
+                          }}
+                          className="flex items-center gap-1 text-[10px] font-bold text-emerald-300 hover:text-white bg-emerald-950/60 hover:bg-emerald-900/80 px-2 py-1 rounded-md border border-emerald-500/30 transition"
+                          title="Gravar este take no teleprompter"
+                        >
+                          <Mic className="h-3 w-3" />
+                          <span>Gravar Take</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopy(cta.text, `cta_${idx}`);
+                          }}
+                          className="text-[10px] text-slate-400 hover:text-slate-200 p-1"
+                          title="Copiar texto do CTA"
+                        >
+                          {copiedSection === `cta_${idx}` ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Live Assembled Preview Panel */}
+          <div className="rounded-2xl border border-indigo-500/30 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 p-5 sm:p-6 shadow-2xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600/30 text-indigo-300 border border-indigo-500/40">
+                  <Sparkles className="h-4 w-4" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-black text-white">Roteiro Montado ao Vivo (Combinação Selecionada)</h3>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    Gancho #{selectedMatrixIndices.hookIndex + 1} + Dor #{selectedMatrixIndices.painIndex + 1} + Solução #{selectedMatrixIndices.solutionIndex + 1} + CTA #{selectedMatrixIndices.ctaIndex + 1}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleRandomizeCombination}
+                  className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 px-3.5 py-2 text-xs font-bold text-white shadow-lg shadow-orange-500/25 hover:from-amber-400 hover:to-rose-400 transition active:scale-95"
+                  title="Sorteia aleatoriamente 1 Gancho + 1 Dor + 1 Desenvolvimento + 1 CTA das variações acima"
+                >
+                  <Shuffle className="h-3.5 w-3.5" />
+                  <span>🎲 Sortear Combinação</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCopy(activeFullTeleprompterText, 'assembled_text')}
+                  className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-3.5 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700 transition"
+                >
+                  {copiedSection === 'assembled_text' ? (
+                    <>
+                      <Check className="h-3.5 w-3.5 text-emerald-400" />
+                      <span className="text-emerald-400">Copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3.5 w-3.5" />
+                      <span>Copiar Roteiro Montado</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openTeleprompterWith(activeFullTeleprompterText, `Roteiro Montado: ${script.title}`)}
+                  className="flex items-center gap-1.5 rounded-xl bg-rose-600 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-rose-600/30 hover:bg-rose-500 transition"
+                >
+                  <Play className="h-3.5 w-3.5 fill-white" />
+                  <span>Abrir no Teleprompter</span>
+                </button>
+                {onNavigateToMerger && (
+                  <button
+                    type="button"
+                    onClick={onNavigateToMerger}
+                    className="flex items-center gap-1.5 rounded-xl border border-indigo-500/40 bg-indigo-600/20 px-3.5 py-2 text-xs font-bold text-indigo-300 hover:bg-indigo-600 hover:text-white transition"
+                    title="Acessar a aba de Junção de Vídeos para unir as gravações"
+                  >
+                    <Film className="h-3.5 w-3.5" />
+                    <span>Ir para Junção</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Seamless narrative display */}
+            <div className="p-4 sm:p-5 rounded-xl bg-slate-950 border border-slate-800 text-sm sm:text-base leading-loose space-y-3 font-sans">
+              <p className="text-rose-300 font-bold border-l-2 border-rose-500 pl-3">
+                "{activeHook.text}"
+              </p>
+              <p className="text-amber-200 border-l-2 border-amber-500 pl-3">
+                {activePain.text}
+              </p>
+              <p className="text-blue-200 border-l-2 border-blue-500 pl-3">
+                {activeSolution.text}
+              </p>
+              <p className="text-emerald-300 font-semibold border-l-2 border-emerald-500 pl-3">
+                {activeCta.text}
+              </p>
+            </div>
+
+            {/* Bottom action bar for live randomizer */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800/80">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleRandomizeCombination}
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 px-4 py-2.5 text-xs font-black text-white shadow-lg shadow-indigo-600/30 hover:from-indigo-500 hover:to-pink-500 transition active:scale-95"
+                >
+                  <Shuffle className="h-4 w-4" />
+                  <span>🎲 Sortear Outra Combinação</span>
+                </button>
+                <span className="text-[11px] text-slate-400">
+                  Sorteia aleatoriamente 1 Gancho + 1 Dor + 1 Desenvolvimento + 1 CTA das variações acima e atualiza este roteiro ao vivo.
+                </span>
+              </div>
+              <div className="text-[11px] font-mono text-indigo-300 bg-indigo-950/60 px-2.5 py-1 rounded-lg border border-indigo-500/30">
+                Gancho #{selectedMatrixIndices.hookIndex + 1} • Dor #{selectedMatrixIndices.painIndex + 1} • Solução #{selectedMatrixIndices.solutionIndex + 1} • CTA #{selectedMatrixIndices.ctaIndex + 1}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* TAB: FOUR PARTS (O Roteiro dividido nas 4 partes exigidas) */}
       {activeTab === 'four_parts' && (
@@ -783,7 +1570,9 @@ ${[...script.hashtags.megaViral, ...script.hashtags.nicheSpecific, ...script.has
       {/* Teleprompter Modal */}
       {isTeleprompterOpen && (
         <TeleprompterModal
-          script={script}
+          script={assembledScriptForTeleprompter}
+          scriptTitle={teleprompterTarget.title || assembledScriptForTeleprompter.title}
+          teleprompterText={teleprompterTarget.text || activeFullTeleprompterText}
           isOpen={isTeleprompterOpen}
           onClose={() => setIsTeleprompterOpen(false)}
         />

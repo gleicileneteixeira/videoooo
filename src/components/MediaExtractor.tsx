@@ -22,6 +22,7 @@ import {
 import { ExtractedTranscript } from '../types';
 import { attachApiKeysPayload } from '../utils/apiHelper';
 import { extractAndCompressAudio } from '../utils/audioExtractor';
+import { LocalWhisperService, type WhisperModelId } from '../services/localWhisperService';
 import { SeoGeneratorModal } from './SeoGeneratorModal';
 import { TranscriptDetailModal } from './TranscriptDetailModal';
 
@@ -101,55 +102,68 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
     setErrorMessage(null);
 
     try {
-      // Step 1: Extract and compress audio track directly in client's browser (Web Audio API)
-      // This converts any large video (e.g. 500MB) down to ~1-2MB 16kHz mono audio
-      const audioResult = await extractAndCompressAudio(file, (status) => {
-        setProgressStatus(status);
-      });
+      const selectedModel: WhisperModelId =
+        modelMode === 'base' ? 'Xenova/whisper-base' : 'Xenova/whisper-tiny';
 
-      if (audioResult.originalSizeMb > audioResult.optimizedSizeMb) {
-        setOptimizationNote(
-          `Arquivo de ${audioResult.originalSizeMb} MB otimizado para ${audioResult.optimizedSizeMb} MB (${audioResult.compressionRatio}) para transcrição ultra rápida.`
+      setProgressStatus('Iniciando motor Whisper neural gratuito...');
+
+      // Executa a transcrição diretamente via biblioteca gratuita Whisper (Local Transformers.js)
+      const transcribedText = await LocalWhisperService.transcribeFile(
+        file,
+        selectedModel,
+        (pct, status) => {
+          setProgressStatus(status);
+        }
+      );
+
+      if (!transcribedText || transcribedText.trim().length === 0) {
+        throw new Error(
+          'Nenhuma fala audível foi detectada no arquivo. Verifique se o vídeo possui áudio ou cole a transcrição manualmente.'
         );
       }
 
-      setProgressStatus('Enviando áudio otimizado para transcrição neural e análise...');
+      const cleanText = transcribedText.trim();
+      const words = cleanText.split(/\s+/).filter(Boolean);
+      const sentences = cleanText
+        .split(/[.!?]+/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 5);
 
-      // Debug: log payload before sending
-      console.log('[MediaExtractor] Payload:', {
-        hasAudioBase64: !!audioResult.audioBase64,
-        audioBase64Length: audioResult.audioBase64?.length || 0,
-        mimeType: audioResult.mimeType,
-        fileName: file.name,
-        modelMode,
-        originalDurationSeconds: audioResult.durationSeconds,
-      });
+      const hookIdentified =
+        sentences[0] || cleanText.slice(0, 100) + '...';
 
-      if (!audioResult.audioBase64) {
-        throw new Error('Falha ao extrair áudio do arquivo. Tente novamente ou cole o texto manualmente.');
-      }
+      const summary =
+        sentences.slice(0, 3).join('. ') + (sentences.length > 3 ? '.' : '');
 
-      const payload = attachApiKeysPayload({
-        mediaBase64: audioResult.audioBase64,
-        mimeType: audioResult.mimeType,
-        fileName: file.name,
-        originalDurationSeconds: audioResult.durationSeconds,
-        modelMode,
-      });
+      const keyPoints =
+        sentences.length >= 3
+          ? sentences.slice(0, 4)
+          : [
+              'Tópico principal extraído do áudio original',
+              'Narrativa identificada na gravação',
+              'Contexto pronto para remodelagem',
+            ];
 
-      const res = await fetch('/api/transcribe-media', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      const durationSec = Math.max(10, Math.round(words.length / 2.5));
+      const formattedDuration =
+        durationSec < 60
+          ? `${durationSec}s`
+          : `${Math.floor(durationSec / 60)}m ${durationSec % 60 ? `${durationSec % 60}s` : ''}`.trim();
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({ error: 'Falha no servidor.' }));
-        throw new Error(errData.error || `Erro HTTP ${res.status}: Não foi possível transcrever a mídia.`);
-      }
+      const transcriptData: ExtractedTranscript = {
+        id: 'transc_' + Date.now(),
+        title: file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' '),
+        fullText: cleanText,
+        hookIdentified,
+        summary: summary || cleanText.slice(0, 180) + '...',
+        keyPoints,
+        wordCount: words.length,
+        originalDuration: formattedDuration,
+        sourceType: file.type.startsWith('video/') ? 'upload_video' : 'upload_audio',
+        mediaUrl: mediaPreviewUrl || undefined,
+        createdAt: new Date().toISOString(),
+      };
 
-      const transcriptData: ExtractedTranscript = await res.json();
-      transcriptData.mediaUrl = mediaPreviewUrl || undefined;
       setCurrentTranscript(transcriptData);
       onSelectRecentTranscript(transcriptData);
 
@@ -158,10 +172,10 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
         spread: 60,
       });
     } catch (err: any) {
-      console.error('Erro na transcrição:', err);
+      console.error('Erro na transcrição gratuita:', err);
       setErrorMessage(
         err.message ||
-          'Não foi possível transcrever esse formato de arquivo. Você também pode colar a transcrição manualmente.'
+          'Não foi possível transcrever esse arquivo. Você também pode colar a transcrição manualmente.'
       );
     } finally {
       setIsProcessing(false);
@@ -224,11 +238,11 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
                   Extrair de Vídeo / Áudio
                 </h2>
                 <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-500/20 uppercase">
-                  Remodelagem com IA
+                  Whisper Gratuito • Zero Custo
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-1">
-                Transcreva uma entrevista, depoimento ou vídeo de referência e use o texto como briefing para gerar um novo roteiro viral remodelado.
+                Extração de fala e texto de vídeos e áudios usando a biblioteca gratuita Whisper (sem consumo de créditos de IA).
               </p>
             </div>
           </div>
@@ -494,7 +508,25 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
                     className="flex items-center gap-1 text-slate-400 hover:text-white transition"
                   >
                     {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                    <span>{copied ? 'Copiado!' : 'Copiar Fala Completa'}</span>
+                    <span>{copied ? 'Copiado!' : 'Copiar'}</span>
+                  </button>
+                  <span className="text-slate-700">•</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const blob = new Blob([currentTranscript.fullText], { type: 'text/plain;charset=utf-8' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `${(currentTranscript.title || 'transcricao').replace(/[^a-zA-Z0-9_-]/g, '_')}.txt`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="flex items-center gap-1 text-slate-400 hover:text-emerald-300 text-[11px] transition"
+                    title="Baixar arquivo TXT do texto"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    <span>Baixar .TXT</span>
                   </button>
                 </div>
               </div>
@@ -646,12 +678,22 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
         />
       )}
 
-      {/* Modal do Gerador de Descrições SEO & Headlines (100% Algorítmico) */}
+      {/* Modal do Gerador de Descrições SEO & Headlines (Com IA ou Sem IA) */}
       {seoTargetTranscript && (
         <SeoGeneratorModal
           transcript={seoTargetTranscript}
           isOpen={isSeoModalOpen}
           onClose={() => setIsSeoModalOpen(false)}
+          onTransformToScript={(headline, description, fullText) => {
+            setIsSeoModalOpen(false);
+            onRemodelScript({
+              ...seoTargetTranscript,
+              title: headline || seoTargetTranscript.title,
+              hookIdentified: headline || seoTargetTranscript.hookIdentified,
+              summary: description || seoTargetTranscript.summary,
+              fullText: fullText || seoTargetTranscript.fullText,
+            });
+          }}
         />
       )}
     </div>

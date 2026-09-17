@@ -15,11 +15,14 @@ import {
   Check,
 } from 'lucide-react';
 
+import { ViralScript } from '../types';
+
 interface TeleprompterModalProps {
   isOpen: boolean;
   onClose: () => void;
-  scriptTitle: string;
-  teleprompterText: string;
+  scriptTitle?: string;
+  teleprompterText?: string;
+  script?: ViralScript;
 }
 
 export const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
@@ -27,7 +30,10 @@ export const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
   onClose,
   scriptTitle,
   teleprompterText,
+  script,
 }) => {
+  const activeTitle = scriptTitle || script?.title || 'Roteiro';
+  const activeText = teleprompterText || script?.fullTeleprompterText || '';
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(160); // Words per minute (approx 100 - 300)
   const [fontSize, setFontSize] = useState(32); // Font size in px
@@ -146,7 +152,7 @@ export const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
       setIsSpeaking(false);
     } else {
       window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(teleprompterText.replace(/\[PAUSA.*?\]/g, '...'));
+      const utterance = new SpeechSynthesisUtterance(activeText.replace(/\[PAUSA.*?\]/g, '...'));
       utterance.lang = 'pt-BR';
       utterance.rate = speed / 160;
       utterance.onend = () => setIsSpeaking(false);
@@ -168,7 +174,7 @@ export const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
   };
 
   const copyPromptText = () => {
-    navigator.clipboard.writeText(teleprompterText);
+    navigator.clipboard.writeText(activeText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -188,7 +194,7 @@ export const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
           </span>
           <div>
             <h3 className="text-sm font-bold text-white truncate max-w-[200px] sm:max-w-md">
-              {scriptTitle || 'Teleprompter Profissional'}
+              {activeTitle || 'Teleprompter Profissional'}
             </h3>
             <p className="text-[11px] text-slate-400">
               Pressione [Espaço] para iniciar/pausar • Olhe diretamente para a câmera
@@ -281,7 +287,7 @@ export const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
           style={{ scrollBehavior: isPlaying ? 'auto' : 'smooth' }}
         >
           <div className="mx-auto max-w-4xl space-y-8 font-sans font-extrabold tracking-wide leading-relaxed text-slate-100">
-            {teleprompterText.split('\n\n').map((paragraph, idx) => (
+            {activeText.split('\n\n').map((paragraph, idx) => (
               <p
                 key={idx}
                 style={{ fontSize: `${fontSize}px`, lineHeight: 1.6 }}

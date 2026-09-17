@@ -55,6 +55,8 @@ export interface ScriptRequest {
   sourceTranscript?: string; // If remodeled from extracted video
   sourceVideoTitle?: string;
   remodelAngle?: 'same_niche_better' | 'different_niche' | 'opposite_contrarian' | 'simplified' | 'humorous';
+  useAi?: boolean; // Se true usa IA, se false usa algoritmo heurístico sem IA
+  quantity?: number; // Quantidade de blocos modulares (1 a 5) gerando N^4 combinações
   // User custom keys if provided in UI
   groqApiKey?: string;
   openRouterApiKey?: string;
@@ -110,6 +112,36 @@ export interface FourPartScriptStructure {
   };
 }
 
+// Bloco Modular Individual para a Matriz Intercambiável 4x4
+export interface ModularBlock {
+  id: string;
+  text: string;
+  label?: string;
+  visualCue?: string;
+  textOnScreen?: string;
+}
+
+// Matriz A/B de Roteiros Modulares Intercambiáveis (N^4 combinações)
+export interface ModularScriptMatrix {
+  quantity: number; // Quantidade de variações de cada bloco (ex: 3)
+  totalCombinations: number; // N * N * N * N (ex: 3^4 = 81)
+  standardConnectors?: {
+    painConnector: string;
+    solutionConnector: string;
+    ctaConnector: string;
+  };
+  hooks: ModularBlock[];
+  pains: ModularBlock[];
+  solutions: ModularBlock[];
+  ctas: ModularBlock[];
+  selectedIndices: {
+    hookIndex: number;
+    painIndex: number;
+    solutionIndex: number;
+    ctaIndex: number;
+  };
+}
+
 export interface ScriptScene {
   timecode: string;
   partNumber?: 1 | 2 | 3 | 4; // 1=Gancho, 2=Dor da História, 3=Desenvolvimento, 4=Solução/CTA
@@ -145,6 +177,9 @@ export interface ViralScript {
   // 4 Pilares fundamentais estruturados
   fourParts?: FourPartScriptStructure;
   
+  // Matriz modular A/B intercambiável (N^4 combinações)
+  modularMatrix?: ModularScriptMatrix;
+  
   scenes: ScriptScene[];
   fullTeleprompterText: string;
   
@@ -174,7 +209,13 @@ export interface ViralScript {
     coverVisualPrompt: string;
   };
 
+  generationMode?: 'ai' | 'algorithmic';
+  isFallbackAlgorithmic?: boolean;
+
   generationMetadata?: {
+    generationMode?: 'ai' | 'algorithmic';
+    isFallbackAlgorithmic?: boolean;
+    fallbackReason?: string;
     usedProvider: string;
     usedModel: string;
     attemptsLogs: ModelAttemptLog[];
@@ -222,7 +263,7 @@ export interface DownloadedMedia {
   title: string;
   author?: string;
   originalUrl: string;
-  platform: 'tiktok' | 'instagram' | 'youtube' | 'twitter' | 'other';
+  platform: 'tiktok' | 'instagram' | 'facebook' | 'youtube' | 'twitter' | 'other';
   mediaUrl: string;
   thumbnailUrl?: string;
   duration?: string;
@@ -304,5 +345,49 @@ export interface GatewayConfig {
   autoFallbackOnError: boolean;
   totalTokensProcessed: number;
   totalCallsMade: number;
+}
+
+// ==========================================
+// FÁBRICA DE POSTS & CALENDÁRIO EDITORIAL
+// ==========================================
+export type AspectRatio = '1:1' | '9:16' | '16:9';
+
+export interface FactoryPost {
+  id: string;
+  topic: string;
+  badgeText: string;
+  titleText: string;
+  userHandle: string;
+  bgPhotoUrl: string;
+  aspectRatio: AspectRatio;
+  accentColor: string;
+  imageDataUrl?: string;
+  createdAt: string;
+  scheduledDay?: string; // 'Segunda', 'Terça', etc.
+  scheduledTime?: string;
+  platform?: 'Instagram' | 'TikTok' | 'YouTube' | 'LinkedIn' | 'Geral';
+  status?: 'Rascunho' | 'Agendado' | 'Publicado';
+  caption?: string; // Texto argumentativo completo com emojis e hashtags
+  searchKeywords?: string[];
+  originalLongText?: string;
+}
+
+export interface CalendarPostItem {
+  id: string;
+  day: 'Segunda' | 'Terça' | 'Quarta' | 'Quinta' | 'Sexta' | 'Sábado' | 'Domingo';
+  date?: string;
+  time: string;
+  title: string;
+  platform: string;
+  status: 'Rascunho' | 'Roteiro Pronto' | 'Gravado' | 'Edição' | 'Agendado' | 'Publicado';
+  postType: 'factory_post' | 'script' | 'video' | 'custom';
+  aspectRatio?: AspectRatio;
+  badgeText?: string;
+  previewImageUrl?: string;
+  factoryPostId?: string;
+  scriptId?: string;
+  userHandle?: string;
+  caption?: string;
+  createdAt?: string;
 }
 

@@ -187,35 +187,50 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                 </div>
 
                 {/* Actions */}
-                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onDeleteMedia(media.id)}
-                    className="p-1.5 text-slate-500 hover:text-red-400 transition"
-                    title="Excluir da Galeria"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-1.5 flex-wrap">
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => onDeleteMedia(media.id)}
+                      className="p-1.5 text-slate-500 hover:text-red-400 transition"
+                      title="Excluir da Galeria"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
 
-                  {/* SEO & Tags Button */}
-                  <button
-                    type="button"
-                    onClick={() => handleOpenSeo(media)}
-                    className="flex items-center gap-1 rounded-xl bg-purple-600/20 border border-purple-500/30 px-2.5 py-2 text-xs font-bold text-purple-300 hover:bg-purple-600 hover:text-white transition"
-                    title="Gerar descrições SEO e hashtags para este vídeo"
-                  >
-                    <Hash className="h-3.5 w-3.5" />
-                    <span>SEO & Tags</span>
-                  </button>
+                    <a
+                      href={media.mediaUrl}
+                      download={`${media.title.replace(/[^a-zA-Z0-9_-]/g, '_') || 'video'}.mp4`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-1.5 text-slate-400 hover:text-blue-400 transition"
+                      title="Salvar arquivo MP4 no seu dispositivo"
+                    >
+                      <Download className="h-4 w-4" />
+                    </a>
+                  </div>
 
-                  <button
-                    type="button"
-                    onClick={() => onRemodelMedia(media.transcript || media.title, media.title)}
-                    className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 py-2 px-3 text-xs font-bold text-white shadow-md shadow-rose-600/20 hover:scale-[1.02] active:scale-[0.98] transition"
-                  >
-                    <Sparkles className="h-3.5 w-3.5" />
-                    <span>Remodelar</span>
-                  </button>
+                  <div className="flex items-center gap-1.5 flex-1 justify-end">
+                    {/* SEO & Tags Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenSeo(media)}
+                      className="flex items-center gap-1 rounded-xl bg-purple-600/20 border border-purple-500/30 px-2.5 py-1.5 text-xs font-bold text-purple-300 hover:bg-purple-600 hover:text-white transition"
+                      title="Gerar descrições SEO e hashtags para este vídeo"
+                    >
+                      <Hash className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">SEO</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => onRemodelMedia(media.transcript || media.title, media.title)}
+                      className="flex items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 py-1.5 px-3 text-xs font-bold text-white shadow-md shadow-rose-600/20 hover:scale-[1.02] active:scale-[0.98] transition"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      <span>Remodelar</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -229,6 +244,13 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
           transcript={seoModalTranscript}
           isOpen={!!seoModalTranscript}
           onClose={() => setSeoModalTranscript(null)}
+          onTransformToScript={(headline, description, fullText) => {
+            setSeoModalTranscript(null);
+            onRemodelMedia(
+              `Headline: ${headline}\n\nDescrição/Resumo: ${description}\n\nTranscrição Base: ${fullText}`,
+              headline || seoModalTranscript.title
+            );
+          }}
         />
       )}
     </div>

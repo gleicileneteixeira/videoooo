@@ -25,6 +25,11 @@ import {
   Download,
   LayoutGrid,
   History,
+  Lightbulb,
+  Repeat,
+  FileText,
+  Trash2,
+  ArrowRight,
 } from 'lucide-react';
 import { LocalWhisperService, type WhisperModelId } from '../services/localWhisperService';
 import {
@@ -116,6 +121,7 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
   const [extraDetails, setExtraDetails] = useState('');
   const [productOrBrand, setProductOrBrand] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [useAi, setUseAi] = useState<boolean>(true);
 
   // Secondary toolbar state
   const [subTab, setSubTab] = useState<'create' | 'transcribe' | 'download' | 'gallery' | 'history'>('create');
@@ -132,9 +138,26 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
   const [selectedObjectives, setSelectedObjectives] = useState<string[]>([]);
   const [customObjective, setCustomObjective] = useState('');
 
-  // AI variant generation state
+  // Modular matrix quantity state (Hooks, Pains, Solutions, CTAs)
   const [quantity, setQuantity] = useState(3);
-  const [isGeneratingVariants, setIsGeneratingVariants] = useState(false);
+
+  // Mode: Criar por Ideia / Tema vs Remodelar Vídeo / Transcrição
+  const [creationMode, setCreationMode] = useState<'idea' | 'remodel'>(
+    sourceTranscript ? 'remodel' : 'idea'
+  );
+  const [remodelText, setRemodelText] = useState(sourceTranscript || '');
+
+  // Helper para identificar o gancho original da transcrição para exibição no card
+  const extractOriginalHookCandidate = (text: string) => {
+    if (!text || !text.trim()) return '';
+    const lines = text.trim().split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const firstLine = lines[0] || '';
+    const match = firstLine.match(/^([^.!?]+[.!?]?)/);
+    if (match && match[1] && match[1].trim().length >= 10) return match[1].trim();
+    if (firstLine.length >= 10 && firstLine.length <= 140) return firstLine;
+    const words = text.trim().split(/\s+/);
+    return words.slice(0, 14).join(' ') + (words.length > 14 ? '...' : '');
+  };
 
   // Voice recording states
   const [isRecording, setIsRecording] = useState(false);
@@ -146,12 +169,30 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
 
   // Sync state whenever props change (e.g. when clicking Remodelar on an extracted transcript)
   React.useEffect(() => {
-    if (initialTopic) {
+    if (sourceTranscript) {
+      setCreationMode('remodel');
+      setRemodelText(sourceTranscript);
+      setSubTab('create');
+    } else if (initialTopic) {
       setTopic(initialTopic);
-    } else if (sourceTranscript) {
-      setTopic(sourceTranscript);
     }
-  }, [initialTopic, sourceTranscript]);
+  }, [sourceTranscript, initialTopic]);
+
+  // Handler unificado de remodelagem chamado de qualquer aba (Extractor, Downloader, Galeria, Histórico)
+  const handleTriggerRemodel = (transcriptInput: any, title?: string) => {
+    let actualText = '';
+    let actualTitle = title || '';
+    if (typeof transcriptInput === 'object' && transcriptInput !== null) {
+      actualText = transcriptInput.fullText || transcriptInput.title || '';
+      actualTitle = transcriptInput.title || title || '';
+    } else if (typeof transcriptInput === 'string') {
+      actualText = transcriptInput;
+    }
+    setCreationMode('remodel');
+    setRemodelText(actualText);
+    setSubTab('create');
+    onRemodelTranscript?.(actualText, actualTitle);
+  };
 
   // Compute live breakdown for the chosen duration
   const activeDurationString = useMemo(() => {
@@ -306,38 +347,20 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
     return cleanObjectives;
   };
 
-  const handleGenerateVariants = async () => {
-    if (!topic.trim()) return;
-    setIsGeneratingVariants(true);
-    try {
-      const cleanObjectives = getCleanObjectives();
-      onGenerate({
-        topic: topic.trim(),
-        niche: selectedNiche,
-        platform,
-        duration: activeDurationString,
-        framework,
-        tone,
-        targetAudience,
-        ctaGoal,
-        extraDetails: extraDetails.trim() ? extraDetails.trim() : undefined,
-        productOrBrand: productOrBrand.trim() ? productOrBrand.trim() : undefined,
-        sourceTranscript: sourceTranscript || undefined,
-        sourceVideoTitle: sourceVideoTitle || undefined,
-        quantity,
-        objectives: cleanObjectives.length > 0 ? cleanObjectives : undefined,
-      });
-    } finally {
-      setIsGeneratingVariants(false);
-    }
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!topic.trim() && !sourceTranscript) return;
+    const isRemodel = creationMode === 'remodel';
+    const effectiveTranscript = isRemodel ? remodelText.trim() : undefined;
+    const effectiveTopic = isRemodel
+      ? (topic.trim() || sourceVideoTitle || (remodelText.trim() ? extractOriginalHookCandidate(remodelText) : 'Remodelagem de Vídeo Viral'))
+      : topic.trim();
 
+    if (isRemodel && !effectiveTranscript) return;
+    if (!isRemodel && !effectiveTopic) return;
+
+    const cleanObjectives = getCleanObjectives();
     onGenerate({
-      topic: topic.trim(),
+      topic: effectiveTopic,
       niche: selectedNiche,
       platform,
       duration: activeDurationString,
@@ -347,13 +370,16 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
       ctaGoal,
       extraDetails: extraDetails.trim() ? extraDetails.trim() : undefined,
       productOrBrand: productOrBrand.trim() ? productOrBrand.trim() : undefined,
-      sourceTranscript: sourceTranscript || undefined,
+      sourceTranscript: effectiveTranscript,
       sourceVideoTitle: sourceVideoTitle || undefined,
+      useAi,
+      quantity,
+      objectives: cleanObjectives.length > 0 ? cleanObjectives : undefined,
     });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="space-y-6">
       {/* Secondary Toolbar - Sub Tabs */}
       <div className="flex items-center gap-2 flex-wrap">
         <button
@@ -420,7 +446,7 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
 
       {/* Only show the create form when subTab is 'create' */}
       {subTab === 'create' && (
-      <>
+      <form onSubmit={handleSubmit} className="space-y-6">
 
       {/* Hero Header for Form */}
       <div className="rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900/90 to-slate-950/90 p-5 sm:p-6 shadow-xl relative overflow-hidden">
@@ -453,87 +479,343 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
           </button>
         </div>
 
-        {/* Source transcript notification if remodeling */}
-        {sourceTranscript && (
-          <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-950/30 p-3.5 text-xs text-rose-200 flex items-start gap-2">
-            <Zap className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" />
+        {/* Selector de Modo: Criar por Ideia vs Remodelar Vídeo */}
+        <div className="mb-5 grid grid-cols-1 sm:grid-cols-2 gap-3 p-1.5 rounded-2xl bg-slate-950/90 border border-slate-800">
+          <button
+            type="button"
+            id="btn-mode-idea"
+            onClick={() => setCreationMode('idea')}
+            className={`flex items-center gap-3 p-3.5 rounded-xl text-left transition-all ${
+              creationMode === 'idea'
+                ? 'bg-gradient-to-r from-rose-600/20 via-pink-600/15 to-transparent border border-rose-500/40 text-white shadow-lg'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent'
+            }`}
+          >
+            <div
+              className={`p-2.5 rounded-xl transition ${
+                creationMode === 'idea'
+                  ? 'bg-rose-500 text-white shadow-md shadow-rose-500/30'
+                  : 'bg-slate-800 text-slate-400'
+              }`}
+            >
+              <Lightbulb className="w-5 h-5" />
+            </div>
             <div>
-              <strong className="text-white block font-bold">Modo de Remodelagem Ativo:</strong>
-              <p className="text-[11px] text-rose-300 line-clamp-2 mt-0.5">
-                O roteiro será criado do zero com base na fala extraída: "{sourceTranscript.slice(0, 150)}..."
+              <div className="font-bold text-sm text-white flex items-center gap-2">
+                <span>💡 Criar por Ideia / Tema</span>
+                {creationMode === 'idea' && (
+                  <span className="text-[10px] bg-rose-500/30 text-rose-300 px-2 py-0.5 rounded-full font-extrabold border border-rose-500/40">
+                    ATIVO
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Crie roteiros novos a partir de um nicho, ideia ou tema do zero.
               </p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            id="btn-mode-remodel"
+            onClick={() => setCreationMode('remodel')}
+            className={`flex items-center gap-3 p-3.5 rounded-xl text-left transition-all ${
+              creationMode === 'remodel'
+                ? 'bg-gradient-to-r from-purple-600/20 via-indigo-600/15 to-transparent border border-purple-500/40 text-white shadow-lg'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent'
+            }`}
+          >
+            <div
+              className={`p-2.5 rounded-xl transition ${
+                creationMode === 'remodel'
+                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                  : 'bg-slate-800 text-slate-400'
+              }`}
+            >
+              <Repeat className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-bold text-sm text-white flex items-center gap-2">
+                <span>🔄 Remodelar Vídeo / Transcrição</span>
+                {creationMode === 'remodel' && (
+                  <span className="text-[10px] bg-purple-500/30 text-purple-300 px-2 py-0.5 rounded-full font-extrabold border border-purple-500/40">
+                    ATIVO
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Mantém o mesmo gancho e gera {quantity} variações do desenvolvimento.
+              </p>
+            </div>
+          </button>
+        </div>
+
+        {/* AI vs Algorithmic Mode Selector (Zero Custo / 100% Confiável) */}
+        <div className="mb-5 rounded-2xl border border-slate-800 bg-slate-950/80 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-inner">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className={`p-2.5 rounded-xl transition ${useAi ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shadow-sm shadow-emerald-500/10' : 'bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-sm shadow-amber-500/10'}`}>
+              {useAi ? <Sparkles className="h-5 w-5" /> : <Cpu className="h-5 w-5" />}
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold text-white">Modo de Geração:</span>
+                <span className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border transition ${
+                  useAi
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                    : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                }`}>
+                  {useAi ? '⚡ Com Inteligência Artificial' : '⚙️ Sem IA (Algoritmo Heurístico)'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1 max-w-xl leading-relaxed">
+                {useAi
+                  ? 'Gera com modelos de IA gratuitos (Groq, OpenRouter). Se todas as IAs falharem, o sistema ativa o algoritmo automaticamente para você nunca ficar sem roteiro.'
+                  : 'Gera 100% por regras heurísticas virais, instantâneo e sem consumo de IA. Ideal para custo zero e velocidade imediata.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 self-start sm:self-center bg-slate-900 border border-slate-800 p-1 rounded-xl shrink-0">
+            <button
+              type="button"
+              onClick={() => setUseAi(true)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                useAi
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              }`}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>Usar IA</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setUseAi(false)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                !useAi
+                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              }`}
+            >
+              <Cpu className="h-3.5 w-3.5" />
+              <span>Sem IA</span>
+            </button>
+          </div>
+        </div>
+
+        {/* MODO 1: REMODELAR VÍDEO / TRANSCRIÇÃO */}
+        {creationMode === 'remodel' && (
+          <div className="space-y-4 mb-5">
+            {/* Card explicativo das regras de ganchos e variações */}
+            <div className="rounded-2xl border border-purple-500/30 bg-purple-950/20 p-4 sm:p-5 shadow-lg relative overflow-hidden">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0 mt-0.5">
+                  <Zap className="h-5 w-5" />
+                </div>
+                <div className="space-y-2 text-xs flex-1">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <strong className="text-sm font-extrabold text-white">
+                        Estratégia de Remodelagem Viral
+                      </strong>
+                      <span className="text-[10px] bg-purple-500/30 text-purple-200 px-2 py-0.5 rounded-full font-bold border border-purple-500/30">
+                        {quantity} {quantity === 1 ? 'Versão' : 'Versões'}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-purple-300 font-mono">
+                      {Math.pow(quantity, 4)} combinações possíveis
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1 text-[11px]">
+                    <div className="p-3 rounded-xl bg-slate-900/90 border border-purple-500/20">
+                      <span className="font-bold text-amber-300 flex items-center gap-1.5 mb-1">
+                        <span>🎯</span> Gancho #1 (Exato):
+                      </span>
+                      <p className="text-slate-300 leading-relaxed text-[11px]">
+                        Inicia <strong>exatamente com o mesmo gancho</strong> que fez o vídeo original viralizar.
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-slate-900/90 border border-purple-500/20">
+                      <span className="font-bold text-purple-300 flex items-center gap-1.5 mb-1">
+                        <span>🔀</span> Ganchos #2 a #{quantity}:
+                      </span>
+                      <p className="text-slate-300 leading-relaxed text-[11px]">
+                        Mantêm a <strong>mesma ideia e sentido</strong> do gancho original com palavras e ângulos alternativos.
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-slate-900/90 border border-purple-500/20">
+                      <span className="font-bold text-pink-300 flex items-center gap-1.5 mb-1">
+                        <span>🧩</span> Desenvolvimento:
+                      </span>
+                      <p className="text-slate-300 leading-relaxed text-[11px]">
+                        Gera {quantity} variações de Dores e Soluções trocando palavras para você gravar diferentes takes.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Input da Transcrição a Remodelar */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="input-remodel-text"
+                  className="block text-xs font-bold uppercase tracking-wider text-purple-300 flex items-center gap-1.5"
+                >
+                  <FileText className="w-3.5 h-3.5 text-purple-400" />
+                  <span>Fala / Transcrição Original do Vídeo a Remodelar</span>
+                  <span className="text-rose-400">*</span>
+                </label>
+                {remodelText.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-slate-400 font-mono">
+                      {remodelText.split(/\s+/).filter(Boolean).length} palavras ({remodelText.length} caracteres)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setRemodelText('')}
+                      className="text-slate-400 hover:text-rose-400 text-xs p-1"
+                      title="Limpar texto"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="relative">
+                <textarea
+                  id="input-remodel-text"
+                  value={remodelText}
+                  onChange={(e) => setRemodelText(e.target.value)}
+                  placeholder="Cole aqui a fala ou áudio extraído de um vídeo viral (TikTok, Reels, Shorts) para ser remodelado..."
+                  rows={6}
+                  required
+                  className="w-full rounded-xl border border-purple-500/40 bg-slate-950/90 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 transition-all focus:border-purple-500 focus:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-purple-500/20 leading-relaxed font-sans"
+                />
+              </div>
+
+              {/* Botões rápidos se a caixa estiver vazia */}
+              {!remodelText.trim() && (
+                <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                  <span className="text-slate-400 text-[11px]">Ainda não extraiu o áudio?</span>
+                  <button
+                    type="button"
+                    onClick={() => setSubTab('transcribe')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-purple-500/40 bg-purple-950/40 text-purple-300 hover:bg-purple-900/60 font-medium transition text-[11px]"
+                  >
+                    <Mic className="w-3 h-3" />
+                    <span>Extrair Áudio de Vídeo (Arquivo)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSubTab('download')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 font-medium transition text-[11px]"
+                  >
+                    <Download className="w-3 h-3" />
+                    <span>Baixar por Link TikTok/Reels</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Preview do Gancho #1 que será preservado */}
+              {remodelText.trim().length >= 10 && (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-3 text-xs flex items-start gap-2.5 shadow-inner">
+                  <span className="text-base shrink-0">🎯</span>
+                  <div className="space-y-0.5 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400">
+                        Gancho #1 Identificado (Preservado nas Versões):
+                      </span>
+                      <span className="text-[10px] text-amber-300/80 bg-amber-900/40 px-2 py-0.5 rounded font-mono">
+                        Validado no Original
+                      </span>
+                    </div>
+                    <p className="text-amber-100 font-medium text-xs leading-relaxed italic pt-0.5">
+                      "{extractOriginalHookCandidate(remodelText)}"
+                    </p>
+                    <p className="text-[11px] text-slate-400 pt-0.5">
+                      As outras {quantity - 1} {quantity - 1 === 1 ? 'versão' : 'versões'} começarão com essa mesma ideia e sentido, testando palavras e ângulos alternativos.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Topic Input Field */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label htmlFor="input-topic" className="block text-xs font-bold uppercase tracking-wider text-slate-300">
-              Sobre o que será o vídeo? <span className="text-rose-400">*</span>
-            </label>
-            {topic.length > 0 && (
-              <span className="text-[11px] text-slate-400 font-mono">
-                {topic.split(/\s+/).filter(Boolean).length} palavras ({topic.length} caracteres)
-              </span>
-            )}
-          </div>
-          <div className="relative">
-            <textarea
-              id="input-topic"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="Ex: Cole aqui a fala do vídeo, ideia ou tema para ser remodelado em um roteiro viral..."
-              rows={topic.length > 180 ? 6 : 3}
-              required={!sourceTranscript}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 transition-all focus:border-rose-500 focus:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-rose-500/20 leading-relaxed font-sans pr-12"
-            />
-            
-            {/* Microphone Button */}
-            <div className="absolute right-2 top-2 flex items-center gap-1">
-              {isRecording && (
+        {/* MODO 2: CRIAR POR IDEIA / TEMA */}
+        {creationMode === 'idea' && (
+          <div className="space-y-2 mb-5">
+            <div className="flex items-center justify-between">
+              <label htmlFor="input-topic" className="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                Sobre o que será o vídeo? <span className="text-rose-400">*</span>
+              </label>
+              {topic.length > 0 && (
+                <span className="text-[11px] text-slate-400 font-mono">
+                  {topic.split(/\s+/).filter(Boolean).length} palavras ({topic.length} caracteres)
+                </span>
+              )}
+            </div>
+            <div className="relative">
+              <textarea
+                id="input-topic"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder="Ex: Como economizar R$ 1.000 em 30 dias sem abrir mão do que você gosta..."
+                rows={topic.length > 180 ? 6 : 3}
+                required
+                className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 transition-all focus:border-rose-500 focus:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-rose-500/20 leading-relaxed font-sans pr-12"
+              />
+              
+              {/* Microphone Button */}
+              <div className="absolute right-2 top-2 flex items-center gap-1">
+                {isRecording && (
+                  <button
+                    type="button"
+                    onClick={cancelRecording}
+                    className="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all"
+                    title="Cancelar gravação"
+                  >
+                    <MicOff className="h-4 w-4" />
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={cancelRecording}
-                  className="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all"
-                  title="Cancelar gravação"
+                  onClick={isRecording ? stopRecording : startRecording}
+                  disabled={isTranscribing}
+                  className={`p-2 rounded-lg transition-all ${
+                    isRecording
+                      ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/30'
+                      : isTranscribing
+                      ? 'bg-amber-500/20 text-amber-400 cursor-wait'
+                      : 'bg-slate-700/50 text-slate-400 hover:bg-rose-500/20 hover:text-rose-400'
+                  }`}
+                  title={isRecording ? 'Parar gravação' : 'Gravar áudio e transcrever'}
                 >
-                  <MicOff className="h-4 w-4" />
+                  {isTranscribing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : isRecording ? (
+                    <Mic className="h-4 w-4" />
+                  ) : (
+                    <Mic className="h-4 w-4" />
+                  )}
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={isRecording ? stopRecording : startRecording}
-                disabled={isTranscribing}
-                className={`p-2 rounded-lg transition-all ${
-                  isRecording
-                    ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/30'
-                    : isTranscribing
-                    ? 'bg-amber-500/20 text-amber-400 cursor-wait'
-                    : 'bg-slate-700/50 text-slate-400 hover:bg-rose-500/20 hover:text-rose-400'
-                }`}
-                title={isRecording ? 'Parar gravação' : 'Gravar áudio e transcrever'}
-              >
-                {isTranscribing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : isRecording ? (
-                  <Mic className="h-4 w-4" />
-                ) : (
-                  <Mic className="h-4 w-4" />
-                )}
-              </button>
+              </div>
             </div>
+            
+            {/* Recording Progress Indicator */}
+            {(isRecording || isTranscribing) && recordingProgress && (
+              <div className="flex items-center gap-2 text-xs text-amber-300 bg-amber-500/10 rounded-lg px-3 py-2 border border-amber-500/20">
+                {isRecording && <Mic className="h-3.5 w-3.5 text-red-400 animate-pulse" />}
+                {isTranscribing && <Loader2 className="h-3.5 w-3.5 text-amber-400 animate-spin" />}
+                <span>{recordingProgress}</span>
+              </div>
+            )}
           </div>
-          
-          {/* Recording Progress Indicator */}
-          {(isRecording || isTranscribing) && recordingProgress && (
-            <div className="flex items-center gap-2 text-xs text-amber-300 bg-amber-500/10 rounded-lg px-3 py-2 border border-amber-500/20">
-              {isRecording && <Mic className="h-3.5 w-3.5 text-red-400 animate-pulse" />}
-              {isTranscribing && <Loader2 className="h-3.5 w-3.5 text-amber-400 animate-spin" />}
-              <span>{recordingProgress}</span>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Dynamic 4-Part Structure Preview Badges (Updated live by chosen duration) */}
         <div className="mt-5 pt-4 border-t border-slate-800/80">
@@ -925,6 +1207,80 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
         )}
       </div>
 
+      {/* Modular Matrix Quantity Selector (Quebra-Cabeça Intercambiável 4x4) */}
+      <div className="rounded-2xl border border-indigo-500/30 bg-gradient-to-r from-indigo-950/40 via-purple-950/30 to-slate-950/80 p-4 shadow-lg shadow-indigo-950/20">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs">
+                🧩
+              </span>
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                Quantidade de Variações Intercambiáveis (Quebra-Cabeça)
+              </label>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">
+              Gera <strong className="text-indigo-300 font-mono">{quantity}</strong> opções de cada bloco (Ganchos, Dores, Soluções e CTAs).
+              Qualquer bloco se encaixa em qualquer outro sem perda de sentido!
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-center">
+            {/* Quick Presets */}
+            <div className="flex items-center gap-1 bg-slate-900/90 border border-slate-800 p-1 rounded-xl">
+              {[1, 3, 4, 5].map((q) => (
+                <button
+                  key={q}
+                  type="button"
+                  onClick={() => setQuantity(q)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                    quantity === q
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  }`}
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+
+            {/* Stepper */}
+            <div className="flex items-center gap-1 rounded-xl border border-slate-700 bg-slate-950 p-1">
+              <button
+                type="button"
+                onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+                className="h-6 w-6 flex items-center justify-center rounded text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              >
+                <Minus className="h-3 w-3" />
+              </button>
+              <span className="w-6 text-center text-xs font-bold text-white font-mono">{quantity}</span>
+              <button
+                type="button"
+                onClick={() => setQuantity((prev) => Math.min(5, prev + 1))}
+                className="h-6 w-6 flex items-center justify-center rounded text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              >
+                <Plus className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Dynamic Matrix Badge calculation */}
+        <div className="mt-3 pt-3 border-t border-indigo-500/20 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+          <div className="flex items-center gap-1.5 text-indigo-300 font-mono">
+            <span>⚙️ Matriz {quantity}×{quantity}×{quantity}×{quantity}:</span>
+            <strong className="text-white bg-indigo-900/60 px-2 py-0.5 rounded border border-indigo-500/30">
+              {Math.pow(quantity, 4)} combinações possíveis
+            </strong>
+          </div>
+          <span className="text-slate-400">
+            {quantity === 1
+              ? '1 roteiro direto e calibrado'
+              : `${quantity} ganchos + ${quantity} dores + ${quantity} soluções + ${quantity} CTAs modulares`}
+          </span>
+        </div>
+      </div>
+
       {/* Dynamic Status / Feedback during AI fallback */}
       {isLoading && (
         <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-4 text-xs text-amber-300 flex items-center gap-3 animate-pulse">
@@ -942,85 +1298,43 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
       <button
         type="submit"
         id="btn-generate-script"
-        disabled={isLoading || (!topic.trim() && !sourceTranscript)}
-        className="w-full flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-rose-600 via-pink-600 to-amber-600 px-6 py-4 text-sm font-extrabold text-white shadow-xl shadow-rose-600/25 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed hover:from-rose-500 hover:to-amber-500"
+        disabled={
+          isLoading ||
+          (creationMode === 'remodel' ? !remodelText.trim() : !topic.trim())
+        }
+        className={`w-full flex items-center justify-center gap-2 rounded-2xl px-6 py-4 text-sm font-extrabold text-white shadow-xl transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed ${
+          creationMode === 'remodel'
+            ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 shadow-purple-600/25 hover:from-purple-500 hover:to-rose-500'
+            : useAi
+            ? 'bg-gradient-to-r from-rose-600 via-pink-600 to-amber-600 shadow-rose-600/25 hover:from-rose-500 hover:to-amber-500'
+            : 'bg-gradient-to-r from-amber-600 via-orange-600 to-amber-500 shadow-amber-600/25 hover:from-amber-500 hover:to-orange-500'
+        }`}
       >
-        <Sparkles className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+        {useAi ? (
+          <Sparkles className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+        ) : (
+          <Cpu className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+        )}
         <span>
           {isLoading
-            ? 'Gerando Roteiro de 4 Partes (Consultando Modelos)...'
-            : sourceTranscript
-            ? `Remodelar em Roteiro de ${durationBreakdown.formattedDuration} (4 Partes)`
-            : `Gerar Roteiro de ${durationBreakdown.formattedDuration} (4 Partes)`}
+            ? (useAi ? 'Gerando Roteiro (Consultando Modelos de IA)...' : 'Calculando Roteiro com Algoritmo Heurístico...')
+            : creationMode === 'remodel'
+            ? `🔄 Remodelar ${quantity} ${quantity === 1 ? 'Versão' : 'Versões'} com ${useAi ? 'IA' : 'Algoritmo'} (Gancho Original Preservado)`
+            : !useAi
+            ? `Gerar Roteiro sem IA (${durationBreakdown.formattedDuration} • Instantâneo)`
+            : quantity > 1
+            ? `Gerar Roteiro Modular com IA (${durationBreakdown.formattedDuration} • ${Math.pow(quantity, 4)} combinações)`
+            : `Gerar Roteiro com IA (${durationBreakdown.formattedDuration} • 4 Partes)`}
         </span>
       </button>
 
-      {/* AI Variant Generation Section */}
-      <div className="rounded-2xl border border-purple-500/30 bg-gradient-to-b from-purple-950/40 to-slate-950/90 p-4 sm:p-5 space-y-4">
-        <div className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/30">
-            <Wand2 className="h-3.5 w-3.5" />
-          </span>
-          <h3 className="text-sm font-bold text-white">Gerar Variantes com IA</h3>
-        </div>
-        <p className="text-[11px] text-slate-400 -mt-2">
-          Gere múltiplas variações do seu briefing de uma vez. A IA cria roteiros alternativos com abordagens diferentes.
-        </p>
-
-        {/* Quantity Selector */}
-        <div className="flex items-center gap-3">
-          <label className="text-xs font-bold text-slate-300">Quantidade:</label>
-          <div className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-950 p-0.5">
-            <button
-              type="button"
-              onClick={() => setQuantity(Math.max(1, quantity - 1))}
-              className="h-7 w-7 flex items-center justify-center rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition"
-            >
-              <Minus className="h-3.5 w-3.5" />
-            </button>
-            <span className="w-8 text-center text-sm font-bold text-white font-mono">{quantity}</span>
-            <button
-              type="button"
-              onClick={() => setQuantity(Math.min(20, quantity + 1))}
-              className="h-7 w-7 flex items-center justify-center rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <span className="text-[11px] text-slate-500">(máx. 20)</span>
-        </div>
-
-        {/* Generate Variants Button */}
-        <button
-          type="button"
-          onClick={handleGenerateVariants}
-          disabled={isGeneratingVariants || isLoading || !topic.trim()}
-          className="w-full py-3 px-4 rounded-2xl font-semibold text-white bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 shadow-lg shadow-purple-900/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
-        >
-          {isGeneratingVariants ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Iniciando...</span>
-            </>
-          ) : (
-            <>
-              <span>🤖</span>
-              <span>Gerar {quantity} Variantes com IA</span>
-            </>
-          )}
-        </button>
-        <p className="text-[11px] text-slate-500 text-center leading-relaxed">
-          Gera {quantity} roteiros alternativos a partir do seu briefing, cada um com uma abordagem diferente.
-        </p>
-      </div>
-
-      </> // End fragment for subTab === 'create'
+      </form>
       )}
 
       {/* Placeholder panels for other sub-tabs */}
       {subTab === 'transcribe' && (
         <MediaExtractor
-          onRemodelScript={(text, title) => onRemodelTranscript?.(text, title)}
+          onRemodelScript={handleTriggerRemodel}
           recentTranscripts={recentTranscripts}
           onSelectRecentTranscript={(t) => onSelectRecentTranscript?.(t)}
           onClearHistory={() => onClearTranscriptHistory?.()}
@@ -1031,14 +1345,14 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
         <MediaDownloader
           onMediaDownloaded={(media, transcript) => onMediaDownloaded?.(media, transcript)}
           onGoToGallery={() => setSubTab('gallery')}
-          onRemodelDirectly={(text, title) => onRemodelTranscript?.(text, title)}
+          onRemodelDirectly={handleTriggerRemodel}
         />
       )}
       {subTab === 'gallery' && (
         <MediaGallery
           mediaList={downloadedMediaList}
           onDeleteMedia={(id) => onDeleteMedia?.(id)}
-          onRemodelMedia={(text, title) => onRemodelMedia?.(text, title)}
+          onRemodelMedia={handleTriggerRemodel}
           onToggleFavoriteMedia={(id) => onToggleFavoriteMedia?.(id)}
           onGoToDownloadTab={() => setSubTab('download')}
         />
@@ -1047,16 +1361,19 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
         <SavedScriptsList
           savedScripts={savedScripts}
           onOpenScript={(script) => onOpenSavedScript?.(script)}
-          onRemodelScript={(script) => onRemodelSavedScript?.(script)}
+          onRemodelScript={(script) => handleTriggerRemodel(script.fullTeleprompterText, script.title)}
           onDeleteScript={(id) => onDeleteSavedScript?.(id)}
           onToggleFavorite={(id) => onToggleFavorite?.(id)}
           onCreateNew={() => {
+            setCreationMode('idea');
+            setTopic('');
+            setRemodelText('');
             setSubTab('create');
             onNewScriptClick?.();
           }}
         />
       )}
-    </form>
+    </div>
   );
 };
 

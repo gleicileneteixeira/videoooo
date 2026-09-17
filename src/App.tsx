@@ -337,18 +337,21 @@ export default function App() {
 
   // Remodel action from Extractor or Downloader
   const handleStartRemodel = (transcript: ExtractedTranscript) => {
-    const fullContent = transcript.fullText || transcript.title;
-    setSourceTranscript(transcript.fullText);
-    setSourceVideoTitle(transcript.title);
-    setPrefilledTopic(fullContent);
-    setCurrentScript(null);
-    setActiveTab('generator');
+    handleStartRemodelFromText(transcript);
   };
 
-  const handleStartRemodelFromText = (transcriptText: string, title: string) => {
-    const fullContent = transcriptText || title;
-    setSourceTranscript(transcriptText);
-    setSourceVideoTitle(title);
+  const handleStartRemodelFromText = (input: any, title?: string) => {
+    let actualText = '';
+    let actualTitle = title || '';
+    if (typeof input === 'object' && input !== null) {
+      actualText = input.fullText || input.title || '';
+      actualTitle = input.title || title || '';
+    } else if (typeof input === 'string') {
+      actualText = input;
+    }
+    const fullContent = actualText || actualTitle;
+    setSourceTranscript(actualText);
+    setSourceVideoTitle(actualTitle);
     setPrefilledTopic(fullContent);
     setCurrentScript(null);
     setActiveTab('generator');
@@ -514,6 +517,10 @@ export default function App() {
                         setSourceVideoTitle('');
                         setPrefilledTopic('');
                       }}
+                      onNavigateToMerger={() => {
+                        handleNavigateRoute('/videos');
+                        setActiveTab('merger');
+                      }}
                     />
                   </div>
                 ) : (
@@ -610,10 +617,18 @@ export default function App() {
         {currentRoute === '/mass-production' && <MassProductionStudio />}
 
         {/* 5. ROTA /studio: FÁBRICA DE POSTS & CARROSSÉIS */}
-        {currentRoute === '/studio' && <PostStudio />}
+        {currentRoute === '/studio' && (
+          <PostStudio
+            onNavigateRoute={handleNavigateRoute}
+          />
+        )}
 
         {/* 6. ROTA /calendar: CALENDÁRIO EDITORIAL */}
-        {currentRoute === '/calendar' && <ContentCalendar />}
+        {currentRoute === '/calendar' && (
+          <ContentCalendar
+            onNavigateRoute={handleNavigateRoute}
+          />
+        )}
 
         {/* 7. ROTA /publish: CENTRAL DE PUBLICAÇÃO */}
         {currentRoute === '/publish' && <PublishHub />}
