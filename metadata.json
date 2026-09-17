@@ -1,6 +1,6 @@
 {
   "name": "ViralScript AI - Gerador de Roteiros Virais",
-  "description": "Gerador inteligente de roteiros virais, motor de download de mídias sociais (TikTok, Instagram, Facebook), fábrica de posts multiformato (1:1, 9:16 e 16:9) com renderizador Canvas e calendário editorial integrado.",
+  "description": "Gerador inteligente de roteiros virais com matriz modular A/B, sugestões de B-roll com busca direta em sites de banco de vídeo gratuitos (Pexels, Pixabay, Mixkit), motor de download de mídias sociais (TikTok, Instagram, Facebook), fábrica de posts multiformato e calendário editorial.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

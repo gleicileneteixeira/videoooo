@@ -1213,6 +1213,13 @@ function generateAlgorithmicScript(params: {
     title: cleanTitle,
     fourParts,
     hooks: selectedHooks,
+    bRollSuggestions: [
+      `${cleanTitle.split(" ").slice(0, 3).join(" ").toLowerCase()}`,
+      "demonstração prática",
+      "pessoa usando celular",
+      "anotações na mesa",
+      "gráfico de crescimento",
+    ],
     scenes,
     fullTeleprompterText,
     modularMatrix,
@@ -1472,7 +1479,14 @@ FORMATO DE RETORNO JSON:
     "callToAction": "Chamada para ação",
     "coverTitleIdea": "Ideia para capa",
     "coverVisualPrompt": "Prompt visual de capa"
-  }
+  },
+  "bRollSuggestions": [
+    "caderno e caneta",
+    "anotações na mesa",
+    "pessoa usando celular",
+    "gráfico de resultados",
+    "demonstração prática"
+  ]
 }
 `;
 
@@ -1728,6 +1742,9 @@ FORMATO DE RETORNO JSON:
       fourParts,
       hooks: legacyHooks,
       scenes,
+      bRollSuggestions: Array.isArray(parsed.bRollSuggestions) && parsed.bRollSuggestions.length > 0
+        ? parsed.bRollSuggestions.slice(0, 6)
+        : baseline.bRollSuggestions,
       fullTeleprompterText,
       modularMatrix,
       viralityAnalysis: parsed.viralityAnalysis || baseline.viralityAnalysis,

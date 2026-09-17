@@ -37,6 +37,7 @@ import {
 import { ViralScript, ScriptHook, ScriptScene, ExtractedTranscript } from '../types';
 import { TeleprompterModal } from './TeleprompterModal';
 import { SeoGeneratorModal } from './SeoGeneratorModal';
+import { BRollSupportLinks } from './BRollSuggestionBar';
 
 interface ScriptViewerProps {
   script: ViralScript;
@@ -914,8 +915,13 @@ ${[...(script.hashtags?.megaViral || []), ...(script.hashtags?.nicheSpecific || 
                         {sol.text}
                       </p>
                       {sol.visualCue && (
-                        <div className="mt-2 pt-2 border-t border-slate-800/60 text-[10px] text-slate-400">
-                          <strong className="text-slate-300">👁️ B-Roll:</strong> {sol.visualCue}
+                        <div className="mt-2 pt-2 border-t border-slate-800/60 text-[10px] text-slate-400 space-y-1">
+                          <div>
+                            <strong className="text-slate-300">👁️ B-Roll:</strong> {sol.visualCue}
+                          </div>
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <BRollSupportLinks rawVisualCue={sol.visualCue} />
+                          </div>
                         </div>
                       )}
 
@@ -1267,6 +1273,11 @@ ${[...(script.hashtags?.megaViral || []), ...(script.hashtags?.nicheSpecific || 
                   <p className="text-amber-300 font-mono mt-0.5">{fourParts.developmentPart.textOnScreen}</p>
                 </div>
               </div>
+
+              {/* Links de Apoio Gratuitos */}
+              <div className="pt-1 border-t border-slate-800/60">
+                <BRollSupportLinks rawVisualCue={fourParts.developmentPart.visualCue} />
+              </div>
             </div>
           </div>
 
@@ -1365,6 +1376,11 @@ ${[...(script.hashtags?.megaViral || []), ...(script.hashtags?.nicheSpecific || 
                   <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">🎵 Trilha / Efeito Sonoro</span>
                   <p className="text-slate-300">{scene.audioMusicCue}</p>
                 </div>
+              </div>
+
+              {/* Links de Apoio Gratuitos */}
+              <div className="pt-1">
+                <BRollSupportLinks rawVisualCue={scene.visualCue} />
               </div>
             </div>
           ))}

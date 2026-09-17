@@ -181,6 +181,7 @@ export interface ViralScript {
   modularMatrix?: ModularScriptMatrix;
   
   scenes: ScriptScene[];
+  bRollSuggestions?: string[];
   fullTeleprompterText: string;
   
   viralityAnalysis: {
