@@ -1,6 +1,6 @@
 {
   "name": "ViralScript AI - Gerador de Roteiros Virais",
-  "description": "Gerador inteligente de roteiros virais com matriz modular A/B, sugestões de B-roll com busca direta em sites de banco de vídeo gratuitos (Pexels, Pixabay, Mixkit), motor de download de mídias sociais (TikTok, Instagram, Facebook), fábrica de posts multiformato e calendário editorial.",
-  "requestFramePermissions": [],
+  "description": "Gerador inteligente de roteiros virais e estúdio de edição de vídeo estilo Drift com aceleração GPU, multicâmera, speed ramping, efeitos 3D, chroma key, denoise de áudio e teleprompter.",
+  "requestFramePermissions": ["camera", "microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

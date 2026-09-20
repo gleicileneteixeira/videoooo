@@ -33,11 +33,13 @@ import {
   Mic,
   ArrowRight,
   ListVideo,
+  Target,
 } from 'lucide-react';
 import { ViralScript, ScriptHook, ScriptScene, ExtractedTranscript } from '../types';
 import { TeleprompterModal } from './TeleprompterModal';
 import { SeoGeneratorModal } from './SeoGeneratorModal';
 import { BRollSupportLinks } from './BRollSuggestionBar';
+import { StrategicBriefingCard } from './StrategicBriefingCard';
 
 interface ScriptViewerProps {
   script: ViralScript;
@@ -58,7 +60,7 @@ export const ScriptViewer: React.FC<ScriptViewerProps> = ({
   onNewScriptClick,
   onNavigateToMerger,
 }) => {
-  const [activeTab, setActiveTab] = useState<'matrix' | 'four_parts' | 'timeline' | 'hooks' | 'post_kit' | 'prompter_text' | 'engine_logs'>(
+  const [activeTab, setActiveTab] = useState<'matrix' | 'four_parts' | 'briefing' | 'timeline' | 'hooks' | 'post_kit' | 'prompter_text' | 'engine_logs'>(
     script.modularMatrix && script.modularMatrix.quantity > 1 ? 'matrix' : 'four_parts'
   );
   const [isTeleprompterOpen, setIsTeleprompterOpen] = useState(false);
@@ -518,6 +520,20 @@ ${[...(script.hashtags?.megaViral || []), ...(script.hashtags?.nicheSpecific || 
           <Layers className="h-4 w-4" />
           <span>Estrutura 4 Partes (Ativa)</span>
         </button>
+
+        {script.strategicBriefing && (
+          <button
+            onClick={() => setActiveTab('briefing')}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition shrink-0 ${
+              activeTab === 'briefing'
+                ? 'bg-sky-600 text-white shadow-lg shadow-sky-600/30'
+                : 'text-sky-300 bg-sky-950/40 border border-sky-500/30 hover:bg-sky-900/50 hover:text-white'
+            }`}
+          >
+            <Target className="h-4 w-4" />
+            <span>🎯 Briefing Estratégico (5 Pilares)</span>
+          </button>
+        )}
 
         <button
           onClick={() => setActiveTab('timeline')}
@@ -1141,9 +1157,27 @@ ${[...(script.hashtags?.megaViral || []), ...(script.hashtags?.nicheSpecific || 
         </div>
       )}
 
+      {/* TAB: BRIEFING ESTRATÉGICO DA IDEIA (5 PILARES) */}
+      {activeTab === 'briefing' && script.strategicBriefing && (
+        <div className="space-y-4">
+          <StrategicBriefingCard briefing={script.strategicBriefing} defaultExpanded={true} />
+        </div>
+      )}
+
       {/* TAB: FOUR PARTS (O Roteiro dividido nas 4 partes exigidas) */}
       {activeTab === 'four_parts' && (
         <div className="space-y-4">
+          {/* Briefing Estratégico em formato retrátil de apoio */}
+          {script.strategicBriefing && (
+            <div className="mb-3">
+              <StrategicBriefingCard
+                briefing={script.strategicBriefing}
+                title="Briefing Estratégico e Argumentação deste Roteiro"
+                defaultExpanded={false}
+              />
+            </div>
+          )}
+
           {/* 1. Gancho */}
           <div className="rounded-2xl border border-rose-500/30 bg-gradient-to-r from-rose-950/40 via-slate-900 to-slate-950 p-5 shadow-xl">
             <div className="flex items-center justify-between gap-3 mb-3">

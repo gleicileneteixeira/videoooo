@@ -9,9 +9,11 @@ import {
   Loader2,
   Sparkles,
   Share2,
+  FolderOpen,
 } from 'lucide-react';
 import { useProjectStore } from '../stores/useProjectStore';
 import { useUIStore } from '../stores/useUIStore';
+import { ProjectsModal } from './ProjectsModal';
 
 interface EditorHeaderProps {
   onExportClick: () => void;
@@ -35,6 +37,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({ onExportClick }) => 
 
   const [isEditingName, setIsEditingName] = useState(false);
   const [localName, setLocalName] = useState(name);
+  const [isProjectsOpen, setIsProjectsOpen] = useState(false);
 
   const handleNameBlur = () => {
     setIsEditingName(false);
@@ -160,6 +163,16 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({ onExportClick }) => 
       <div className="flex items-center gap-2">
         <button
           type="button"
+          onClick={() => setIsProjectsOpen(true)}
+          title="Gerenciar múltiplos projetos e rascunhos salvos"
+          className="flex items-center gap-1.5 rounded-lg border border-purple-500/40 bg-purple-950/30 px-2.5 py-1 text-[11px] font-semibold text-purple-200 transition hover:border-purple-400 hover:bg-purple-900/40 hover:text-white"
+        >
+          <FolderOpen className="h-3.5 w-3.5 text-purple-400" />
+          <span>Projetos</span>
+        </button>
+
+        <button
+          type="button"
           onClick={handleManualSave}
           title="Salvar projeto manualmente"
           className="hidden sm:flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-slate-300 transition hover:border-slate-700 hover:bg-slate-850 hover:text-white"
@@ -177,6 +190,11 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({ onExportClick }) => 
           <span>Exportar</span>
         </button>
       </div>
+
+      <ProjectsModal
+        isOpen={isProjectsOpen}
+        onClose={() => setIsProjectsOpen(false)}
+      />
     </header>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Bookmark,
   Search,
@@ -16,9 +16,15 @@ import {
   Hash,
   Copy,
   Check,
+  Play,
+  RefreshCw,
+  Download,
+  Upload,
+  ShieldCheck,
 } from 'lucide-react';
 import { ViralScript, ExtractedTranscript } from '../types';
 import { SeoGeneratorModal } from './SeoGeneratorModal';
+import { TeleprompterModal } from './TeleprompterModal';
 
 interface SavedScriptsListProps {
   savedScripts: ViralScript[];
@@ -27,6 +33,9 @@ interface SavedScriptsListProps {
   onToggleFavorite: (id: string) => void;
   onCreateNew: () => void;
   onRemodelScript?: (script: ViralScript) => void;
+  onRefreshHistory?: () => void;
+  isSyncing?: boolean;
+  onImportBackup?: (scripts: ViralScript[]) => void;
 }
 
 export const SavedScriptsList: React.FC<SavedScriptsListProps> = ({
@@ -36,12 +45,18 @@ export const SavedScriptsList: React.FC<SavedScriptsListProps> = ({
   onToggleFavorite,
   onCreateNew,
   onRemodelScript,
+  onRefreshHistory,
+  isSyncing,
+  onImportBackup,
 }) => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'ideia' | 'gravado' | 'editado' | 'postado'>('all');
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [copiedMap, setCopiedMap] = useState<{ [key: string]: boolean }>({});
   const [seoModalTranscript, setSeoModalTranscript] = useState<ExtractedTranscript | null>(null);
+  const [teleprompterScript, setTeleprompterScript] = useState<ViralScript | null>(null);
+  const [backupNotice, setBackupNotice] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleCopyText = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -52,13 +67,13 @@ export const SavedScriptsList: React.FC<SavedScriptsListProps> = ({
   };
 
   const handleOpenSeo = (script: ViralScript) => {
-    const selectedHook = script.hooks[script.selectedHookIndex || 0] || script.hooks[0];
+    const selectedHook = script.hooks?.[script.selectedHookIndex || 0] || script.hooks?.[0];
     const transcriptObj: ExtractedTranscript = {
       id: `script_${script.id}`,
-      title: script.title,
-      fullText: script.fullTeleprompterText || script.title,
+      title: script.title || 'Roteiro Viral',
+      fullText: script.fullTeleprompterText || script.title || '',
       summary: script.captionAndPost?.captionBody || `Roteiro viral para ${script.platform} sobre ${script.niche}.`,
-      hookIdentified: selectedHook?.spokenText || script.title,
+      hookIdentified: selectedHook?.spokenText || script.title || '',
       wordCount: (script.fullTeleprompterText || '').split(/\s+/).filter(Boolean).length,
       sourceType: 'upload_video',
       keyPoints: [
@@ -71,14 +86,58 @@ export const SavedScriptsList: React.FC<SavedScriptsListProps> = ({
     setSeoModalTranscript(transcriptObj);
   };
 
-  const filtered = savedScripts.filter((s) => {
-    const matchesSearch =
-      s.title.toLowerCase().includes(search.toLowerCase()) ||
-      s.niche.toLowerCase().includes(search.toLowerCase()) ||
-      s.fullTeleprompterText.toLowerCase().includes(search.toLowerCase());
+  const handleExportBackup = () => {
+    try {
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(savedScripts, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute('href', dataStr);
+      downloadAnchor.setAttribute('download', `viralscript_roteiros_backup_${new Date().toISOString().slice(0, 10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      setBackupNotice('Backup exportado com sucesso!');
+      setTimeout(() => setBackupNotice(null), 3000);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string);
+        if (Array.isArray(json) && json.length > 0) {
+          onImportBackup?.(json);
+          setBackupNotice(`${json.length} roteiros importados com sucesso!`);
+          setTimeout(() => setBackupNotice(null), 3000);
+        } else {
+          setBackupNotice('Arquivo de backup inválido.');
+          setTimeout(() => setBackupNotice(null), 3000);
+        }
+      } catch (err) {
+        setBackupNotice('Erro ao ler arquivo JSON.');
+        setTimeout(() => setBackupNotice(null), 3000);
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const filtered = savedScripts.filter((s) => {
+    if (!s) return false;
+    const title = (s.title || '').toLowerCase();
+    const niche = (s.niche || '').toLowerCase();
+    const fullText = (s.fullTeleprompterText || '').toLowerCase();
+    const query = (search || '').toLowerCase().trim();
+
+    const matchesSearch = !query || title.includes(query) || niche.includes(query) || fullText.includes(query);
     const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
-    const matchesFav = !favoritesOnly || s.isFavorite;
+    const matchesFav = !favoritesOnly || !!s.isFavorite;
 
     return matchesSearch && matchesStatus && matchesFav;
   });
@@ -92,24 +151,82 @@ export const SavedScriptsList: React.FC<SavedScriptsListProps> = ({
             <Bookmark className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-lg sm:text-xl font-extrabold text-white">
-              Meus Roteiros Salvos ({savedScripts.length})
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg sm:text-xl font-extrabold text-white">
+                Histórico de Roteiros Salvos ({savedScripts.length})
+              </h2>
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">
+                <ShieldCheck className="w-3 h-3" />
+                Sincronizado (Servidor + Local)
+              </span>
+            </div>
             <p className="text-xs text-slate-400">
-              Biblioteca de roteiros criados, organizados por status de gravação e publicação.
+              Biblioteca persistente de roteiros criados, prontos para gravar no teleprompter e publicar.
             </p>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={onCreateNew}
-          className="flex items-center gap-1.5 self-start rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-rose-600/20 hover:scale-105 active:scale-95 transition"
-        >
-          <Sparkles className="h-3.5 w-3.5" />
-          <span>Criar Novo Roteiro</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Sync history button */}
+          {onRefreshHistory && (
+            <button
+              type="button"
+              onClick={onRefreshHistory}
+              disabled={isSyncing}
+              className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700 active:scale-95 transition disabled:opacity-50"
+              title="Sincronizar com o servidor para carregar roteiros criados em outras abas"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin text-rose-400' : ''}`} />
+              <span>{isSyncing ? 'Sincronizando...' : 'Atualizar'}</span>
+            </button>
+          )}
+
+          {/* Export backup */}
+          <button
+            type="button"
+            onClick={handleExportBackup}
+            className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition"
+            title="Exportar todos os roteiros salvos em arquivo JSON"
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Backup JSON</span>
+          </button>
+
+          {/* Import backup */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition"
+            title="Importar roteiros a partir de um backup JSON"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Restaurar</span>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleImportFile}
+            className="hidden"
+          />
+
+          <button
+            type="button"
+            onClick={onCreateNew}
+            className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-rose-600/20 hover:scale-105 active:scale-95 transition"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>Criar Novo Roteiro</span>
+          </button>
+        </div>
       </div>
+
+      {backupNotice && (
+        <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center justify-between">
+          <span>{backupNotice}</span>
+          <button onClick={() => setBackupNotice(null)} className="text-slate-400 hover:text-white">✕</button>
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 space-y-3">
@@ -121,7 +238,7 @@ export const SavedScriptsList: React.FC<SavedScriptsListProps> = ({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por título, nicho ou palavras-chave..."
+              placeholder="Buscar por título, nicho, gancho ou palavras do roteiro..."
               className="w-full rounded-xl border border-slate-700 bg-slate-950 pl-10 pr-4 py-2 text-xs text-slate-100 placeholder-slate-500 outline-none focus:border-rose-500"
             />
           </div>
@@ -234,10 +351,10 @@ export const SavedScriptsList: React.FC<SavedScriptsListProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <span className="rounded-md bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-300 border border-rose-500/30">
-                      {s.platform.toUpperCase()}
+                      {(s.platform || 'TIKTOK').toUpperCase()}
                     </span>
                     <span className="rounded-md bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-400">
-                      {s.duration}
+                      {s.duration || '45s'}
                     </span>
                   </div>
 
@@ -262,14 +379,14 @@ export const SavedScriptsList: React.FC<SavedScriptsListProps> = ({
 
                 {/* Hook Preview */}
                 <p className="text-xs text-slate-400 italic line-clamp-2 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80">
-                  "{s.hooks[s.selectedHookIndex || 0]?.spokenText || s.fullTeleprompterText.substring(0, 80)}..."
+                  "{s.hooks?.[s.selectedHookIndex || 0]?.spokenText || (s.fullTeleprompterText || '').substring(0, 90)}..."
                 </p>
 
                 {/* Meta details */}
                 <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
                   <span className="flex items-center gap-1 text-rose-400 font-bold">
                     <Flame className="h-3 w-3" />
-                    Score: {s.viralityAnalysis?.overallScore || 90}/100
+                    Score: {s.viralityAnalysis?.overallScore || 95}/100
                   </span>
 
                   <span
@@ -302,7 +419,7 @@ export const SavedScriptsList: React.FC<SavedScriptsListProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => handleCopyText(s.fullTeleprompterText, s.id)}
+                    onClick={() => handleCopyText(s.fullTeleprompterText || '', s.id)}
                     className="flex items-center gap-1 text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 text-xs transition"
                     title="Copiar Fala do Teleprompter"
                   >
@@ -319,7 +436,7 @@ export const SavedScriptsList: React.FC<SavedScriptsListProps> = ({
                     title="Gerar 1 a 10 descrições SEO e headlines a partir deste roteiro"
                   >
                     <Hash className="h-3.5 w-3.5" />
-                    <span>SEO & Tags</span>
+                    <span>SEO</span>
                   </button>
 
                   {/* Remodel Button */}
@@ -335,10 +452,22 @@ export const SavedScriptsList: React.FC<SavedScriptsListProps> = ({
                     </button>
                   )}
 
+                  {/* Direct Teleprompter Record Button */}
+                  <button
+                    type="button"
+                    onClick={() => setTeleprompterScript(s)}
+                    className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 px-3 py-1.5 text-xs font-bold text-white shadow-md shadow-rose-600/20 hover:scale-105 active:scale-95 transition"
+                    title="Gravar este roteiro no Teleprompter agora"
+                  >
+                    <Play className="h-3 w-3 fill-white" />
+                    <span>Gravar</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => onOpenScript(s)}
-                    className="flex items-center gap-1 rounded-xl bg-slate-800 border border-slate-700 px-3 py-1.5 text-xs font-bold text-slate-200 hover:bg-rose-600 hover:text-white hover:border-rose-600 transition"
+                    className="flex items-center gap-1 rounded-xl bg-slate-800 border border-slate-700 px-3 py-1.5 text-xs font-bold text-slate-200 hover:bg-slate-700 hover:text-white transition"
+                    title="Abrir no editor visual de 4 partes"
                   >
                     <span>Abrir</span>
                     <ExternalLink className="h-3 w-3" />
@@ -356,6 +485,17 @@ export const SavedScriptsList: React.FC<SavedScriptsListProps> = ({
           transcript={seoModalTranscript}
           isOpen={!!seoModalTranscript}
           onClose={() => setSeoModalTranscript(null)}
+        />
+      )}
+
+      {/* Teleprompter Modal */}
+      {teleprompterScript && (
+        <TeleprompterModal
+          isOpen={!!teleprompterScript}
+          onClose={() => setTeleprompterScript(null)}
+          script={teleprompterScript}
+          scriptTitle={teleprompterScript.title}
+          teleprompterText={teleprompterScript.fullTeleprompterText}
         />
       )}
     </div>

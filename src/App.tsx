@@ -35,11 +35,47 @@ import {
   DownloadedMedia,
   ApiKeysConfig,
 } from './types';
-import { SAMPLE_VIRAL_SCRIPT } from './data/presets';
+import { SAMPLE_VIRAL_SCRIPT, DETRAN_SIMULADO_SCRIPT } from './data/presets';
 import { Sparkles, AlertCircle, ArrowLeft, Cpu } from 'lucide-react';
 import { getStoredApiKeys, saveStoredApiKeys, attachApiKeysPayload } from './utils/apiHelper';
 
 const STORAGE_SCRIPTS = 'viralscript_saved_list_v3';
+const LEGACY_STORAGE_KEYS = [
+  'viralscript_saved_list_v3',
+  'viralscript_saved_list_v2',
+  'viralscript_saved_list_v1',
+  'viralscript_saved_scripts',
+  'viralscript_saved_list',
+  'viralscript_scripts',
+  'saved_scripts',
+];
+
+function getInitialStoredScripts(): ViralScript[] {
+  const map = new Map<string, ViralScript>();
+  // Pre-seed detran script and sample script
+  map.set(DETRAN_SIMULADO_SCRIPT.id, DETRAN_SIMULADO_SCRIPT);
+  map.set(SAMPLE_VIRAL_SCRIPT.id, SAMPLE_VIRAL_SCRIPT);
+
+  for (const key of LEGACY_STORAGE_KEYS) {
+    try {
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((item: any) => {
+            if (item && item.id) {
+              map.set(item.id, item);
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Erro ao ler key localstorage:', key, e);
+    }
+  }
+  return Array.from(map.values());
+}
+
 const STORAGE_MEDIA = 'viralscript_downloaded_media_v3';
 const STORAGE_TRANSCRIPTS = 'viralscript_transcripts_v3';
 const STORAGE_API_KEYS = 'viralscript_api_keys_v1';
@@ -172,14 +208,89 @@ export default function App() {
 
   // Persisted state
   const [savedScripts, setSavedScripts] = useState<ViralScript[]>(() => {
+    return getInitialStoredScripts();
+  });
+  const [isSyncingHistory, setIsSyncingHistory] = useState(false);
+
+  // Sync server saved-scripts on mount and allow manual refresh
+  const syncScriptsWithServer = async () => {
+    setIsSyncingHistory(true);
     try {
-      const stored = localStorage.getItem(STORAGE_SCRIPTS);
-      if (stored) return JSON.parse(stored);
+      const res = await fetch('/api/saved-scripts');
+      if (res.ok) {
+        const data = await res.json();
+        const serverScripts: ViralScript[] = data.scripts || [];
+
+        setSavedScripts((current) => {
+          const map = new Map<string, ViralScript>();
+          // Server scripts first
+          serverScripts.forEach((s) => {
+            if (s && s.id) map.set(s.id, s);
+          });
+          // Client scripts
+          current.forEach((s) => {
+            if (s && s.id && !map.has(s.id)) {
+              map.set(s.id, s);
+            }
+          });
+          // Ensure detran script is present
+          if (!map.has(DETRAN_SIMULADO_SCRIPT.id)) {
+            map.set(DETRAN_SIMULADO_SCRIPT.id, DETRAN_SIMULADO_SCRIPT);
+          }
+          const merged = Array.from(map.values()).sort((a, b) => {
+            const dateA = new Date(a.createdAt || 0).getTime();
+            const dateB = new Date(b.createdAt || 0).getTime();
+            return dateB - dateA;
+          });
+
+          // Also backup any client scripts missing on server to server
+          const missingOnServer = current.filter(
+            (c) => !serverScripts.some((s) => s.id === c.id)
+          );
+          if (missingOnServer.length > 0) {
+            fetch('/api/save-script', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ scripts: missingOnServer }),
+            }).catch(console.error);
+          }
+
+          return merged;
+        });
+      }
+    } catch (err) {
+      console.error('Falha ao sincronizar scripts com o servidor:', err);
+    } finally {
+      setIsSyncingHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    syncScriptsWithServer();
+  }, []);
+
+  const handleImportBackup = async (imported: ViralScript[]) => {
+    if (!Array.isArray(imported) || imported.length === 0) return;
+    setSavedScripts((prev) => {
+      const map = new Map<string, ViralScript>();
+      imported.forEach((s) => {
+        if (s && s.id) map.set(s.id, s);
+      });
+      prev.forEach((s) => {
+        if (s && s.id && !map.has(s.id)) map.set(s.id, s);
+      });
+      return Array.from(map.values());
+    });
+    try {
+      await fetch('/api/save-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scripts: imported }),
+      });
     } catch (e) {
       console.error(e);
     }
-    return [SAMPLE_VIRAL_SCRIPT];
-  });
+  };
 
   const [downloadedMediaList, setDownloadedMediaList] = useState<DownloadedMedia[]>(() => {
     try {
@@ -281,6 +392,11 @@ export default function App() {
 
       // Add to saved history
       setSavedScripts((prev) => [generatedScript, ...prev.filter((s) => s.id !== generatedScript.id)]);
+      fetch('/api/save-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script: generatedScript }),
+      }).catch(console.error);
 
       confetti({
         particleCount: 80,
@@ -322,6 +438,11 @@ export default function App() {
 
       // Update in saved list
       setSavedScripts((prev) => [remixedScript, ...prev.filter((s) => s.id !== remixedScript.id)]);
+      fetch('/api/save-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script: remixedScript }),
+      }).catch(console.error);
 
       confetti({
         particleCount: 50,
@@ -383,6 +504,11 @@ export default function App() {
       }
       return [updatedScript, ...prev];
     });
+    fetch('/api/save-script', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ script: updatedScript }),
+    }).catch(console.error);
   };
 
   // Delete Script
@@ -391,13 +517,23 @@ export default function App() {
     if (currentScript?.id === id) {
       setCurrentScript(null);
     }
+    fetch(`/api/saved-scripts/${id}`, { method: 'DELETE' }).catch(console.error);
   };
 
   // Toggle Favorite
   const handleToggleFavorite = (id: string) => {
-    setSavedScripts((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, isFavorite: !s.isFavorite } : s))
-    );
+    setSavedScripts((prev) => {
+      const updated = prev.map((s) => (s.id === id ? { ...s, isFavorite: !s.isFavorite } : s));
+      const target = updated.find((s) => s.id === id);
+      if (target) {
+        fetch('/api/save-script', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ script: target }),
+        }).catch(console.error);
+      }
+      return updated;
+    });
     if (currentScript?.id === id) {
       setCurrentScript((prev) => (prev ? { ...prev, isFavorite: !prev.isFavorite } : null));
     }
@@ -556,6 +692,9 @@ export default function App() {
                     }}
                     onDeleteSavedScript={handleDeleteScript}
                     onToggleFavorite={handleToggleFavorite}
+                    onRefreshHistory={syncScriptsWithServer}
+                    isSyncing={isSyncingHistory}
+                    onImportBackup={handleImportBackup}
                     onNewScriptClick={() => {
                       setCurrentScript(null);
                       setSourceTranscript('');
@@ -589,6 +728,9 @@ export default function App() {
                 }}
                 onDeleteScript={handleDeleteScript}
                 onToggleFavorite={handleToggleFavorite}
+                onRefreshHistory={syncScriptsWithServer}
+                isSyncing={isSyncingHistory}
+                onImportBackup={handleImportBackup}
                 onCreateNew={() => {
                   setCurrentScript(null);
                   setSourceTranscript('');

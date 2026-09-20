@@ -6,6 +6,8 @@ import { TextPanel } from '../panels/TextPanel';
 import { StickersPanel } from '../panels/StickersPanel';
 import { EffectsPanel } from '../panels/EffectsPanel';
 import { TransitionsPanel } from '../panels/TransitionsPanel';
+import { SpeedPanel } from '../panels/SpeedPanel';
+import { MulticamPanel } from '../panels/MulticamPanel';
 import { SubtitlesPanel } from '../panels/SubtitlesPanel';
 import { FiltersPanel } from '../panels/FiltersPanel';
 import { AdjustPanel } from '../panels/AdjustPanel';
@@ -30,10 +32,12 @@ export const EditorSidebarContent: React.FC = () => {
       {activeTab === 'stickers' && <StickersPanel />}
       {activeTab === 'effects' && <EffectsPanel />}
       {activeTab === 'transitions' && <TransitionsPanel />}
+      {activeTab === 'speed' && <SpeedPanel />}
       {activeTab === 'subtitles' && <SubtitlesPanel />}
       {activeTab === 'filters' && <FiltersPanel />}
       {activeTab === 'adjust' && <AdjustPanel />}
       {activeTab === 'templates' && <TemplatesLibrary />}
+      {activeTab === 'multicam' && <MulticamPanel />}
       {activeTab === 'animation' && <AnimationPanel />}
       {activeTab === 'matchcut' && <MatchCut />}
       {activeTab === 'teleprompter' && <Teleprompter />}

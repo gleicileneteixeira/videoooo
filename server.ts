@@ -28,6 +28,92 @@ if (!fs.existsSync(downloadsDir)) {
 }
 app.use("/downloads", express.static(downloadsDir));
 
+// ==========================================
+// PERSISTÊNCIA DE ROTEIROS EM DISCO (Servidor)
+// ==========================================
+const DATA_DIR = path.join(process.cwd(), "data");
+const SAVED_SCRIPTS_FILE = path.join(DATA_DIR, "saved_scripts.json");
+
+function ensureDataDir() {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+  if (!fs.existsSync(SAVED_SCRIPTS_FILE)) {
+    fs.writeFileSync(SAVED_SCRIPTS_FILE, JSON.stringify([], null, 2), "utf-8");
+  }
+}
+
+function getSavedScriptsFromDisk(): any[] {
+  try {
+    ensureDataDir();
+    const raw = fs.readFileSync(SAVED_SCRIPTS_FILE, "utf-8");
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    console.error("Erro ao ler scripts salvos do disco:", err);
+    return [];
+  }
+}
+
+function saveScriptToDisk(script: any): any[] {
+  if (!script || typeof script !== "object" || !script.id) return [];
+  try {
+    ensureDataDir();
+    const list = getSavedScriptsFromDisk();
+    const existingIndex = list.findIndex((s: any) => s.id === script.id);
+    if (existingIndex >= 0) {
+      list[existingIndex] = { ...list[existingIndex], ...script, updatedAt: new Date().toISOString() };
+    } else {
+      list.unshift({ ...script, savedAt: new Date().toISOString() });
+    }
+    fs.writeFileSync(SAVED_SCRIPTS_FILE, JSON.stringify(list, null, 2), "utf-8");
+    return list;
+  } catch (err) {
+    console.error("Erro ao salvar script no disco:", err);
+    return [];
+  }
+}
+
+function saveScriptsBatchToDisk(scripts: any[]): any[] {
+  if (!Array.isArray(scripts)) return [];
+  try {
+    ensureDataDir();
+    const list = getSavedScriptsFromDisk();
+    const map = new Map<string, any>();
+    list.forEach((s) => {
+      if (s && s.id) map.set(s.id, s);
+    });
+    scripts.forEach((s) => {
+      if (s && s.id) {
+        map.set(s.id, { ...(map.get(s.id) || {}), ...s, updatedAt: new Date().toISOString() });
+      }
+    });
+    const merged = Array.from(map.values()).sort((a, b) => {
+      const dateA = new Date(a.createdAt || a.savedAt || 0).getTime();
+      const dateB = new Date(b.createdAt || b.savedAt || 0).getTime();
+      return dateB - dateA;
+    });
+    fs.writeFileSync(SAVED_SCRIPTS_FILE, JSON.stringify(merged, null, 2), "utf-8");
+    return merged;
+  } catch (err) {
+    console.error("Erro ao salvar lote de scripts no disco:", err);
+    return [];
+  }
+}
+
+function deleteScriptFromDisk(id: string): any[] {
+  try {
+    ensureDataDir();
+    let list = getSavedScriptsFromDisk();
+    list = list.filter((s: any) => s.id !== id);
+    fs.writeFileSync(SAVED_SCRIPTS_FILE, JSON.stringify(list, null, 2), "utf-8");
+    return list;
+  } catch (err) {
+    console.error("Erro ao deletar script do disco:", err);
+    return [];
+  }
+}
+
 // Model Candidate definitions with free-tier order
 export interface CandidateModel {
   provider: "groq" | "openrouter" | "gemini";
@@ -883,6 +969,7 @@ function generateAlgorithmicScript(params: {
   fallbackReason?: string;
   attemptLogs?: any[];
   quantity?: number;
+  strategicBriefing?: any;
 }) {
   const {
     topic = "Como Dominar Esse Método Viral",
@@ -901,6 +988,7 @@ function generateAlgorithmicScript(params: {
     fallbackReason = "",
     attemptLogs = [],
     quantity = 3,
+    strategicBriefing,
   } = params;
 
   const targetQuantity = Math.max(1, Math.min(5, Number(quantity) || 3));
@@ -1223,6 +1311,7 @@ function generateAlgorithmicScript(params: {
     scenes,
     fullTeleprompterText,
     modularMatrix,
+    strategicBriefing: strategicBriefing || generateAlgorithmicIdeaInterpretation(cleanTitle, niche, productOrBrand),
     viralityAnalysis: {
       overallScore: 92,
       hookStrengthScore: 94,
@@ -1252,6 +1341,178 @@ function generateAlgorithmicScript(params: {
     },
   };
 }
+
+// Heuristic Generator of Strategic Idea Briefing (Tema, Objetivo, Problema Tradicional, Solução, Prova Social, CTA Dual)
+function generateAlgorithmicIdeaInterpretation(idea: string, niche?: string, productOrOffer?: string): any {
+  const cleanIdea = (idea || "").trim();
+  const lower = cleanIdea.toLowerCase();
+  const isDrivingTest =
+    lower.includes("simulado") ||
+    lower.includes("detran") ||
+    lower.includes("cnh") ||
+    lower.includes("prova") ||
+    lower.includes("habilita") ||
+    lower.includes("reprov") ||
+    lower.includes("autoescola") ||
+    lower.includes("teorica");
+
+  if (isDrivingTest) {
+    return {
+      videoTheme: cleanIdea || "Resposta a um comentário de uma pessoa que reprovou 5 vezes na prova teórica de habilitação.",
+      strategicObjective: "Alertar sobre o perigo de estudar por simulados genéricos e apresentar o meu simulado como a solução ideal e realista.",
+      pointsOfAttentionAndArgumentation: {
+        flawedTraditionalMethod: {
+          title: "O problema dos simulados tradicionais (ex: CNH Brasil e apps genéricos)",
+          dangerConcept: "Estudar só por eles é 'dar um tiro no pé'.",
+          stateContextOrStatistic: "Em Minas Gerais e em vários estados, o alto índice de reprovação acontece porque os alunos tiram 29 ou 30 pontos nesses simulados e acham que estão prontos.",
+          hardReality: "Na hora da prova real, a realidade é outra: perguntas muito mais bem elaboradas, pegadinhas e nível de exigência alto, levando à reprovação de quem não se preparou do jeito certo.",
+        },
+        idealSolution: {
+          title: "A Solução (Meu Simulado Calibrado)",
+          coreDifferentiator: "Criado e atualizado com base no nível real das provas recentes, testado e aprovado por diversos alunos.",
+        },
+        socialProofOrRealCase: {
+          transitionHook: 'Veja o depoimento de uma aluna que já tinha reprovado, estava com medo e apostou no meu simulado.',
+          storySummary: "Nos simulados tradicionais (e até no do próprio Detran), ela tirava 30 pontos. No meu simulado, tirou entre 21 e 22 pontos na véspera. Na prova oficial, passou exatamente com 22 pontos.",
+          caseConclusion: "Isso prova que o meu simulado está perfeitamente alinhado com a dificuldade da prova real.",
+          suggestedAudioClip: 'Inserir trecho de 4 segundos do áudio de depoimento da aluna comemorando a aprovação de primeira.',
+        },
+        dualCta: {
+          callToActionContext: "Se a pessoa quer saber se está realmente preparada para passar de primeira, deve testar um simulado no nível da prova real.",
+          action1Bio: "Clicar no link da bio para se cadastrar agora.",
+          action2CommentWord: "Comentar 'QUERO' no vídeo para receber o link direto no privado.",
+          keywordTrigger: "QUERO",
+        },
+      },
+    };
+  }
+
+  // Fallback heurístico inteligente para qualquer nicho / produto
+  return {
+    videoTheme: cleanIdea || `Estratégia de alto impacto para ${niche || "destravar resultados"}`,
+    strategicObjective: `Alertar sobre o erro clássico de confiar em métodos genéricos e posicionar ${productOrOffer || "a metodologia própria"} como a solução realista e de resultado comprovado.`,
+    pointsOfAttentionAndArgumentation: {
+      flawedTraditionalMethod: {
+        title: `O problema dos métodos e conteúdos genéricos de ${niche || "mercado"}`,
+        dangerConcept: "Seguir apenas fórmulas prontas e superficiais é 'dar um tiro no pé'.",
+        stateContextOrStatistic: "A maioria atinge uma falsa sensação de segurança com testes fáceis e acredita que já está preparada.",
+        hardReality: "Quando o teste prático real chega, as exigências profundas e os detalhes ocultos derrubam quem treinou no modo facilitado.",
+      },
+      idealSolution: {
+        title: `A Solução Validada (${productOrOffer || "Método Calibrado"})`,
+        coreDifferentiator: "Desenvolvido e continuamente atualizado com base nas exigências reais mais recentes do mercado, testado e validado.",
+      },
+      socialProofOrRealCase: {
+        transitionHook: "Veja o caso real de quem já tinha tentado outras vezes sem sucesso e apostou nesta estrutura.",
+        storySummary: "No método tradicional parecia tudo garantido, mas faltava o alinhamento crítico. Ao testar na véspera com o método calibrado, o resultado foi alcançado exatamente dentro do padrão esperado.",
+        caseConclusion: "Isso comprova que o preparo alinhado com a realidade é o único que traz segurança.",
+        suggestedAudioClip: "Inserir print ou áudio rápido de 3 a 5 segundos comprovando o resultado.",
+      },
+      dualCta: {
+        callToActionContext: "Se você quer ter certeza de que está realmente preparado para o resultado real:",
+        action1Bio: "Clica agora no link da bio para garantir o seu acesso direto.",
+        action2CommentWord: `Comente "QUERO" aqui embaixo para receber o material exclusivo direto no seu privado.`,
+        keywordTrigger: "QUERO",
+      },
+    },
+  };
+}
+
+// Endpoint: Interpretação e Briefing Estratégico da Ideia do Vídeo (5 Pilares de Alta Conversão)
+app.post("/api/interpret-idea", async (req, res) => {
+  try {
+    const { idea, niche, productOrOffer, extraDetails } = req.body;
+    const { groqInput, openRouterInput } = extractKeysFromBody(req.body);
+
+    if (!idea || !idea.trim()) {
+      return res.status(400).json({ error: "Por favor, informe a ideia ou tema do vídeo para interpretação." });
+    }
+
+    const baselineInterpretation = generateAlgorithmicIdeaInterpretation(idea, niche, productOrOffer);
+
+    const systemPrompt = `Você é um renomado estrategista de conteúdo viral e mestre em copywriting persuasivo.
+Sua missão é receber qualquer ideia, comentário, dúvida ou tema bruto do usuário e estruturar um BRIEFING ESTRATÉGICO DE ALTA CONVERSÃO em 5 pilares fundamentais em PORTUGUÊS DO BRASIL:
+1. Tema do Vídeo: O ângulo central de impacto (ex: resposta a um comentário de alguém que reprovou, quebra de mito).
+2. Objetivo Estratégico: O objetivo psicológico e comercial (alertar contra métodos genéricos e ancorar a solução própria realista).
+3. Pontos de Atenção e Argumentação do Roteiro:
+   - O problema dos simulados/métodos tradicionais: por que estudar por eles é "dar um tiro no pé", a ilusão de notas altas em testes fáceis (29/30) e o choque na prova real cheia de pegadinhas e alta exigência.
+   - A Solução (Meu Simulado / Meu Produto): criado e atualizado com base no nível real das provas recentes, testado e aprovado.
+   - Prova Social / Caso Real: sugestão de transição ("Veja o depoimento de uma aluna que já tinha reprovado..."), história com contraste numérico real (tirava 30 no tradicional, tirou 21-22 no meu e passou com 22 na prova real), conclusão irrefutável e sugestão de áudio.
+   - Chamada para Ação (CTA Dual): Contexto forte + Ação 1 (Link na bio) + Ação 2 (Comentar "QUERO" para receber no privado).
+
+Você SEMPRE responde estritamente em JSON puro e válido.`;
+
+    const prompt = `
+Analise e interprete estrategicamente a seguinte ideia fornecida pelo usuário:
+
+IDEIA DO CRIADOR:
+"""
+${idea}
+"""
+${niche ? `- Nicho: ${niche}` : ""}
+${productOrOffer ? `- Produto/Oferta/Simulado: ${productOrOffer}` : ""}
+${extraDetails ? `- Detalhes Extras: ${extraDetails}` : ""}
+
+Retorne RIGOROSAMENTE neste formato JSON:
+{
+  "videoTheme": "Tema do Vídeo claro e focado",
+  "strategicObjective": "Objetivo de persuasão e retenção do vídeo",
+  "pointsOfAttentionAndArgumentation": {
+    "flawedTraditionalMethod": {
+      "title": "O problema dos simulados tradicionais (ex: CNH Brasil / métodos genéricos)",
+      "dangerConcept": "Estudar só por eles é 'dar um tiro no pé'",
+      "stateContextOrStatistic": "Contexto regional ou estatístico de reprovação (ex: em Minas Gerais reprovam porque tiram 29 ou 30 e acham que estão prontos)",
+      "hardReality": "Na hora da prova real, a realidade é outra: perguntas elaboradas e pegadinhas levam à reprovação"
+    },
+    "idealSolution": {
+      "title": "A Solução (Meu Simulado / Método)",
+      "coreDifferentiator": "Criado e atualizado com base no nível real das provas recentes, testado e aprovado"
+    },
+    "socialProofOrRealCase": {
+      "transitionHook": "Veja o depoimento de uma aluna que já tinha reprovado, estava com medo e apostou no meu simulado.",
+      "storySummary": "A história com contraste real: nos simulados tradicionais tirava 30; no meu tirou 21-22 na véspera; na prova oficial passou com 22.",
+      "caseConclusion": "Isso prova que o meu simulado está perfeitamente alinhado com a dificuldade da prova real.",
+      "suggestedAudioClip": "Sugestão de trecho/gancho para áudio de depoimento (ex: áudio de 4 segundos da aluna comemorando aprovação)"
+    },
+    "dualCta": {
+      "callToActionContext": "Se a pessoa quer saber se está realmente preparada para passar de primeira, deve testar um simulado no nível da prova real.",
+      "action1Bio": "Clicar no link da bio para se cadastrar agora.",
+      "action2CommentWord": "Comentar 'QUERO' no vídeo para receber o link direto no privado.",
+      "keywordTrigger": "QUERO"
+    }
+  }
+}
+`;
+
+    try {
+      const aiResponse = await executeWithDynamicFallback(
+        groqInput,
+        openRouterInput,
+        prompt,
+        systemPrompt
+      );
+
+      const data = aiResponse.data;
+      if (data && data.videoTheme && data.pointsOfAttentionAndArgumentation) {
+        return res.json({
+          interpretation: data,
+          usedProvider: aiResponse.usedProvider,
+          usedModel: aiResponse.usedModel,
+        });
+      }
+    } catch (e: any) {
+      console.warn("Interpretador IA externo falhou, usando interpretação algorítmica especializada:", e.message);
+    }
+
+    return res.json({
+      interpretation: baselineInterpretation,
+      usedProvider: "algoritmo_estrategico",
+      usedModel: "persuasive_briefing_engine",
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Erro ao interpretar ideia." });
+  }
+});
 
 // Endpoint: Generate Full 4-Part Viral Script with Dynamic Multi-Model Fallback
 app.post("/api/generate-script", async (req, res) => {
@@ -1298,6 +1559,7 @@ app.post("/api/generate-script", async (req, res) => {
         sourceVideoTitle,
         isFallback: false,
         quantity: targetQuantity,
+        strategicBriefing: req.body.strategicBriefing,
       });
 
       const completeScript = {
@@ -1334,6 +1596,7 @@ app.post("/api/generate-script", async (req, res) => {
         },
       };
 
+      saveScriptToDisk(completeScript);
       return res.json(completeScript);
     }
 
@@ -1355,6 +1618,7 @@ app.post("/api/generate-script", async (req, res) => {
       sourceVideoTitle,
       isFallback: false,
       quantity: targetQuantity,
+      strategicBriefing: req.body.strategicBriefing,
     });
 
     const systemPrompt = `Você é um dos maiores diretores de criação e roteiristas de vídeos virais do mundo (TikTok, Reels, Shorts e YouTube).
@@ -1421,9 +1685,44 @@ REGRAS DE PROIBIÇÃO E COESÃO:
 - ❌ PROIBIDO citar cidades ou especificidades regionais desconectadas.
 - ✔️ OBRIGATÓRIO: Nomear a entidade/conceito principal de forma explícita e autônoma em todos os blocos.
 
+🎯 DIRETRIZES DE PERSUASÃO E ARGUMENTAÇÃO DO ROTEIRO (ALTA CONVERSÃO):
+Ao construir a narrativa para qualquer ideia (especialmente temas de simulados, provas, estudos, ou métodos onde pessoas sofrem com opções genéricas):
+1. GANCHOS: Podem abrir respondendo a um comentário de alguém que reprovou ou está frustrado (ex: "Respondendo quem reprovou 5 vezes na prova teórica..."), alerta de choque ou denúncia de armadilha.
+2. DORES: Denuncie que estudar por simulados/métodos tradicionais e genéricos (ex: CNH Brasil) é "dar um tiro no pé". As pessoas tiram 29 ou 30 pontos neles e acham que estão prontas, mas na prova real o nível de exigência e as pegadinhas reprovam quem treinou fácil.
+3. SOLUÇÕES: Apresente o seu simulado/método como a solução criada e atualizada com base no nível real das provas recentes, testada e aprovada. Conecte com prova social / caso real de contraste numérico (tirava 30 no tradicional, tirou 21-22 no meu e passou exatamente com 22 na prova real).
+4. CTAS (CTA DUAL): Feche com CTA de duplo canal: se quer testar o simulado no nível da prova real para passar de primeira, Ação 1 é clicar no link da bio e Ação 2 é comentar "QUERO" para receber direto no direct.
+
 FORMATO DE RETORNO JSON:
 {
   "title": "Título magnético do roteiro",
+  "strategicBriefing": {
+    "videoTheme": "Tema do Vídeo claro e magnético",
+    "strategicObjective": "Objetivo de persuasão e retenção do vídeo",
+    "pointsOfAttentionAndArgumentation": {
+      "flawedTraditionalMethod": {
+        "title": "O problema dos simulados tradicionais (ex: CNH Brasil)",
+        "dangerConcept": "Estudar só por eles é 'dar um tiro no pé'",
+        "stateContextOrStatistic": "Alunos tiram 29 ou 30 e acham que estão prontos",
+        "hardReality": "Na prova real, pegadinhas e alta exigência causam reprovação"
+      },
+      "idealSolution": {
+        "title": "A Solução (Meu Simulado / Método)",
+        "coreDifferentiator": "Criado e atualizado com base no nível real das provas recentes"
+      },
+      "socialProofOrRealCase": {
+        "transitionHook": "Veja o depoimento de uma aluna que já tinha reprovado...",
+        "storySummary": "Tirava 30 no tradicional, tirou 21-22 no meu e passou com 22 na oficial",
+        "caseConclusion": "Isso prova o alinhamento com o nível real da prova",
+        "suggestedAudioClip": "Inserir trecho de áudio da aluna comemorando a aprovação"
+      },
+      "dualCta": {
+        "callToActionContext": "Se quer saber se está realmente preparado para passar de primeira...",
+        "action1Bio": "Clicar no link da bio para se cadastrar agora",
+        "action2CommentWord": "Comentar 'QUERO' no vídeo para receber no privado",
+        "keywordTrigger": "QUERO"
+      }
+    }
+  },
   "hooks": [
     {
       "id": "hook_1",
@@ -1739,6 +2038,7 @@ FORMATO DE RETORNO JSON:
       id: "script_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7),
       ...parsed,
       title: parsed.title || baseline.title,
+      strategicBriefing: req.body.strategicBriefing || parsed.strategicBriefing || baseline.strategicBriefing || generateAlgorithmicIdeaInterpretation(topic, niche, productOrBrand),
       fourParts,
       hooks: legacyHooks,
       scenes,
@@ -1777,6 +2077,7 @@ FORMATO DE RETORNO JSON:
       },
     };
 
+    saveScriptToDisk(completeScript);
     res.json(completeScript);
   } catch (error: any) {
     console.error("Erro crítico ao gerar roteiro:", error);
@@ -1790,19 +2091,60 @@ FORMATO DE RETORNO JSON:
         isFallback: true,
         fallbackReason: error.message,
       });
-      return res.json({
+      const emergencyComplete = {
         id: "script_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7),
         ...emergencyScript,
         createdAt: new Date().toISOString(),
-        generationMode: "algorithmic",
+        generationMode: "algorithmic" as const,
         isFallbackAlgorithmic: true,
-      });
+      };
+      saveScriptToDisk(emergencyComplete);
+      return res.json(emergencyComplete);
     } catch {
       res.status(500).json({
         error: error.message || "Falha ao processar roteiro.",
         attemptsLogs: error.attemptsLogs || [],
       });
     }
+  }
+});
+
+// ========================================================
+// ENDPOINTS DE HISTÓRICO E PERSISTÊNCIA DOS ROTEIROS
+// ========================================================
+app.get("/api/saved-scripts", (req, res) => {
+  try {
+    const scripts = getSavedScriptsFromDisk();
+    res.json({ scripts, count: scripts.length });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message, scripts: [] });
+  }
+});
+
+app.post("/api/save-script", (req, res) => {
+  try {
+    const { script, scripts } = req.body;
+    if (Array.isArray(scripts) && scripts.length > 0) {
+      const updated = saveScriptsBatchToDisk(scripts);
+      return res.json({ success: true, count: updated.length, scripts: updated });
+    }
+    if (script && script.id) {
+      const updated = saveScriptToDisk(script);
+      return res.json({ success: true, count: updated.length, scripts: updated });
+    }
+    return res.status(400).json({ error: "Nenhum script válido fornecido para salvar." });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete("/api/saved-scripts/:id", (req, res) => {
+  try {
+    const { id } = req.params;
+    const updated = deleteScriptFromDisk(id);
+    res.json({ success: true, count: updated.length });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -2191,6 +2533,7 @@ Retorne o JSON completo com title, fourParts, hooks, scenes (com partNumber 1, 2
       },
     };
 
+    saveScriptToDisk(updatedScript);
     res.json(updatedScript);
   } catch (error: any) {
     console.error("Erro ao remixar roteiro:", error);

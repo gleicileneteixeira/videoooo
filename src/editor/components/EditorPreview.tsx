@@ -9,6 +9,9 @@ import {
   Volume2,
   VolumeX,
   Sparkles,
+  ShieldCheck,
+  Eye,
+  Camera,
 } from 'lucide-react';
 import { useProjectStore } from '../stores/useProjectStore';
 import { usePlaybackStore } from '../stores/usePlaybackStore';
@@ -24,6 +27,8 @@ export const EditorPreview: React.FC = () => {
   const durationInFrames = useProjectStore((s) => s.durationInFrames);
   const items = useProjectStore((s) => s.items);
   const updateItem = useProjectStore((s) => s.updateItem);
+  const showSafeAreas = useProjectStore((s) => s.showSafeAreas ?? false);
+  const toggleSafeAreas = useProjectStore((s) => s.toggleSafeAreas);
 
   const isPlaying = usePlaybackStore((s) => s.isPlaying);
   const currentFrame = usePlaybackStore((s) => s.currentFrame);
@@ -152,6 +157,29 @@ export const EditorPreview: React.FC = () => {
     dragStartRef.current = null;
   };
 
+  // Compute CSS filter string with Drift HSL and Temperature
+  const getVideoFilterStyle = (vItem: TimelineItem) => {
+    const b = vItem.filters.brightness ?? 100;
+    const c = vItem.filters.contrast ?? 100;
+    const s = vItem.filters.saturate ?? 100;
+    const blur = vItem.filters.blur ?? 0;
+    const hue = vItem.filters.hue ?? 0;
+    const sepia = (vItem.filters.temperature ?? 0) > 0 ? (vItem.filters.temperature! * 0.6) : 0;
+
+    let filterStr = `brightness(${b}%) contrast(${c}%) saturate(${s}%) blur(${blur}px) hue-rotate(${hue}deg)`;
+    if (sepia > 0) {
+      filterStr += ` sepia(${sepia}%)`;
+    }
+    return filterStr;
+  };
+
+  const activeEffects = activeVideo?.effects || [];
+  const hasGlitch = activeEffects.some((e) => e.includes('Glitch') || e.includes('VHS'));
+  const hasRGB = activeEffects.some((e) => e.includes('RGB'));
+  const hasBloom = activeEffects.some((e) => e.includes('Bloom') || e.includes('Glow'));
+  const hasHalation = activeEffects.some((e) => e.includes('Halation'));
+  const hasScanline = activeEffects.some((e) => e.includes('Scanline') || e.includes('CRT'));
+
   return (
     <div
       onMouseMove={handleCanvasMouseMove}
@@ -168,7 +196,24 @@ export const EditorPreview: React.FC = () => {
           <span className="text-purple-400 font-semibold">{fps} FPS</span>
         </div>
 
-        <div className="flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-2 py-0.5 rounded-lg border border-slate-800 pointer-events-auto">
+        <div className="flex items-center gap-1.5 bg-slate-900/80 backdrop-blur-md px-2 py-0.5 rounded-lg border border-slate-800 pointer-events-auto">
+          {/* Safe Area Overlay Toggle for TikTok / Reels */}
+          <button
+            type="button"
+            onClick={toggleSafeAreas}
+            className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold transition ${
+              showSafeAreas
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+            title="Linhas de Segurança (TikTok / Reels / Shorts)"
+          >
+            <ShieldCheck className="h-3 w-3" />
+            <span>Guias Social</span>
+          </button>
+
+          <span className="text-slate-700">|</span>
+
           <button
             type="button"
             onClick={() => setPreviewZoom('fit')}
@@ -202,27 +247,94 @@ export const EditorPreview: React.FC = () => {
             transform: previewZoom === '100%' ? 'scale(1.15)' : 'scale(1)',
           }}
         >
+          {/* Blur Behind layer if enabled in Drift */}
+          {activeVideo && activeVideo.filters?.blurBehind && (
+            <div className="absolute inset-0 z-0 overflow-hidden">
+              <video
+                src={activeVideo.src}
+                className="h-full w-full object-cover scale-125 blur-xl opacity-60"
+                autoPlay={isPlaying}
+                loop
+                muted
+              />
+            </div>
+          )}
+
           {/* Active Video / Image Background */}
           {activeVideo ? (
             <div
-              className="absolute inset-0 flex items-center justify-center overflow-hidden"
+              className={`absolute inset-0 flex items-center justify-center overflow-hidden z-10 ${
+                activeVideo.filters?.blurBehind ? 'scale-90 rounded-xl shadow-2xl' : ''
+              } ${hasGlitch ? 'animate-pulse' : ''}`}
               style={{
-                filter: `brightness(${activeVideo.filters.brightness}%) contrast(${activeVideo.filters.contrast}%) saturate(${activeVideo.filters.saturate}%) blur(${activeVideo.filters.blur}px)`,
+                filter: getVideoFilterStyle(activeVideo),
                 opacity: activeVideo.transform.opacity,
+                transform: `scale(${activeVideo.transform.scale}) rotate(${activeVideo.transform.rotation}deg) translate(${activeVideo.transform.x}px, ${activeVideo.transform.y}px)`,
+                boxShadow: hasBloom ? '0 0 35px rgba(168, 85, 247, 0.45)' : undefined,
               }}
             >
               <video
                 src={activeVideo.src}
-                className="h-full w-full object-cover pointer-events-none"
+                className={`h-full w-full object-cover pointer-events-none ${
+                  activeVideo.filters?.chromaKey?.enabled ? 'mix-blend-screen' : ''
+                }`}
                 autoPlay={isPlaying}
                 loop
                 muted={isMuted}
               />
+
+              {/* Halation / 35mm Red Glow Effect Overlay */}
+              {hasHalation && (
+                <div className="pointer-events-none absolute inset-0 bg-red-500/10 mix-blend-color-dodge" />
+              )}
+
+              {/* RGB Split Fringe Effect */}
+              {hasRGB && (
+                <div className="pointer-events-none absolute inset-0 bg-cyan-500/10 mix-blend-difference translate-x-1" />
+              )}
+
+              {/* Scanline Overlay */}
+              {hasScanline && (
+                <div
+                  className="pointer-events-none absolute inset-0 opacity-25"
+                  style={{
+                    backgroundImage: 'repeating-linear-gradient(0deg, #000, #000 2px, transparent 2px, transparent 4px)',
+                  }}
+                />
+              )}
             </div>
           ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 to-slate-950 text-slate-600">
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 to-slate-950 text-slate-600 z-10">
               <Sparkles className="h-8 w-8 text-purple-600/40 mb-2" />
               <span className="text-xs font-semibold text-slate-500">Adicione um vídeo na timeline</span>
+            </div>
+          )}
+
+          {/* TikTok / Reels / Shorts Safe Areas Overlay */}
+          {showSafeAreas && (
+            <div className="pointer-events-none absolute inset-0 z-30 flex flex-col justify-between p-4 border border-emerald-500/30">
+              {/* Top Safe Area (Profile & Search Header) */}
+              <div className="h-14 w-full rounded-lg border border-dashed border-emerald-500/40 bg-emerald-500/10 flex items-center justify-center">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-300">
+                  Área de Cabeçalho / Abas do TikTok (Não colocar texto)
+                </span>
+              </div>
+
+              {/* Middle Action Area */}
+              <div className="flex flex-1 items-end justify-between pb-12">
+                {/* Bottom Left Title / Subtitle Safe Area */}
+                <div className="w-[68%] rounded-lg border border-dashed border-emerald-500/40 bg-emerald-500/10 p-2 text-[9px] font-bold text-emerald-300">
+                  <span>Zona Segura de Legendas & @Perfil</span>
+                </div>
+
+                {/* Right Side Social Buttons (Like, Comments, Share, Audio Disc) */}
+                <div className="w-[24%] h-44 rounded-lg border border-dashed border-pink-500/40 bg-pink-500/10 flex flex-col items-center justify-around p-1 text-[8px] font-bold text-pink-300 text-center">
+                  <span>Like</span>
+                  <span>Coment.</span>
+                  <span>Salvar</span>
+                  <span>Disco</span>
+                </div>
+              </div>
             </div>
           )}
 
@@ -239,7 +351,7 @@ export const EditorPreview: React.FC = () => {
                   fontSize: `${textItem.fontSize || 32}px`,
                   color: textItem.color || '#ffffff',
                 }}
-                className={`absolute inset-0 m-auto flex h-fit w-fit max-w-[85%] cursor-move items-center justify-center text-center font-black tracking-tight leading-tight select-none ${
+                className={`absolute inset-0 m-auto flex h-fit w-fit max-w-[85%] cursor-move items-center justify-center text-center font-black tracking-tight leading-tight select-none z-20 ${
                   isSelected
                     ? 'ring-2 ring-purple-500 ring-offset-2 ring-offset-black rounded-lg p-1.5'
                     : 'hover:ring-1 hover:ring-purple-400/50 p-1.5'

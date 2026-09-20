@@ -74,6 +74,14 @@ interface ProjectStoreState extends ProjectState {
   toggleTrackMute: (trackId: string) => void;
   toggleTrackLock: (trackId: string) => void;
   toggleTrackVisibility: (trackId: string) => void;
+  setInFrame: (frame: number | null) => void;
+  setOutFrame: (frame: number | null) => void;
+  setInPoint: (frame: number | null) => void;
+  setOutPoint: (frame: number | null) => void;
+  clearWorkArea: () => void;
+  toggleSnapping: () => void;
+  toggleRippleEdit: () => void;
+  toggleSafeAreas: () => void;
   loadState: (state: ProjectState) => void;
   getSnapshot: () => ProjectState;
 }
@@ -87,6 +95,11 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   durationInFrames: 450, // 15s total
   tracks: DEFAULT_TRACKS,
   items: INITIAL_ITEMS,
+  inFrame: null,
+  outFrame: null,
+  isSnappingEnabled: true,
+  isRippleEditEnabled: false,
+  showSafeAreas: false,
 
   setName: (name) => set({ name }),
 
@@ -108,6 +121,15 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     set({ aspectRatio, width, height });
   },
 
+  setInFrame: (frame) => set({ inFrame: frame }),
+  setOutFrame: (frame) => set({ outFrame: frame }),
+  setInPoint: (frame) => set({ inFrame: frame }),
+  setOutPoint: (frame) => set({ outFrame: frame }),
+  clearWorkArea: () => set({ inFrame: null, outFrame: null }),
+  toggleSnapping: () => set((state) => ({ isSnappingEnabled: !state.isSnappingEnabled })),
+  toggleRippleEdit: () => set((state) => ({ isRippleEditEnabled: !state.isRippleEditEnabled })),
+  toggleSafeAreas: () => set((state) => ({ showSafeAreas: !state.showSafeAreas })),
+
   addItem: (item) => {
     set((state) => ({ items: [...state.items, item] }));
   },
@@ -119,9 +141,27 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   },
 
   removeItem: (id) => {
-    set((state) => ({
-      items: state.items.filter((item) => item.id !== id),
-    }));
+    set((state) => {
+      const target = state.items.find((i) => i.id === id);
+      if (!target) return state;
+
+      let remaining = state.items.filter((item) => item.id !== id);
+
+      // Drift Ripple edit: automatically ripple pull subsequent items on same track
+      if (state.isRippleEditEnabled) {
+        remaining = remaining.map((item) => {
+          if (item.trackId === target.trackId && item.startFrame > target.startFrame) {
+            return {
+              ...item,
+              startFrame: Math.max(0, item.startFrame - target.durationInFrames),
+            };
+          }
+          return item;
+        });
+      }
+
+      return { items: remaining };
+    });
   },
 
   splitItem: (id, atFrame) => {

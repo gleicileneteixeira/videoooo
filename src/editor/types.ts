@@ -6,11 +6,13 @@ export type EditorTab =
   | 'effects'
   | 'transitions'
   | 'subtitles'
+  | 'speed'
   | 'filters'
   | 'adjust'
   | 'templates'
   | 'animation'
   | 'matchcut'
+  | 'multicam'
   | 'teleprompter'
   | 'tts'
   | 'brandkit'
@@ -28,19 +30,71 @@ export interface TransformProperties {
   opacity: number;
 }
 
+export interface ChromaKeyProperties {
+  enabled: boolean;
+  color: string;
+  similarity: number; // 0 to 100
+  smoothness: number; // 0 to 50
+  spillReduction: number; // 0 to 100
+}
+
+export interface MaskProperties {
+  type: 'none' | 'rectangle' | 'circle';
+  feather: number;
+  invert: boolean;
+}
+
 export interface FilterProperties {
   brightness: number; // 100 is normal
   contrast: number; // 100 is normal
   saturate: number; // 100 is normal
   blur: number; // 0px
   lutPreset?: string;
+  temperature?: number; // -50 to 50
+  hue?: number; // -180 to 180
+  gamma?: number; // 0.5 to 2.0
+  chromaKey?: ChromaKeyProperties;
+  mask?: MaskProperties;
+  blurBehind?: boolean;
+}
+
+export interface EqualizerProperties {
+  bass: number; // -12 to +12 dB
+  mid: number; // -12 to +12 dB
+  treble: number; // -12 to +12 dB
+  preset?: string;
+}
+
+export interface DenoiseProperties {
+  enabled: boolean;
+  strength: number; // 0 to 100%
+  mode: 'ai_smart' | 'hiss_reduction' | 'hum_remover' | 'vocal_isolate';
+}
+
+export interface CompressorProperties {
+  enabled: boolean;
+  threshold: number; // -60 to 0 dB
+  ratio: number; // 1 to 20
+  attack: number; // ms
+  release: number; // ms
 }
 
 export interface AudioProperties {
-  volume: number; // 0 to 100
+  volume: number; // 0 to 150
   fadeInFrames: number;
   fadeOutFrames: number;
   voiceEffect?: string;
+  equalizer?: EqualizerProperties;
+  denoise?: DenoiseProperties;
+  compressor?: CompressorProperties;
+  audioTexture?: string;
+}
+
+export interface SpeedRampProperties {
+  preset: 'linear' | 'montage' | 'bullet_time' | 'flash_in' | 'hero' | 'jumper' | 'custom';
+  reverse?: boolean;
+  preservePitch?: boolean;
+  freezeFrame?: boolean;
 }
 
 export interface AnimationProperties {
@@ -68,6 +122,9 @@ export interface TimelineItem {
   transform: TransformProperties;
   filters: FilterProperties;
   speed: number; // 1.0 normal
+  speedRamp?: SpeedRampProperties;
+  isReversed?: boolean;
+  isFrozen?: boolean;
   animation: AnimationProperties;
   audio: AudioProperties;
   effects: string[];
@@ -103,4 +160,9 @@ export interface ProjectState {
   durationInFrames: number;
   tracks: Track[];
   items: TimelineItem[];
+  inFrame?: number | null;
+  outFrame?: number | null;
+  isSnappingEnabled?: boolean;
+  isRippleEditEnabled?: boolean;
+  showSafeAreas?: boolean;
 }

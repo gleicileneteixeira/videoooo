@@ -30,6 +30,7 @@ import {
   FileText,
   Trash2,
   ArrowRight,
+  AlertTriangle,
 } from 'lucide-react';
 import { LocalWhisperService, type WhisperModelId } from '../services/localWhisperService';
 import {
@@ -42,6 +43,7 @@ import {
   ViralScript,
   ExtractedTranscript,
   DownloadedMedia,
+  StrategicBriefing,
 } from '../types';
 import {
   NICHE_OPTIONS,
@@ -56,6 +58,7 @@ import { MediaExtractor } from './MediaExtractor';
 import { MediaDownloader } from './MediaDownloader';
 import { MediaGallery } from './MediaGallery';
 import { SavedScriptsList } from './SavedScriptsList';
+import { StrategicBriefingCard } from './StrategicBriefingCard';
 
 interface ScriptGeneratorFormProps {
   onGenerate: (data: ScriptRequest) => void;
@@ -80,6 +83,9 @@ interface ScriptGeneratorFormProps {
   onDeleteSavedScript?: (id: string) => void;
   onToggleFavorite?: (id: string) => void;
   onNewScriptClick?: () => void;
+  onRefreshHistory?: () => void;
+  isSyncing?: boolean;
+  onImportBackup?: (scripts: ViralScript[]) => void;
 }
 
 export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
@@ -105,6 +111,9 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
   onDeleteSavedScript,
   onToggleFavorite,
   onNewScriptClick,
+  onRefreshHistory,
+  isSyncing,
+  onImportBackup,
 }) => {
   const [topic, setTopic] = useState(initialTopic || sourceTranscript);
   const [selectedNiche, setSelectedNiche] = useState<string>('Finanças & Dinheiro');
@@ -166,6 +175,66 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Strategic Idea Interpretation States (Tema, Objetivo, Problema Tradicional, Solução, Prova Social, CTA Dual)
+  const [interpretedBriefing, setInterpretedBriefing] = useState<StrategicBriefing | null>(null);
+  const [isInterpreting, setIsInterpreting] = useState(false);
+  const [interpretError, setInterpretError] = useState('');
+
+  const handleInterpretIdea = async (ideaText?: string) => {
+    const textToAnalyze = (ideaText || topic || '').trim();
+    if (!textToAnalyze) {
+      setInterpretError('Por favor, digite a ideia ou tema do vídeo para interpretação estratégica.');
+      return;
+    }
+    setInterpretError('');
+    setIsInterpreting(true);
+    try {
+      const resp = await fetch('/api/interpret-idea', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          idea: textToAnalyze,
+          niche: selectedNiche,
+          productOrOffer: productOrBrand,
+          extraDetails,
+        }),
+      });
+
+      if (!resp.ok) {
+        const errJson = await resp.json().catch(() => ({}));
+        throw new Error(errJson.error || 'Falha ao interpretar ideia');
+      }
+
+      const data = await resp.json();
+      if (data && data.interpretation) {
+        setInterpretedBriefing(data.interpretation);
+      }
+    } catch (err: any) {
+      console.error('Erro na interpretação da ideia:', err);
+      setInterpretError(err.message || 'Não foi possível interpretar a ideia no momento.');
+    } finally {
+      setIsInterpreting(false);
+    }
+  };
+
+  const loadDrivingTestExample = () => {
+    const exampleTopic = `Tema do Vídeo: Resposta a um comentário de uma pessoa que reprovou 5 vezes na prova teórica de habilitação.
+
+Objetivo: Alertar sobre o perigo de estudar por simulados genéricos e apresentar o meu simulado como a solução ideal e realista.
+
+Pontos de Atenção e Argumentação do Roteiro:
+- O problema dos simulados tradicionais (ex: CNH Brasil): Estudar só por eles é "dar um tiro no pé". Em Minas Gerais, o alto índice de reprovação acontece porque os alunos tiram 29 ou 30 pontos nesses simulados e acham que estão prontos. Na hora da prova real, a realidade é outra: perguntas muito mais bem elaboradas, pegadinhas e nível de exigência alto, levando à reprovação de quem não se preparou do jeito certo.
+- A Solução (Meu Simulado): Criado e atualizado com base no nível real das provas recentes, testado e aprovado por diversos alunos.
+- Prova Social / Caso Real: Aluna que tirava 30 no tradicional, tirou 21-22 no meu e passou exatamente com 22 na prova real.
+- Chamada para Ação (CTA Dual): Clicar no link da bio ou comentar 'QUERO' para receber no privado.`;
+
+    setTopic(exampleTopic);
+    setSelectedNiche('Educação & Cursos');
+    setProductOrBrand('Meu Simulado Oficial');
+    setCtaGoal('comentar');
+    handleInterpretIdea(exampleTopic);
+  };
 
   // Sync state whenever props change (e.g. when clicking Remodelar on an extracted transcript)
   React.useEffect(() => {
@@ -375,6 +444,7 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
       useAi,
       quantity,
       objectives: cleanObjectives.length > 0 ? cleanObjectives : undefined,
+      strategicBriefing: interpretedBriefing || undefined,
     });
   };
 
@@ -812,6 +882,78 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
                 {isRecording && <Mic className="h-3.5 w-3.5 text-red-400 animate-pulse" />}
                 {isTranscribing && <Loader2 className="h-3.5 w-3.5 text-amber-400 animate-spin" />}
                 <span>{recordingProgress}</span>
+              </div>
+            )}
+
+            {/* Ações de Interpretação Estratégica da Ideia (5 Pilares Persuasivos) */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  id="btn-interpret-idea"
+                  onClick={() => handleInterpretIdea()}
+                  disabled={isInterpreting || !topic.trim()}
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition shadow-sm ${
+                    !topic.trim()
+                      ? 'bg-slate-800/80 text-slate-500 cursor-not-allowed border border-slate-700/50'
+                      : isInterpreting
+                      ? 'bg-sky-700 text-white cursor-wait animate-pulse'
+                      : 'bg-gradient-to-r from-sky-600 via-indigo-600 to-purple-600 hover:from-sky-500 hover:to-purple-500 text-white shadow-sky-600/25 active:scale-95'
+                  }`}
+                  title="Interpreta a ideia do vídeo estruturando nos 5 pilares: Tema, Objetivo, Problema Tradicional, Solução Ideal, Prova Social e CTA Dual"
+                >
+                  {isInterpreting ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Interpretando Ideia...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 text-sky-200" />
+                      <span>Interpretar Ideia Estratégica (5 Pilares)</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  id="btn-example-driving-test"
+                  onClick={loadDrivingTestExample}
+                  disabled={isInterpreting}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-700/80 bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 text-xs font-medium transition"
+                  title="Carregar exemplo prático de Simulado da Prova Teórica com estrutura argumentativa completa"
+                >
+                  <span>📝 Exemplo: Simulado Prova Teórica</span>
+                </button>
+              </div>
+
+              {interpretedBriefing && (
+                <button
+                  type="button"
+                  onClick={() => setInterpretedBriefing(null)}
+                  className="text-[11px] text-slate-400 hover:text-rose-400 transition underline underline-offset-2"
+                >
+                  Limpar Briefing
+                </button>
+              )}
+            </div>
+
+            {/* Mensagem de Erro na Interpretação */}
+            {interpretError && (
+              <div className="rounded-xl border border-rose-500/30 bg-rose-950/20 p-3 text-xs text-rose-300 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+                <span>{interpretError}</span>
+              </div>
+            )}
+
+            {/* Exibição do Briefing Estratégico Interpretado */}
+            {interpretedBriefing && (
+              <div className="pt-2">
+                <StrategicBriefingCard
+                  briefing={interpretedBriefing}
+                  title="Interpretação Estratégica da Sua Ideia (5 Pilares Persuasivos)"
+                  defaultExpanded={true}
+                />
               </div>
             )}
           </div>
@@ -1364,6 +1506,9 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
           onRemodelScript={(script) => handleTriggerRemodel(script.fullTeleprompterText, script.title)}
           onDeleteScript={(id) => onDeleteSavedScript?.(id)}
           onToggleFavorite={(id) => onToggleFavorite?.(id)}
+          onRefreshHistory={onRefreshHistory}
+          isSyncing={isSyncing}
+          onImportBackup={onImportBackup}
           onCreateNew={() => {
             setCreationMode('idea');
             setTopic('');

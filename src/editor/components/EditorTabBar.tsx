@@ -18,6 +18,8 @@ import {
   Cloud,
   Maximize2,
   Sliders,
+  Gauge,
+  Camera,
 } from 'lucide-react';
 import { EditorTab } from '../types';
 import { useUIStore } from '../stores/useUIStore';
@@ -35,10 +37,12 @@ export const EDITOR_TABS: TabDefinition[] = [
   { id: 'stickers', label: 'Stickers', icon: Smile },
   { id: 'effects', label: 'Efeitos', icon: Sparkles },
   { id: 'transitions', label: 'Transições', icon: Shuffle },
+  { id: 'speed', label: 'Velocidade', icon: Gauge },
   { id: 'subtitles', label: 'Legendas', icon: FileText },
   { id: 'filters', label: 'Filtros', icon: SlidersHorizontal },
   { id: 'adjust', label: 'Ajuste', icon: Sliders },
   { id: 'templates', label: 'Templates', icon: LayoutTemplate },
+  { id: 'multicam', label: 'Multicâmera', icon: Camera },
   { id: 'animation', label: 'Animação', icon: Activity },
   { id: 'matchcut', label: 'Batidas', icon: Scissors },
   { id: 'teleprompter', label: 'Teleprompter', icon: Mic },

@@ -39,7 +39,8 @@ export type CtaGoal =
   | 'seguir' // Seguir para parte 2 ou mais dicas
   | 'compartilhar' // Enviar para alguém
   | 'link_bio' // Clicar no link / comprar produto
-  | 'responder_pergunta';
+  | 'responder_pergunta'
+  | 'ambos'; // CTA Duplo (Bio + Comentário)
 
 export interface ScriptRequest {
   topic: string;
@@ -57,10 +58,42 @@ export interface ScriptRequest {
   remodelAngle?: 'same_niche_better' | 'different_niche' | 'opposite_contrarian' | 'simplified' | 'humorous';
   useAi?: boolean; // Se true usa IA, se false usa algoritmo heurístico sem IA
   quantity?: number; // Quantidade de blocos modulares (1 a 5) gerando N^4 combinações
+  strategicBriefing?: StrategicBriefing; // Briefing estratégico interpretado com 5 pilares
+  objectives?: string[];
   // User custom keys if provided in UI
   groqApiKey?: string;
   openRouterApiKey?: string;
   preferredProvider?: 'auto' | 'groq' | 'openrouter' | 'gemini';
+}
+
+// Briefing Estratégico e Interpretação Persuasiva da Ideia (Baseada em Tema, Objetivo, Problema Tradicional, Solução, Prova Social e CTA Dual)
+export interface StrategicBriefing {
+  videoTheme: string; // Tema do Vídeo
+  strategicObjective: string; // Objetivo
+  pointsOfAttentionAndArgumentation: {
+    flawedTraditionalMethod: {
+      title: string; // Ex: O problema dos simulados tradicionais (ex: CNH Brasil)
+      dangerConcept: string; // Ex: Estudar só por eles é "dar um tiro no pé"
+      stateContextOrStatistic?: string; // Ex: Em Minas Gerais, alto índice de reprovação porque alunos tiram 29 ou 30 e acham que estão prontos
+      hardReality: string; // Ex: Na hora da prova real, a realidade é outra: perguntas bem elaboradas e pegadinhas
+    };
+    idealSolution: {
+      title: string; // A Solução (Meu Simulado / Método)
+      coreDifferentiator: string; // Criado e atualizado com base no nível real das provas recentes, testado e aprovado
+    };
+    socialProofOrRealCase: {
+      transitionHook: string; // Sugestão de transição: "Veja o depoimento de uma aluna..."
+      storySummary: string; // A história com contraste numérico real
+      caseConclusion: string; // Conclusão irrefutável do alinhamento
+      suggestedAudioClip?: string; // Gancho para trecho de áudio/depoimento
+    };
+    dualCta: {
+      callToActionContext: string; // Contexto persuasivo da chamada
+      action1Bio: string; // Ação 1: Clicar no link da bio
+      action2CommentWord: string; // Ação 2: Comentar palavra-chave para receber no privado
+      keywordTrigger: string; // Ex: "QUERO", "SIMULADO"
+    };
+  };
 }
 
 export interface ScriptHook {
@@ -179,6 +212,9 @@ export interface ViralScript {
   
   // Matriz modular A/B intercambiável (N^4 combinações)
   modularMatrix?: ModularScriptMatrix;
+  
+  // Interpretação e Briefing Estratégico da Ideia (Tema, Objetivo, Problema Tradicional, Solução, Prova Social, CTA Dual)
+  strategicBriefing?: StrategicBriefing;
   
   scenes: ScriptScene[];
   bRollSuggestions?: string[];

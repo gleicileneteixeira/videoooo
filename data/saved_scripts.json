@@ -1,0 +1,266 @@
+[
+  {
+    "id": "script_detran_reprovacao_simulado",
+    "title": "Reprovou 5 Vezes na Prova Teórica? O Perigo dos Simulados Genéricos",
+    "niche": "Autoescola & Primeira Habilitação",
+    "platform": "tiktok",
+    "duration": "45s",
+    "framework": "hook_story_offer",
+    "tone": "dinamico_acelerado",
+    "targetAudience": "Alunos de autoescola prestando a prova teórica do Detran",
+    "ctaGoal": "ambos",
+    "selectedHookIndex": 0,
+    "createdAt": "2026-09-20T04:36:41.915Z",
+    "status": "ideia",
+    "isFavorite": true,
+    "strategicBriefing": {
+      "videoTheme": "Resposta a um comentário de uma pessoa que reprovou 5 vezes na prova teórica de habilitação.",
+      "strategicObjective": "Alertar sobre o perigo de estudar por simulados genéricos e apresentar o meu simulado como a solução ideal e realista.",
+      "attentionAndArguments": "O problema dos simulados tradicionais (ex: CNH Brasil): Estudar só por eles é \"dar um tiro no pé\". Em Minas Gerais, o alto índice de reprovação acontece porque os alunos tiram 29 ou 30 pontos nesses simulados e acham que estão prontos. Na hora da prova real, a realidade é outra: perguntas muito mais elaboradas, pegadinhas e nível de exigência alto, levando à reprovação de quem não se preparou do jeito certo.",
+      "socialProofAndAuthority": "Criado e atualizado especificamente com base nas questões oficiais, pegadinhas de trânsito e índice de aprovação comprovado.",
+      "dualCta": {
+        "callToActionContext": "Evite gastar mais de 300 reais em taxa de reteste e passe na próxima tentativa.",
+        "action1Bio": "Clica agora no link da minha bio para baixar o Simulado Realista Atualizado.",
+        "action2CommentWord": "Ou comenta \"SIMULADO\" aqui embaixo que eu envio o acesso direto no seu privado.",
+        "keywordTrigger": "SIMULADO"
+      }
+    },
+    "fourParts": {
+      "hookPart": {
+        "title": "Parte 1: Gancho (0-3s)",
+        "timecode": "00:00 - 00:03",
+        "audioScript": "Essa pessoa aqui acabou de reprovar pela 5ª vez na prova teórica do Detran... e você provavelmente tá cometendo o MESMO erro dela!",
+        "visualCue": "Apontar para o print do comentário de reprovação na tela, expressão séria e alerta direto pra câmera.",
+        "textOnScreen": "REPROVOU 5 VEZES?! ⚠️ NÃO COMETA ESSE ERRO",
+        "hookTrigger": "Gatilho de Identificação Negativa / Alerta de Perigo Iminente."
+      },
+      "storyPainPart": {
+        "title": "Parte 2: A Dor da História (3-15s)",
+        "timecode": "00:03 - 00:15",
+        "audioScript": "O maior perigo dos alunos, principalmente em Minas Gerais, é estudar só por aplicativo genérico tipo CNH Brasil. Lá você faz a prova em 5 minutos, tira 29 ou 30 pontos e acha que tá preparado. Só que isso é um tiro no pé!",
+        "visualCue": "Mostrar print de celular com score 30/30 e sobrepor um \"X\" vermelho bem grande.",
+        "textOnScreen": "SIMULADOS GENÉRICOS = TIRO NO PÉ ❌",
+        "painPoint": "Falsa sensação de preparo causada por simulados fáceis e desatualizados."
+      },
+      "developmentPart": {
+        "title": "Parte 3: Desenvolvimento & Revelação (15-35s)",
+        "timecode": "00:15 - 00:35",
+        "audioScript": "Na hora da prova oficial, a realidade bate na sua cara: perguntas muito mais elaboradas, textos longos e pegadinhas maldosas de mecânica e legislação que derrubam 70% dos candidatos. Você não precisa de simulado fácil pra inflar seu ego; você precisa de perguntas reais de prova!",
+        "visualCue": "Zoom in nos olhos, demonstrando firmeza, depois transição para ilustração de pegadinha do Detran.",
+        "textOnScreen": "A PROVA REAL TEM PEGADINHAS! 🚨",
+        "keyInsight": "A prova do Detran cobra interpretação e pegadinhas, não decoreba rasa."
+      },
+      "solutionCtaPart": {
+        "title": "Parte 4: Solução & Chamada para Ação / CTA Duplo (35-45s)",
+        "timecode": "00:35 - 00:45",
+        "audioScript": "É por isso que eu criei o meu Simulado Realista Atualizado, com as questões exatas e todas as pegadinhas explicadas. Para não jogar taxa de reteste no lixo, clica no link da minha bio ou comenta \"SIMULADO\" aqui embaixo que eu te mando no privado!",
+        "visualCue": "Mostrar tela do Simulado Atualizado e apontar para a bio e depois para os comentários.",
+        "textOnScreen": "COMENTE \"SIMULADO\" OU LINK NA BIO 📲",
+        "ctaAction": "Comentar \"SIMULADO\" ou clicar no link da bio para receber o simulado realista."
+      }
+    },
+    "hooks": [
+      {
+        "id": "hook_detran_1",
+        "category": "shock",
+        "spokenText": "Essa pessoa aqui acabou de reprovar pela 5ª vez na prova teórica do Detran... e você provavelmente tá cometendo o MESMO erro dela!",
+        "visualAction": "Apontar para o print do comentário de reprovação na tela, expressão séria e alerta direto pra câmera.",
+        "textOnScreen": "REPROVOU 5 VEZES?! ⚠️ NÃO COMETA ESSE ERRO",
+        "retentionTrigger": "Gatilho de Identificação Negativa / Alerta de Perigo Iminente."
+      },
+      {
+        "id": "hook_detran_2",
+        "category": "contrarian",
+        "spokenText": "Tirar 30 pontos no aplicativo CNH Brasil é a maior ilusão da sua vida de autoescola!",
+        "visualAction": "Mostrar o celular com print de 30/30 e balançar a cabeça dizendo não com corte seco.",
+        "textOnScreen": "30 PONTOS NO APP É ILUSÃO! 🛑",
+        "retentionTrigger": "Gatilho Contrariano / Quebra de Crença Popular."
+      },
+      {
+        "id": "hook_detran_3",
+        "category": "problem",
+        "spokenText": "Você sabia que mais de 60% dos alunos que reprovam no Detran estudaram todos os dias pelo simulado errado?",
+        "visualAction": "Expressão de indignação mostrando índice de reprovação do Detran.",
+        "textOnScreen": "60% ESTUDAM PELO SIMULADO ERRADO! 📊",
+        "retentionTrigger": "Gatilho de Estatística Chocante / Alerta de Injustiça."
+      }
+    ],
+    "modularMatrix": {
+      "quantity": 3,
+      "totalCombinations": 81,
+      "hooks": [
+        {
+          "id": "h_1",
+          "text": "Essa pessoa aqui acabou de reprovar pela 5ª vez na prova teórica do Detran... e você provavelmente tá cometendo o MESMO erro dela!",
+          "visualCue": "Apontar para comentário de seguidor com reprovação repetida",
+          "textOnScreen": "REPROVOU 5 VEZES?! ⚠️"
+        },
+        {
+          "id": "h_2",
+          "text": "Tirar 30 pontos no aplicativo CNH Brasil é a maior ilusão da sua vida de autoescola!",
+          "visualCue": "Mostrar print de 30 acertos no app e fazer sinal de não com a mão",
+          "textOnScreen": "30 PONTOS É ILUSÃO! 🛑"
+        },
+        {
+          "id": "h_3",
+          "text": "Se você tá marcando sua prova teórica essa semana, PARE tudo e ouça esse aviso urgente!",
+          "visualCue": "Gesto de pare com as duas mãos na câmera e corte dinâmico",
+          "textOnScreen": "AVISO URGENTE DETRAN 🚨"
+        }
+      ],
+      "pains": [
+        {
+          "id": "p_1",
+          "text": "O maior perigo dos alunos, principalmente em Minas Gerais, é estudar só por aplicativo genérico tipo CNH Brasil. Lá você faz a prova em 5 minutos, tira 29 ou 30 pontos e acha que tá preparado. Só que isso é um tiro no pé!",
+          "visualCue": "Print de simulado genérico com X vermelho sobreposto",
+          "textOnScreen": "SIMULADOS GENÉRICOS = TIRO NO PÉ ❌"
+        },
+        {
+          "id": "p_2",
+          "text": "Os aplicativos genéricos têm perguntas de 10 anos atrás. Você decora o gabarito sem entender a matéria, chega confiante na sala de prova e toma um susto na primeira questão.",
+          "visualCue": "Expressão de choque simulando olhar para a tela da prova oficial",
+          "textOnScreen": "QUESTÕES DE 10 ANOS ATRÁS 📉"
+        },
+        {
+          "id": "p_3",
+          "text": "Cada reprovação te custa mais de 300 reais em taxa de reexame, além da vergonha e do medo de vencer o prazo do seu processo de habilitação.",
+          "visualCue": "Mostrar nota de dinheiro fictícia sumindo e relógio correndo",
+          "textOnScreen": "R$ 300+ POR REPROVAÇÃO 💸"
+        }
+      ],
+      "solutions": [
+        {
+          "id": "s_1",
+          "text": "Na prova oficial do Detran, as bancas mudam termos técnicos, colocam textos longos e pegadinhas de legislação e mecânica que derrubam 70% de primeira. Você precisa treinar com perguntas reais e atualizadas.",
+          "visualCue": "Exibir exemplo de pegadinha real desvendada na tela",
+          "textOnScreen": "PEGADINHAS QUE DERRUBAM 70% 🧠"
+        },
+        {
+          "id": "s_2",
+          "text": "O segredo da aprovação de primeira não é quantidade de questões decoradas, é dominar o padrão das pegadinhas que o Detran usa para confundir os alunos desatentos.",
+          "visualCue": "Apontar para mapa mental ou resumo visual de legislação",
+          "textOnScreen": "DOMINE O PADRÃO DAS BANCAS 🎯"
+        },
+        {
+          "id": "s_3",
+          "text": "Quando você estuda pelo simulado certo, você chega na prova e parece que já viu todas as questões antes, respondendo com total segurança em menos de 20 minutos.",
+          "visualCue": "Sorriso confiante e sinal de positivo demonstrando tranquilidade",
+          "textOnScreen": "SEGURANÇA TOTAL NA PROVA ⏱️"
+        }
+      ],
+      "ctas": [
+        {
+          "id": "c_1",
+          "text": "É por isso que eu criei o meu Simulado Realista Atualizado com as questões oficiais. Clica no link da minha bio ou comenta \"SIMULADO\" aqui embaixo que eu te envio no privado agora!",
+          "visualCue": "Apontar para a bio e depois para os comentários",
+          "textOnScreen": "COMENTE \"SIMULADO\" OU LINK NA BIO 📲"
+        },
+        {
+          "id": "c_2",
+          "text": "Não jogue dinheiro de taxa de reexame fora. Comenta \"SIMULADO\" aqui nos comentários ou acessa o link na bio para garantir sua aprovação de primeira!",
+          "visualCue": "Gesto firme apontando para o botão de comentário",
+          "textOnScreen": "GARANTA SUA APROVAÇÃO HOJE 🎓"
+        },
+        {
+          "id": "c_3",
+          "text": "Quer receber o material que já aprovou milhares de alunos? Escreve \"SIMULADO\" aqui embaixo ou toca no link do meu perfil antes que você faça sua prova!",
+          "visualCue": "Apontar para cima indicando a foto de perfil / bio",
+          "textOnScreen": "LINK NA BIO OU COMENTE \"SIMULADO\" 🚀"
+        }
+      ],
+      "selectedIndices": {
+        "hookIndex": 0,
+        "painIndex": 0,
+        "solutionIndex": 0,
+        "ctaIndex": 0
+      }
+    },
+    "scenes": [
+      {
+        "timecode": "00:00 - 00:03",
+        "partNumber": 1,
+        "sectionName": "Parte 1: Gancho",
+        "audioScript": "Essa pessoa aqui acabou de reprovar pela 5ª vez na prova teórica do Detran... e você provavelmente tá cometendo o MESMO erro dela!",
+        "visualCue": "Apontar para o print do comentário de seguidor na tela, expressão séria e corte seco.",
+        "textOnScreen": "REPROVOU 5 VEZES?! ⚠️",
+        "audioMusicCue": "Batida com suspense e parada súbita aos 3 segundos."
+      },
+      {
+        "timecode": "00:03 - 00:15",
+        "partNumber": 2,
+        "sectionName": "Parte 2: A Dor da História",
+        "audioScript": "O maior perigo dos alunos, principalmente em Minas Gerais, é estudar só por aplicativo genérico tipo CNH Brasil. Lá você faz a prova em 5 minutos, tira 29 ou 30 pontos e acha que tá preparado. Só que isso é um tiro no pé!",
+        "visualCue": "Mostrar print de 30 acertos no app com um \"X\" vermelho gigante sobreposto.",
+        "textOnScreen": "SIMULADOS GENÉRICOS = TIRO NO PÉ ❌",
+        "audioMusicCue": "Trilha grave e tensa de alerta."
+      },
+      {
+        "timecode": "00:15 - 00:35",
+        "partNumber": 3,
+        "sectionName": "Parte 3: Desenvolvimento & Revelação",
+        "audioScript": "Na prova oficial do Detran, a realidade é outra: perguntas muito mais elaboradas, textos longos e pegadinhas maldosas de mecânica e legislação que derrubam 70% dos candidatos. Você não precisa de simulado fácil pra inflar seu ego; você precisa de perguntas reais de prova!",
+        "visualCue": "Zoom in nos olhos com postura de autoridade, mostrando exemplo de pegadinha do Detran.",
+        "textOnScreen": "A PROVA REAL TEM PEGADINHAS! 🚨",
+        "audioMusicCue": "Música de revelação e foco com ritmo progressivo."
+      },
+      {
+        "timecode": "00:35 - 00:45",
+        "partNumber": 4,
+        "sectionName": "Parte 4: Solução & CTA Duplo",
+        "audioScript": "É por isso que eu criei o meu Simulado Realista Atualizado, com as questões exatas e todas as pegadinhas explicadas. Para não jogar taxa de reteste no lixo, clica no link da minha bio ou comenta \"SIMULADO\" aqui embaixo que eu te mando no privado!",
+        "visualCue": "Mostrar a tela do Simulado Atualizado e apontar para a bio e comentários.",
+        "textOnScreen": "COMENTE \"SIMULADO\" OU LINK NA BIO 📲",
+        "audioMusicCue": "Trilha energética e inspiradora de fechamento."
+      }
+    ],
+    "fullTeleprompterText": "Essa pessoa aqui acabou de reprovar pela 5ª vez na prova teórica do Detran... [PAUSA] e você provavelmente tá cometendo o MESMO erro que ela!\n\nO maior perigo dos alunos, principalmente aqui em Minas Gerais, é ficar viciado em aplicativo genérico tipo CNH Brasil. [PAUSA CURTA] Lá você faz a prova em 5 minutos, tira 29 ou 30 pontos e sai achando que tá 100% pronto. Só que estudar só por eles é um verdadeiro tiro no pé!\n\nNa hora da prova oficial, a realidade bate de frente: perguntas muito mais elaboradas, enunciados longos e pegadinhas maldosas de mecânica e legislação que reprovam mais de 70% dos candidatos logo de cara. Você não precisa de simulado fácil pra inflar seu ego; você precisa encarar as pegadinhas reais que o Detran cobra!\n\nÉ por isso que eu desenvolvi o meu Simulado Realista Atualizado, com as questões reais e as pegadinhas comentadas passo a passo. [PAUSA]\n\nPara não jogar mais nenhuma taxa de reexame no lixo, clica agora no link da minha bio ou comenta \"SIMULADO\" aqui embaixo que eu envio o acesso direto no seu privado!",
+    "viralityAnalysis": {
+      "overallScore": 97,
+      "hookStrengthScore": 98,
+      "retentionPacingScore": 95,
+      "shareabilityScore": 96,
+      "commentTriggerScore": 99,
+      "whyItGoesViral": [
+        "Responde a uma dor real e frequente (reprovação repetida na prova teórica).",
+        "Desmistifica um hábito que quase todo aluno tem (usar apps genéricos que dão falsa sensação de preparo).",
+        "O CTA de comentar palavra-chave \"SIMULADO\" ativa o algoritmo do TikTok/Instagram por alto volume de comentários."
+      ],
+      "retentionSecret": "A menção a Minas Gerais e à pontuação \"29 ou 30 pontos\" gera identificação hiper-específica instantânea.",
+      "perfectLoopTip": "Termine com tom de urgência para incentivar o comentário antes de sair do vídeo."
+    },
+    "bestPostingTimes": [
+      "Segunda a Quinta: 12h00 às 13h30 (horário de descanso e estudos)",
+      "Domingo à Noite: 19h00 às 22h00 (ansiedade pré-semana de provas)"
+    ],
+    "hashtags": {
+      "megaViral": [
+        "#detran",
+        "#autoescola",
+        "#provateorica",
+        "#cnh",
+        "#primeirahabilitacao"
+      ],
+      "nicheSpecific": [
+        "#cnh2024",
+        "#simuladodetran",
+        "#reprovadodetran",
+        "#leisdetransito",
+        "#detranmg"
+      ],
+      "lowCompetition": [
+        "#provateoricadetran",
+        "#pegadinhasdetran",
+        "#aprovadacnh",
+        "#carteirademotorista",
+        "#dicasdetran"
+      ]
+    },
+    "captionAndPost": {
+      "headline": "Reprovou na prova teórica do Detran? Cuidado com essa armadilha! ⚠️🚗",
+      "captionBody": "Se você tá estudando apenas por simulados genéricos e tirando 30 pontos achando que tá pronto, cuidado! A prova real tem pegadinhas que não aparecem nesses aplicativos.\n\nAssista ao vídeo para entender o motivo e descubra como se preparar com questões reais!",
+      "callToAction": "Comente \"SIMULADO\" aqui embaixo para receber o material realista no seu direct ou acesse o link na minha bio! 📲👇",
+      "coverTitleIdea": "REPROVOU 5 VEZES NO DETRAN? 🚨 O VERDADEIRO MOTIVO",
+      "coverVisualPrompt": "Instrutor de trânsito sério apontando para uma placa de prova do Detran e comentário de reprovação."
+    }
+  }
+]
