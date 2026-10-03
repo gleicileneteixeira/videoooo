@@ -34,15 +34,15 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { icon: Home, label: 'Dashboard', route: '/dashboard' },
+  { icon: Home, label: 'Painel', route: '/dashboard' },
   { icon: Sparkles, label: 'Roteiro & IA', route: '/script' },
-  { icon: Factory, label: 'Criacao em Massa', route: '/mass-production' },
-  { icon: Scissors, label: 'Editor', route: '/editor' },
-  { icon: Store, label: 'Fabrica de Posts', route: '/studio' },
-  { icon: CalendarDays, label: 'Calendario', route: '/calendar' },
-  { icon: Share2, label: 'Publicacao', route: '/publish' },
+  { icon: Factory, label: 'Criação em Massa', route: '/mass-production' },
+  { icon: Scissors, label: 'Editor de Vídeo', route: '/editor' },
+  { icon: Store, label: 'Fábrica de Posts', route: '/studio' },
+  { icon: CalendarDays, label: 'Calendário', route: '/calendar' },
+  { icon: Share2, label: 'Publicação', route: '/publish' },
   { icon: FileStack, label: 'Separador & PDF', route: '/pdf-merge' },
-  { icon: Video, label: 'Videos', route: '/videos' },
+  { icon: Video, label: 'Vídeos', route: '/videos' },
   { icon: Paintbrush, label: 'SpeedPaint', route: '/speed-paint' },
 ];
 

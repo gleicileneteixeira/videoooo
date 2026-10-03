@@ -41,17 +41,17 @@ interface HeaderProps {
 }
 
 const ROUTE_LABELS: Record<AppRoute, { title: string; subtitle: string }> = {
-  '/dashboard': { title: 'Dashboard', subtitle: 'Painel geral & métricas virais' },
-  '/script': { title: 'Roteiro & IA', subtitle: 'Gerador em 4 partes & ganchos' },
+  '/dashboard': { title: 'Painel Geral', subtitle: 'Métricas virais, roteiros & estúdio' },
+  '/script': { title: 'Roteiro & IA', subtitle: 'Gerador em 4 partes & ganchos persuasivos' },
   '/mass-production': { title: 'Criação em Massa', subtitle: 'Geração de roteiros em lote' },
-  '/editor': { title: 'Editor Studio', subtitle: 'Teleprompter & edição de ritmo' },
+  '/editor': { title: 'Editor de Vídeo', subtitle: 'Linha do tempo, filmstrip & narração' },
   '/studio': { title: 'Fábrica de Posts', subtitle: 'Carrosséis & copies magnéticas' },
-  '/calendar': { title: 'Calendário', subtitle: 'Grade semanal de postagens' },
-  '/publish': { title: 'Publicação', subtitle: 'Checklist & distribuição' },
-  '/pdf-merge': { title: 'Juntar PDF', subtitle: 'Consolidação de roteiros' },
-  '/videos': { title: 'Vídeos Studio', subtitle: 'Junção FFmpeg, extração & galeria' },
-  '/speed-paint': { title: 'SpeedPaint', subtitle: 'Storyboards & prompts de cena' },
-  '/settings': { title: 'Configurações', subtitle: 'Chaves de API, VPS & Gateway' },
+  '/calendar': { title: 'Calendário Editorial', subtitle: 'Grade semanal e mensal de postagens' },
+  '/publish': { title: 'Central de Publicação', subtitle: 'Checklist, agendamento & distribuição' },
+  '/pdf-merge': { title: 'Separador & PDF Studio', subtitle: 'Fragmentar livros de 1.000 folhas & mesclar PDFs' },
+  '/videos': { title: 'Estúdio de Vídeos', subtitle: 'Junção FFmpeg, extração & galeria' },
+  '/speed-paint': { title: 'SpeedPaint & Cenas', subtitle: 'Storyboards & prompts de cena' },
+  '/settings': { title: 'Configurações', subtitle: 'Chaves de API, VPS & Gateway Omni' },
 };
 
 export const Header: React.FC<HeaderProps> = ({

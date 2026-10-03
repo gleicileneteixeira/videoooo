@@ -317,7 +317,7 @@ export const EditorTimeline: React.FC<EditorTimelineProps> = ({ timelineHeight }
             }`}
           >
             <Activity className="h-3 w-3" />
-            <span>Waveform</span>
+            <span>Forma de Onda</span>
           </button>
 
           <div className="h-4 w-px bg-slate-800 mx-0.5 flex-shrink-0" />
