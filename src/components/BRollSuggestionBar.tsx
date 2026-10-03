@@ -166,6 +166,11 @@ export const BRollSuggestionBar: React.FC<BRollSuggestionBarProps> = ({
       badgeClass: 'border-amber-500/40 text-amber-300 bg-amber-950/40 hover:bg-amber-900/60 hover:border-amber-400',
       getUrl: (query: string) => `https://coverr.co/s?q=${encodeURIComponent(query)}`,
     },
+    {
+      name: 'Unsplash (Fotos)',
+      badgeClass: 'border-purple-500/40 text-purple-300 bg-purple-950/40 hover:bg-purple-900/60 hover:border-purple-400',
+      getUrl: (query: string) => `https://unsplash.com/pt-br/s/fotografias/${encodeURIComponent(query)}`,
+    },
   ];
 
   return (
@@ -338,6 +343,11 @@ export const BRollSupportLinks: React.FC<BRollSupportLinksProps> = ({
       name: 'Coverr',
       badgeClass: 'border-amber-500/40 text-amber-300 bg-amber-950/40 hover:bg-amber-900/60 hover:border-amber-400',
       getUrl: (q: string) => `https://coverr.co/s?q=${encodeURIComponent(q)}`,
+    },
+    {
+      name: 'Unsplash',
+      badgeClass: 'border-purple-500/40 text-purple-300 bg-purple-950/40 hover:bg-purple-900/60 hover:border-purple-400',
+      getUrl: (q: string) => `https://unsplash.com/pt-br/s/fotografias/${encodeURIComponent(q)}`,
     },
   ];
 

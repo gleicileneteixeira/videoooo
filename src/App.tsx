@@ -785,8 +785,8 @@ export default function App() {
 
             {activeTab === 'extractor' && (
               <MediaExtractor
-                onRemodelScript={(text, title) => {
-                  handleStartRemodelFromText(text, title);
+                onRemodelScript={(transcript) => {
+                  handleStartRemodelFromText(transcript);
                   handleNavigateRoute('/script');
                 }}
                 recentTranscripts={recentTranscripts}
@@ -795,6 +795,12 @@ export default function App() {
                 }}
                 onClearHistory={() => setRecentTranscripts([])}
                 onDeleteTranscript={handleDeleteTranscript}
+                onSendToScriptGenerator={(topic, hookText) => {
+                  setPrefilledTopic(hookText ? `${topic} (Gancho: "${hookText}")` : topic);
+                  setCurrentScript(null);
+                  handleNavigateRoute('/script');
+                  setActiveTab('generator');
+                }}
               />
             )}
 

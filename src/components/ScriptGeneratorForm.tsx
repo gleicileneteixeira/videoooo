@@ -1481,6 +1481,10 @@ Pontos de Atenção e Argumentação do Roteiro:
           onSelectRecentTranscript={(t) => onSelectRecentTranscript?.(t)}
           onClearHistory={() => onClearTranscriptHistory?.()}
           onDeleteTranscript={(id) => onDeleteTranscript?.(id)}
+          onSendToScriptGenerator={(topic, hookText) => {
+            setTopic(hookText ? `${topic} (Gancho: "${hookText}")` : topic);
+            setSubTab('generator');
+          }}
         />
       )}
       {subTab === 'download' && (

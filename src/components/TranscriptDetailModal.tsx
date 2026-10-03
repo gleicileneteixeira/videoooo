@@ -10,6 +10,7 @@ import {
   ArrowRight,
   Flame,
   Lightbulb,
+  Film,
 } from 'lucide-react';
 import { ExtractedTranscript } from '../types';
 
@@ -19,6 +20,7 @@ interface TranscriptDetailModalProps {
   onClose: () => void;
   onRemodelScript: (transcript: ExtractedTranscript) => void;
   onOpenSeoGenerator: (transcript: ExtractedTranscript) => void;
+  onOpenPackageModal?: (transcript: ExtractedTranscript) => void;
 }
 
 export const TranscriptDetailModal: React.FC<TranscriptDetailModalProps> = ({
@@ -27,6 +29,7 @@ export const TranscriptDetailModal: React.FC<TranscriptDetailModalProps> = ({
   onClose,
   onRemodelScript,
   onOpenSeoGenerator,
+  onOpenPackageModal,
 }) => {
   const [copiedFull, setCopiedFull] = useState(false);
   const [copiedHook, setCopiedHook] = useState(false);
@@ -98,19 +101,21 @@ export const TranscriptDetailModal: React.FC<TranscriptDetailModalProps> = ({
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Botão Gerar SEO */}
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                onOpenSeoGenerator(transcript);
-              }}
-              className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 px-3.5 py-1.5 font-extrabold text-white shadow-md shadow-purple-600/20 hover:scale-105 active:scale-95 transition-all"
-            >
-              <Hash className="h-3.5 w-3.5" />
-              <span>Gerar Descrições SEO & Headlines</span>
-            </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Botão Finalizar Vídeo */}
+            {onOpenPackageModal && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenPackageModal(transcript);
+                }}
+                className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-cyan-600 via-teal-600 to-emerald-600 px-3.5 py-1.5 font-black text-slate-950 shadow-md shadow-cyan-600/20 hover:scale-105 active:scale-95 transition-all border border-cyan-300/40"
+              >
+                <Film className="h-3.5 w-3.5 text-slate-950" />
+                <span>Finalizar Vídeo (B-Rolls, Capas & SEO)</span>
+              </button>
+            )}
 
             {/* Botão Remodelar */}
             <button
@@ -119,11 +124,11 @@ export const TranscriptDetailModal: React.FC<TranscriptDetailModalProps> = ({
                 onClose();
                 onRemodelScript(transcript);
               }}
-              className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-amber-500 px-3.5 py-1.5 font-extrabold text-white shadow-md shadow-rose-600/20 hover:scale-105 active:scale-95 transition-all"
+              className="flex items-center gap-1.5 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 px-3.5 py-1.5 font-bold text-white hover:text-emerald-300 transition-all"
             >
-              <Sparkles className="h-3.5 w-3.5" />
+              <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
               <span>Remodelar em Roteiro</span>
-              <ArrowRight className="h-3.5 w-3.5" />
+              <ArrowRight className="h-3.5 w-3.5 text-emerald-400" />
             </button>
           </div>
         </div>

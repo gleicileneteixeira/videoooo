@@ -18,6 +18,10 @@ import {
   Eye,
   FileText,
   Flame,
+  Film,
+  Download,
+  ExternalLink,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { ExtractedTranscript } from '../types';
 import { attachApiKeysPayload } from '../utils/apiHelper';
@@ -25,6 +29,8 @@ import { extractAndCompressAudio } from '../utils/audioExtractor';
 import { LocalWhisperService, type WhisperModelId } from '../services/localWhisperService';
 import { SeoGeneratorModal } from './SeoGeneratorModal';
 import { TranscriptDetailModal } from './TranscriptDetailModal';
+import { ViralMediaPackageModal } from './ViralMediaPackageModal';
+import { BRollSuggestionBar } from './BRollSuggestionBar';
 
 interface MediaExtractorProps {
   onRemodelScript: (transcript: ExtractedTranscript) => void;
@@ -32,6 +38,7 @@ interface MediaExtractorProps {
   onSelectRecentTranscript: (transcript: ExtractedTranscript) => void;
   onClearHistory: () => void;
   onDeleteTranscript: (id: string) => void;
+  onSendToScriptGenerator?: (topic: string, hookText?: string) => void;
 }
 
 export const MediaExtractor: React.FC<MediaExtractorProps> = ({
@@ -40,6 +47,7 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
   onSelectRecentTranscript,
   onClearHistory,
   onDeleteTranscript,
+  onSendToScriptGenerator,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -57,6 +65,10 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
   const [seoTargetTranscript, setSeoTargetTranscript] = useState<ExtractedTranscript | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [detailTargetTranscript, setDetailTargetTranscript] = useState<ExtractedTranscript | null>(null);
+
+  // NOVO: Pacote Completo Modal State (Hooks, Headlines, Descrição, Tags & Criativo)
+  const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
+  const [packageTargetTranscript, setPackageTargetTranscript] = useState<ExtractedTranscript | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const topResultRef = useRef<HTMLDivElement>(null);
@@ -412,126 +424,158 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
         {currentTranscript && !isProcessing && (
           <div
             ref={topResultRef}
-            className="mt-6 rounded-2xl border border-emerald-500/40 bg-gradient-to-b from-emerald-950/30 to-slate-950 p-5 sm:p-6 space-y-4 animate-in fade-in"
+            className="mt-6 rounded-2xl border border-emerald-500/40 bg-gradient-to-b from-emerald-950/20 via-slate-900 to-slate-950 p-5 sm:p-6 space-y-5 animate-in fade-in"
           >
+            {/* Header com Título e Estatísticas */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
               <div>
                 <div className="flex items-center gap-2">
                   <span className="rounded-md bg-emerald-500/20 px-2 py-0.5 text-[10px] font-black text-emerald-300 border border-emerald-500/30">
-                    TRANSCRIÇÃO EXTRAÍDA COM SUCESSO
+                    ÁUDIO EXTRAÍDO COM SUCESSO
                   </span>
                   <span className="text-xs text-slate-400 font-mono">
                     {currentTranscript.wordCount} palavras • ~{currentTranscript.originalDuration || '45s'}
                   </span>
                 </div>
-                <h3 className="text-base font-bold text-white mt-1">
+                <h3 className="text-base sm:text-lg font-bold text-white mt-1">
                   {currentTranscript.title}
                 </h3>
               </div>
 
-              {/* Actions: SEO Descriptions Generator & Remodel */}
-              <div className="flex flex-wrap items-center gap-2">
-                {/* 1. Botão Gerar Descrições SEO & Headlines */}
+              {/* Botões rápidos do texto */}
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  id="btn-generate-seo-descriptions"
                   onClick={() => {
-                    setSeoTargetTranscript(currentTranscript);
-                    setIsSeoModalOpen(true);
+                    setDetailTargetTranscript(currentTranscript);
+                    setIsDetailModalOpen(true);
                   }}
-                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 px-4 py-2.5 text-xs sm:text-sm font-extrabold text-white shadow-lg shadow-purple-600/30 hover:scale-105 active:scale-95 transition-all"
+                  className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition"
+                  title="Expandir leitura em tela cheia"
                 >
-                  <Hash className="h-4 w-4" />
-                  <span>CRIAR DESCRIÇÕES SEO & HEADLINES</span>
+                  <Eye className="h-3.5 w-3.5 text-purple-400" />
+                  <span>Expandir</span>
                 </button>
 
-                {/* 2. Botão Remodelar em Novo Roteiro */}
                 <button
                   type="button"
-                  id="btn-remodel-this-transcript"
-                  onClick={() => onRemodelScript(currentTranscript)}
-                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 via-pink-600 to-amber-500 px-5 py-2.5 text-xs sm:text-sm font-extrabold text-white shadow-lg shadow-rose-600/30 hover:scale-105 active:scale-95 transition-all"
+                  onClick={() => handleCopyText(currentTranscript.fullText)}
+                  className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition"
+                  title="Copiar texto para a área de transferência"
                 >
-                  <Sparkles className="h-4 w-4" />
-                  <span>REMODELAR EM ROTEIRO VIRAL</span>
-                  <ArrowRight className="h-4 w-4" />
+                  {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                  <span>{copied ? 'Copiado!' : 'Copiar Texto'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const blob = new Blob([currentTranscript.fullText], { type: 'text/plain;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${(currentTranscript.title || 'transcricao').replace(/[^a-zA-Z0-9_-]/g, '_')}.txt`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-emerald-300 hover:bg-slate-700 transition"
+                  title="Baixar arquivo TXT do texto"
+                >
+                  <FileText className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>Baixar .TXT</span>
                 </button>
               </div>
             </div>
 
-            {/* Identified Hook & Summary */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 text-xs">
-              <div className="rounded-xl bg-slate-950/80 p-3.5 border border-slate-800">
-                <span className="font-bold text-amber-400 text-[10px] uppercase flex items-center gap-1 mb-1">
-                  <Flame className="h-3 w-3 text-amber-400" />
-                  Gancho Original Identificado:
-                </span>
-                <p className="text-slate-200 italic font-semibold leading-relaxed">
-                  "{currentTranscript.hookIdentified || 'Gancho direto sem enrolação'}"
-                </p>
-              </div>
-
-              <div className="rounded-xl bg-slate-950/80 p-3.5 border border-slate-800">
-                <span className="font-bold text-emerald-400 text-[10px] uppercase flex items-center gap-1 mb-1">
-                  <FileText className="h-3 w-3 text-emerald-400" />
-                  Resumo do Insight:
-                </span>
-                <p className="text-slate-300 leading-relaxed">
-                  {currentTranscript.summary}
-                </p>
+            {/* Texto Completo Extraído */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <FileText className="h-3.5 w-3.5 text-emerald-400" />
+                Texto do que foi falado no vídeo:
+              </span>
+              <div className="rounded-xl bg-slate-950 p-4 border border-slate-800 text-xs sm:text-sm text-slate-200 leading-relaxed font-sans max-h-60 overflow-y-auto whitespace-pre-line select-text shadow-inner">
+                {currentTranscript.fullText}
               </div>
             </div>
 
-            {/* Full Extracted Spoken Script */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
-                <span className="flex items-center gap-1.5">
-                  <FileText className="h-3.5 w-3.5 text-purple-400" />
-                  Texto Completo Extraído:
-                </span>
-                <div className="flex items-center gap-2">
+            {/* O QUE VOCÊ DESEJA FAZER COM ESSE TEXTO? */}
+            <div className="pt-3 border-t border-slate-800/80 space-y-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-amber-400" />
+                <h4 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider">
+                  O que você deseja fazer com este texto extraído?
+                </h4>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                {/* Opção 1: Finalização do Vídeo (B-Rolls, Headlines, Descrição SEO & Hashtags) */}
+                <div className="rounded-2xl border-2 border-cyan-500/40 bg-gradient-to-br from-cyan-950/30 via-slate-900 to-slate-950 p-4 flex flex-col justify-between space-y-3 hover:border-cyan-400 transition-all shadow-lg group">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/20 text-cyan-300">
+                        <Film className="h-4 w-4" />
+                      </div>
+                      <span className="text-xs font-black uppercase text-cyan-300 tracking-wider">
+                        Para Vídeo Já Gravado
+                      </span>
+                    </div>
+
+                    <h5 className="text-sm font-extrabold text-white">
+                      Finalizar Vídeo (B-Rolls, Capas, SEO & Tags)
+                    </h5>
+
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Já gravou o seu vídeo? Busque imagens de apoio dos bancos gratuitos para baixar na tela, gere títulos de capa (Headlines), hashtags e a descrição SEO com CTA pronta para postar.
+                    </p>
+                  </div>
+
                   <button
                     type="button"
+                    id="btn-generate-complete-video-package"
                     onClick={() => {
-                      setDetailTargetTranscript(currentTranscript);
-                      setIsDetailModalOpen(true);
+                      setPackageTargetTranscript(currentTranscript);
+                      setIsPackageModalOpen(true);
                     }}
-                    className="flex items-center gap-1 text-slate-400 hover:text-purple-300 text-[11px] transition"
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-600 px-4 py-2.5 text-xs sm:text-sm font-black text-slate-950 shadow-md shadow-cyan-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
                   >
-                    <Eye className="h-3.5 w-3.5" />
-                    <span>Expandir Leitura</span>
-                  </button>
-                  <span className="text-slate-700">•</span>
-                  <button
-                    type="button"
-                    onClick={() => handleCopyText(currentTranscript.fullText)}
-                    className="flex items-center gap-1 text-slate-400 hover:text-white transition"
-                  >
-                    {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                    <span>{copied ? 'Copiado!' : 'Copiar'}</span>
-                  </button>
-                  <span className="text-slate-700">•</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const blob = new Blob([currentTranscript.fullText], { type: 'text/plain;charset=utf-8' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `${(currentTranscript.title || 'transcricao').replace(/[^a-zA-Z0-9_-]/g, '_')}.txt`;
-                      a.click();
-                      URL.revokeObjectURL(url);
-                    }}
-                    className="flex items-center gap-1 text-slate-400 hover:text-emerald-300 text-[11px] transition"
-                    title="Baixar arquivo TXT do texto"
-                  >
-                    <FileText className="h-3.5 w-3.5" />
-                    <span>Baixar .TXT</span>
+                    <Film className="h-4 w-4 text-slate-950" />
+                    <span>FINALIZAR VÍDEO (B-ROLLS & SEO)</span>
+                    <ArrowRight className="h-4 w-4 text-slate-950" />
                   </button>
                 </div>
-              </div>
-              <div className="rounded-xl bg-slate-950 p-4 border border-slate-800 text-xs sm:text-sm text-slate-200 leading-relaxed font-sans max-h-56 overflow-y-auto whitespace-pre-line select-text">
-                {currentTranscript.fullText}
+
+                {/* Opção 2: Remodelar em Novo Roteiro */}
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 flex flex-col justify-between space-y-3 hover:border-emerald-500/40 transition-all shadow-md group">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">
+                        <Sparkles className="h-4 w-4" />
+                      </div>
+                      <span className="text-xs font-black uppercase text-emerald-300 tracking-wider">
+                        Para Regravar / Criar Novo
+                      </span>
+                    </div>
+
+                    <h5 className="text-sm font-extrabold text-white">
+                      Remodelar em Novo Roteiro Viral
+                    </h5>
+
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Deseja regravar ou reescrever o conteúdo? Envie o texto extraído para o Criador de Roteiro e transforme-o em um novo roteiro completo de 4 partes com ganchos magnéticos.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    id="btn-remodel-this-transcript"
+                    onClick={() => onRemodelScript(currentTranscript)}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-2.5 text-xs sm:text-sm font-bold text-white hover:text-emerald-300 transition-all"
+                  >
+                    <Sparkles className="h-4 w-4 text-emerald-400" />
+                    <span>REMODELAR EM ROTEIRO VIRAL</span>
+                    <ArrowRight className="h-4 w-4 text-emerald-400" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -598,7 +642,21 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
 
                 {/* Direct Action Buttons on History Item */}
                 <div className="flex flex-wrap items-center gap-1.5 self-end sm:self-center">
-                  {/* 1. Ver / Abrir Transcrição Completa */}
+                  {/* Finalizar Vídeo (B-Rolls & SEO) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPackageTargetTranscript(t);
+                      setIsPackageModalOpen(true);
+                    }}
+                    className="flex items-center gap-1.5 rounded-lg bg-cyan-500/20 border border-cyan-500/40 px-3 py-1.5 text-xs font-bold text-cyan-300 hover:bg-cyan-500 hover:text-slate-950 transition shadow-sm"
+                    title="Finalizar vídeo: baixar B-Rolls das cenas, gerar títulos de capa e descrição SEO com hashtags"
+                  >
+                    <Film className="h-3.5 w-3.5" />
+                    <span>Finalizar Vídeo (B-Rolls & SEO)</span>
+                  </button>
+
+                  {/* Ver / Abrir Transcrição Completa */}
                   <button
                     type="button"
                     onClick={() => {
@@ -611,20 +669,6 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
                   >
                     <Eye className="h-3.5 w-3.5 text-purple-400" />
                     <span>Ver Texto</span>
-                  </button>
-
-                  {/* 2. Gerar Descrições SEO & Headlines */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSeoTargetTranscript(t);
-                      setIsSeoModalOpen(true);
-                    }}
-                    className="flex items-center gap-1 rounded-lg bg-purple-600/20 border border-purple-500/30 px-2.5 py-1.5 text-xs font-bold text-purple-300 hover:bg-purple-600 hover:text-white transition"
-                    title="Gerar títulos virais e descrições SEO com hashtags"
-                  >
-                    <Hash className="h-3.5 w-3.5" />
-                    <span>SEO & Tags</span>
                   </button>
 
                   {/* 3. Copiar Fala */}
@@ -675,6 +719,10 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
             setSeoTargetTranscript(t);
             setIsSeoModalOpen(true);
           }}
+          onOpenPackageModal={(t) => {
+            setPackageTargetTranscript(t);
+            setIsPackageModalOpen(true);
+          }}
         />
       )}
 
@@ -694,6 +742,16 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
               fullText: fullText || seoTargetTranscript.fullText,
             });
           }}
+        />
+      )}
+
+      {/* NOVO: Modal do Pacote Completo (Hooks, Headlines, Descrição, Tags & Criativo) */}
+      {packageTargetTranscript && (
+        <ViralMediaPackageModal
+          transcript={packageTargetTranscript}
+          isOpen={isPackageModalOpen}
+          onClose={() => setIsPackageModalOpen(false)}
+          onSendToScriptGenerator={onSendToScriptGenerator}
         />
       )}
     </div>

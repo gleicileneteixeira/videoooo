@@ -274,7 +274,7 @@ async function callGeminiAPI(apiKey: string, model: string, prompt: string, sche
   }
 
   const response = await ai.models.generateContent({
-    model: model || "gemini-2.5-flash",
+    model: model || "gemini-3.8-flash",
     contents: prompt,
     config,
   });
@@ -2427,6 +2427,429 @@ ${(fullText || '').slice(0, 3500)}
     });
   }
 });
+
+// Endpoint: Generate Complete 5-Pillar Publishing & Creative Package (Hooks, Headlines, Legenda, Tags & Criativo)
+app.post("/api/generate-video-package", async (req, res) => {
+  try {
+    const {
+      title = "",
+      hook = "",
+      summary = "",
+      fullText = "",
+      tone = "viral",
+      useAi = true,
+    } = req.body;
+
+    const { groqInput, openRouterInput } = extractKeysFromBody(req.body);
+
+    if (!fullText && !title && !summary) {
+      return res.status(400).json({ error: "Texto, título ou resumo obrigatório para gerar o pacote." });
+    }
+
+    // Helper para gerar o pacote no backend de forma algorítmica instantânea
+    const generateFallbackPackage = () => {
+      const technicalJunk = /^(document|audio|video|recording|rec|file|img|image|whatsapp|tiktok|youtube|yt|tmp|\d+|[a-f0-9-]{8,})/i;
+      const cleanTitle = !technicalJunk.test(title.trim()) && title.trim().length > 3 ? title.trim() : "";
+      
+      const words = (fullText || "").toLowerCase().replace(/[^\w\s\u00C0-\u017F]/g, " ").split(/\s+/).filter(w => w.length > 3 && !technicalJunk.test(w));
+      const topic = cleanTitle || (words.length > 1 ? words.slice(0, 2).join(" ") : "conteúdo estratégico");
+      const secondary = words[2] || words[1] || "resultados";
+      const action = words[3] || "prática";
+
+      const cleanHook = hook && hook.trim().length > 10
+        ? hook.trim().replace(/[.,;]+$/, "")
+        : `O que você precisa saber sobre ${topic}`;
+
+      const cleanSummary = summary && summary.trim().length > 15
+        ? summary.trim()
+        : (fullText || "").slice(0, 200).replace(/^(se você quer|basicamente|então|olha só|aqui|fala galera)\s*/i, "").trim() + "...";
+
+      const nicheTags = [`#${topic.replace(/\s+/g, "").toLowerCase()}`, `#${secondary.toLowerCase()}`, `#${action.toLowerCase()}`].filter(t => t.length > 3);
+      const viralTags = ["#viral", "#dicas", "#foryou", "#estrategia", "#sucesso"];
+      const allTags = Array.from(new Set([...nicheTags, ...viralTags]));
+      const formattedAll = allTags.join(" ");
+
+      return {
+        id: "pack_" + Date.now(),
+        sourceTitle: title || "Vídeo Gravado",
+        detectedTopic: topic,
+        secondaryTopic: secondary,
+        hooks: [
+          {
+            id: "hk_1",
+            category: "contrarian",
+            label: "Quebra de Padrão (Contra-intuitivo)",
+            spokenText: `Se você ainda tenta ter resultado com ${topic} do jeito tradicional, pare agora antes de perder mais tempo!`,
+            visualCue: "Olhar sério na câmera e fazer sinal de pare com a mão.",
+            textOnScreen: `PARE DE ERRAR COM ${topic.toUpperCase()}`,
+            estimatedRetention: "98% Retenção",
+          },
+          {
+            id: "hk_2",
+            category: "curiosity",
+            label: "Curiosidade Magnética (Loop Aberto)",
+            spokenText: `Existe um segredo sobre ${topic} que quase ninguém tem coragem de falar abertamente...`,
+            visualCue: "Aproximar o rosto da câmera em tom confidencial.",
+            textOnScreen: "O SEGREDO QUE ESCONDEM 🤫",
+            estimatedRetention: "96% Retenção",
+          },
+          {
+            id: "hk_3",
+            category: "shock",
+            label: "Choque de Realidade / Alerta",
+            spokenText: `90% das pessoas erram feio quando tentam aplicar ${topic}. E você pode estar caindo nessa armadilha!`,
+            visualCue: "Expressão de espanto, apontar o dedo indicador.",
+            textOnScreen: `O MAIOR ERRO COM ${topic.toUpperCase()}`,
+            estimatedRetention: "97% Retenção",
+          },
+          {
+            id: "hk_4",
+            category: "problem",
+            label: "Dor Direta / Identificação",
+            spokenText: `Você já se sentiu cansado de tentar ter consistência com ${secondary} e nada dar certo?`,
+            visualCue: "Tom empático, respiração profunda e olhar direto.",
+            textOnScreen: "CANSADO DE FICAR TRAVADO?",
+            estimatedRetention: "93% Retenção",
+          },
+          {
+            id: "hk_5",
+            category: "promise",
+            label: "Transformação Rápida / Promessa",
+            spokenText: `Em menos de 1 minuto eu vou te entregar o passo a passo prático para destravar ${topic}!`,
+            visualCue: "Gesto rápido com as duas mãos, energia alta e firmeza.",
+            textOnScreen: `MÉTODO DEFINITIVO: ${topic.toUpperCase()}`,
+            estimatedRetention: "95% Retenção",
+          },
+        ],
+        headlines: [
+          {
+            id: "hl_1",
+            type: "capa_reels",
+            label: "Capa Reels & TikTok (Curto & Legível)",
+            text: `${topic.toUpperCase()}: COMO FAZER CERTO`,
+            badge: "Capa 9:16",
+          },
+          {
+            id: "hl_2",
+            type: "thumbnail_yt",
+            label: "Thumbnail YouTube / Capa de Carrossel",
+            text: `A Verdade Sobre ${topic} Que Mudou Meus Resultados`,
+            badge: "Thumbnail",
+          },
+          {
+            id: "hl_3",
+            type: "curiosidade",
+            label: "Headline em Pergunta Hipnótica",
+            text: `Você Ainda Faz Isso com ${secondary}? Veja a Forma Certa`,
+            badge: "CTR Alto",
+          },
+          {
+            id: "hl_4",
+            type: "polemica",
+            label: "Headline de Alerta / Polêmica",
+            text: `PARE de Errar com ${topic}: Faça Isso Hoje Mesmo`,
+            badge: "Polêmico",
+          },
+          {
+            id: "hl_5",
+            type: "curto",
+            label: "Headline Passo a Passo / Método",
+            text: `O Método Simples para Destravar ${topic} sem Enrolação`,
+            badge: "Passo a Passo",
+          },
+        ],
+        descriptions: [
+          {
+            id: "desc_1",
+            platform: "instagram_reels",
+            platformLabel: "Instagram Reels / Feed",
+            title: "Legenda de Alta Conversão com Gancho & CTA",
+            hookLine: `🔥 ${topic.toUpperCase()}: COMO FAZER CERTO`,
+            body: cleanSummary,
+            bullets: [
+              `Foco total em consistência e aplicação prática de ${topic}`,
+              `Menos complicação e mais execução com ${secondary}`,
+              `Dica de ouro: aplique de imediato para sentir a diferença`,
+            ],
+            cta: "💡 Salve este post na bandeirinha e comente a sua opinião!",
+            hashtags: allTags,
+            fullCaption: `🔥 ${topic.toUpperCase()}: COMO FAZER CERTO\n\n${cleanHook}\n\n${cleanSummary}\n\n📌 O que você precisa guardar deste vídeo:\n• O maior erro é insistir no método antigo sem testar atalhos comprovados\n• Foco total em consistência e aplicação prática de ${topic}\n• Menos teoria e mais execução com ${secondary}\n\n💡 Salve este post na bandeirinha para consultar sempre que for aplicar!\n\n👇 Me conta nos comentários: você já conhecia essa estratégia?\n\n${formattedAll}`,
+            charCount: 380,
+          },
+          {
+            id: "desc_2",
+            platform: "tiktok",
+            platformLabel: "TikTok (Foco em Busca & Retenção)",
+            title: "Legenda Curta & Otimizada para TikTok Search",
+            hookLine: `🎯 Você ainda faz isso com ${secondary}?`,
+            body: cleanSummary,
+            bullets: ["Retenção alta no algoritmo", "Palavras-chave nos primeiros segundos"],
+            cta: "📌 Salve o vídeo e compartilhe com um amigo!",
+            hashtags: allTags.slice(0, 5),
+            fullCaption: `🎯 A verdade sobre ${topic} que mudou tudo!\n\n${cleanSummary} Assiste até o final e me diz se você concorda! 🚀\n\n📌 Salve para não esquecer e compartilhe com um amigo que precisa ver isso.\n\n${allTags.slice(0, 5).join(" ")}`,
+            charCount: 220,
+          },
+          {
+            id: "desc_3",
+            platform: "youtube_shorts",
+            platformLabel: "YouTube Shorts",
+            title: "Descrição Rica em Palavras-Chave",
+            hookLine: `A Verdade Sobre ${topic}`,
+            body: cleanSummary,
+            bullets: [`Como dominar ${topic}`, `Estratégia prática com ${secondary}`],
+            cta: "Inscreva-se no canal para mais vídeos rápidos!",
+            hashtags: allTags,
+            fullCaption: `A Verdade Sobre ${topic} Que Mudou Tudo\n\n${cleanSummary}\n\nNeste vídeo rápido você vai entender como dominar ${topic} e melhorar seus resultados com ${secondary}.\n\nInscreva-se no canal e ative o sininho para mais conteúdos diários!\n\n${formattedAll}`,
+            charCount: 260,
+          },
+        ],
+        hashtags: {
+          nicheTags,
+          broadTags: [`#${secondary.toLowerCase()}`, `#${action.toLowerCase()}`],
+          viralTags,
+          allTags,
+          formattedAll,
+        },
+        creatives: [
+          {
+            id: "crio_1",
+            title: "Criativo #1: Tráfego Pago / Anúncio Direto",
+            angle: "anuncio_vendas",
+            angleLabel: "Anúncio Direto (Problema > Solução > Oferta)",
+            hook: `Se você quer resultados reais com ${topic}, você não pode ignorar este aviso.`,
+            spokenScript: `Muita gente passa meses tentando destravar ${topic} batendo a cabeça no mesmo erro. Eu vejo as pessoas gastando energia com coisas que não funcionam. Mas quando você aplica a metodologia certa focada em ${secondary}, tudo fica mais simples e direto. Se você quer ter acesso ao passo a passo mastigado que vai te economizar semanas de frustração, clica no botão aqui embaixo e veja como funciona.`,
+            visualDirection: "Gravação em plano médio, boa luz, olhar convicto. No CTA final, apontar para baixo indicando o botão Saiba Mais.",
+            callToAction: "Clique no link abaixo e garanta sua condição especial hoje!",
+            estimatedDuration: "35s",
+          },
+          {
+            id: "crio_2",
+            title: "Criativo #2: UGC Depoimento Natural / Relato Pessoal",
+            angle: "ugc_depoimento",
+            angleLabel: "UGC Orgânico (Como se fosse gravado de improviso no celular)",
+            hook: `Gente, eu juro que não ia gravar isso, mas eu precisava compartilhar o que aconteceu comigo com ${topic}...`,
+            spokenScript: `Eu sempre achei que precisava complicar para conseguir resultado com ${secondary}. Ficava testando mil fórmulas da internet e só me estressava. Aí eu decidi mudar a postura e focar exatamente nisso que mostrei: simplificar o processo e seguir uma rotina objetiva. O resultado veio muito mais rápido do que eu imaginava. Se você também está na mesma situação, para de complicar e salva essa dica agora.`,
+            visualDirection: "Câmera na mão estilo selfie com movimento leve e natural. Ambiente casual, tom espontâneo e sincero.",
+            callToAction: "Comenta 'QUERO' aqui embaixo que eu te envio o link no direct!",
+            estimatedDuration: "40s",
+          },
+          {
+            id: "crio_3",
+            title: "Criativo #3: Pílula Rápida de 15 Segundos (Corte Acelerado)",
+            angle: "pilula_rapida_15s",
+            angleLabel: "Fast Content / Retenção Extrema (15s)",
+            hook: `3 coisas que você precisa parar de fazer agora em ${topic}:`,
+            spokenScript: `Número um: achar que precisa de horas de teoria sem prática. Número dois: ignorar a consistência em ${secondary}. E número três: desistir antes de ver os primeiros frutos. Salva esse vídeo e volta aqui amanhã para ver a diferença!`,
+            visualDirection: "Cortes rápidos a cada número com zoom alternado e legendas amarelas piscando no centro.",
+            callToAction: "Toque em seguir para não perder as próximas dicas rápidas!",
+            estimatedDuration: "15s",
+          },
+          {
+            id: "crio_4",
+            title: "Criativo #4: Quebra de Mito / Contra-Intuitivo",
+            angle: "contra_intuitivo",
+            angleLabel: "Quebra de Crença (Gera debate nos comentários)",
+            hook: `Todo mundo te ensina que para dominar ${topic} você precisa fazer X. Mas a verdade é bem diferente...`,
+            spokenScript: `Enquanto todo mundo fica repetindo a mesma ladainha ultrapassada, quem realmente tem resultado foca em ${secondary} e na execução prática sem enrolação. Não é sobre fazer mais, é sobre fazer o que realmente funciona. Você concorda com isso ou ainda acha que o método tradicional é o melhor?`,
+            visualDirection: "Tom provocativo, sobrancelha erguida, gesticulação com as mãos chamando para o debate nos comentários.",
+            callToAction: "Deixe sua opinião sincera nos comentários!",
+            estimatedDuration: "30s",
+          },
+        ],
+        brolls: [
+          `${topic} na prática`,
+          `estudos e anotações sobre ${secondary}`,
+          "pessoa usando celular e digitando",
+          "tela de computador com dados e gráficos",
+          "olhando para a câmera pensativo",
+          "comemorando conquista e resultado positivo",
+        ].map((term, bIdx) => ({
+          id: `broll_${Date.now()}_${bIdx}`,
+          term,
+          sceneContext: bIdx === 0
+            ? "Corte nos primeiros 3s (Gancho) para prender a atenção visual"
+            : bIdx === 1
+            ? "Inserir no meio da explicação da dor/história"
+            : bIdx === 2
+            ? "Inserir para ilustrar a execução na prática"
+            : bIdx === 3
+            ? "Inserir mostrando dados, telas ou prova social"
+            : bIdx === 4
+            ? "Inserir na quebra de objeção do espectador"
+            : "Inserir no encerramento junto com a Chamada para Ação (CTA)",
+          downloadLinks: {
+            pexelsUrl: `https://www.pexels.com/pt-br/procurar/videos/${encodeURIComponent(term)}/`,
+            pixabayUrl: `https://pixabay.com/pt/videos/search/${encodeURIComponent(term)}/`,
+            mixkitUrl: `https://mixkit.co/free-stock-video/${encodeURIComponent(term)}/`,
+            coverrUrl: `https://coverr.co/s?q=${encodeURIComponent(term)}`,
+            unsplashUrl: `https://unsplash.com/pt-br/s/fotografias/${encodeURIComponent(term)}`,
+          },
+          sampleImageUrl: [
+            "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80",
+          ][bIdx % 6],
+        })),
+        generatedAt: new Date().toISOString(),
+        modeUsed: "algorithmic",
+        providerName: "Motor Heurístico Instantâneo (Zero Custo)",
+      };
+    };
+
+    if (useAi === false) {
+      return res.json({
+        generationMode: "algorithmic",
+        isFallback: false,
+        package: generateFallbackPackage(),
+      });
+    }
+
+    // Modo IA
+    const systemPrompt = `Você é o maior especialista em Criação de Conteúdo Viral, Tráfego Pago e Copywriting do Brasil.
+Você vai receber a transcrição de um vídeo que o usuário já gravou e precisa gerar um PACOTE COMPLETO DE PUBLICAÇÃO & CRIATIVOS com 5 pilares essenciais:
+1. GANCHOS MAGNÉTICOS (HOOKS VIRAL - 0 a 3 segundos): 5 ganchos matadores para prender a atenção no início (contra-intuitivo, curiosidade, choque, dor, promessa).
+2. HEADLINES DE ALTO IMPACTO: 5 títulos magnéticos para capa de Reels/TikTok, thumbnail do YouTube e manchetes.
+3. DESCRIÇÕES COMPLETAS DE POST: 3 legendas completas e formatadas com emojis, gancho, tópicos e CTA forte (Instagram, TikTok e Shorts).
+4. HASHTAGS ESTRATÉGICAS: Tags de nicho, de amplo alcance e virais.
+5. CRIATIVOS REMODELADOS (CRIO): 4 novos roteiros de criativos para anúncios ou novos posts (Anúncio Direto, UGC Natural, Pílula 15s, Contra-intuitivo).
+
+Responda EXCLUSIVAMENTE em formato JSON estrito, sem nenhum texto introdutório ou markdown fora do JSON.`;
+
+    const prompt = `
+Analise a transcrição do vídeo gravado abaixo e crie o Pacote Completo de Publicação e Criativos no tom '${tone}'.
+
+--- TRANSCRIÇÃO DO VÍDEO GRAVADO ---
+Título / Nome do arquivo: ${title}
+Gancho Inicial Identificado: ${hook || "Não informado"}
+Resumo: ${summary || "Não informado"}
+Fala Completa Transcrita:
+${fullText.slice(0, 3500)}
+
+--- FORMATO ESPERADO (JSON ESTRITO) ---
+{
+  "detectedTopic": "tema central falado no vídeo",
+  "secondaryTopic": "assunto secundário",
+  "hooks": [
+    {
+      "id": "hk_1",
+      "category": "contrarian",
+      "label": "Quebra de Padrão (Contra-intuitivo)",
+      "spokenText": "frase falada exatamente nos primeiros 3s",
+      "visualCue": "dica de gesto e olhar na câmera",
+      "textOnScreen": "TEXTO EM LETRAS MAIÚSCULAS NA TELA",
+      "estimatedRetention": "98% Retenção"
+    }
+  ],
+  "headlines": [
+    {
+      "id": "hl_1",
+      "type": "capa_reels",
+      "label": "Capa Reels & TikTok (Curto & Legível)",
+      "text": "TÍTULO CURTO E IMPACTANTE",
+      "badge": "Capa 9:16"
+    }
+  ],
+  "descriptions": [
+    {
+      "id": "desc_1",
+      "platform": "instagram_reels",
+      "platformLabel": "Instagram Reels / Feed",
+      "title": "Legenda Estruturada com Alta Conversão",
+      "hookLine": "Linha 1 do post",
+      "body": "Corpo da legenda explicando o conteúdo",
+      "bullets": ["Tópico 1", "Tópico 2", "Tópico 3"],
+      "cta": "Chamada para ação clara",
+      "hashtags": ["#tag1", "#tag2", "#tag3"],
+      "fullCaption": "Texto integral da legenda pronto para colar com quebras de linha e emojis"
+    }
+  ],
+  "hashtags": {
+    "nicheTags": ["#nicho1", "#nicho2"],
+    "broadTags": ["#amplo1", "#amplo2"],
+    "viralTags": ["#viral", "#foryou"],
+    "allTags": ["#nicho1", "#nicho2", "#amplo1", "#amplo2", "#viral", "#foryou"],
+    "formattedAll": "#nicho1 #nicho2 #amplo1 #amplo2 #viral #foryou"
+  },
+  "creatives": [
+    {
+      "id": "crio_1",
+      "title": "Criativo #1: Tráfego Pago / Anúncio Direto",
+      "angle": "anuncio_vendas",
+      "angleLabel": "Anúncio Direto (Problema > Solução > Oferta)",
+      "hook": "Gancho do anúncio",
+      "spokenScript": "Roteiro completo falado da fala do anúncio",
+      "visualDirection": "Instruções de cena e enquadramento",
+      "callToAction": "Chamada para ação final do anúncio",
+      "estimatedDuration": "35s"
+    }
+  ]
+}
+`;
+
+    let aiPackage: any = null;
+    let usedProvider = "groq";
+    let usedModel = "llama-3.3-70b";
+    let isFallback = false;
+
+    try {
+      const aiResponse = await executeWithDynamicFallback(
+        groqInput,
+        openRouterInput,
+        prompt,
+        systemPrompt
+      );
+
+      aiPackage = aiResponse.data;
+      usedProvider = aiResponse.usedProvider;
+      usedModel = aiResponse.usedModel;
+
+      if (!aiPackage || !aiPackage.hooks || !Array.isArray(aiPackage.hooks) || aiPackage.hooks.length === 0) {
+        throw new Error("Resposta da IA não continha a estrutura de ganchos esperada.");
+      }
+    } catch (err: any) {
+      console.warn("Falha ao gerar pacote com IA, usando motor heurístico:", err.message);
+      isFallback = true;
+      aiPackage = generateFallbackPackage();
+      usedProvider = "algoritmo_heuristico";
+      usedModel = "motor_video_pack_v1";
+    }
+
+    const finalPackage = {
+      id: "pack_" + Date.now(),
+      sourceTitle: title || "Vídeo Gravado",
+      detectedTopic: aiPackage.detectedTopic || "Estratégia",
+      secondaryTopic: aiPackage.secondaryTopic || "",
+      hooks: aiPackage.hooks || [],
+      headlines: aiPackage.headlines || [],
+      descriptions: aiPackage.descriptions || [],
+      hashtags: aiPackage.hashtags || {
+        nicheTags: [],
+        broadTags: [],
+        viralTags: [],
+        allTags: [],
+        formattedAll: "",
+      },
+      creatives: aiPackage.creatives || [],
+      brolls: aiPackage.brolls && aiPackage.brolls.length > 0 ? aiPackage.brolls : generateFallbackPackage().brolls,
+      generatedAt: new Date().toISOString(),
+      modeUsed: isFallback ? "algorithmic" : "ai",
+      providerName: isFallback ? "Motor Heurístico Instantâneo" : `${usedProvider.toUpperCase()} (${usedModel})`,
+    };
+
+    res.json({
+      generationMode: isFallback ? "algorithmic" : "ai",
+      isFallback,
+      package: finalPackage,
+    });
+  } catch (error: any) {
+    console.error("Erro no /api/generate-video-package:", error);
+    res.status(500).json({ error: error.message || "Erro interno ao processar pacote de vídeo." });
+  }
+});
+
 
 // Endpoint: Generate Alternative Viral Hooks
 app.post("/api/generate-hooks", async (req, res) => {

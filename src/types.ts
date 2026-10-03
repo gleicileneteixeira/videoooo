@@ -409,6 +409,89 @@ export interface FactoryPost {
   originalLongText?: string;
 }
 
+// ==========================================
+// PACOTE COMPLETO: HOOKS, HEADLINES, DESCRIÇÕES, HASHTAGS & CRIATIVO (CRIO)
+// ==========================================
+export interface VideoPackageHook {
+  id: string;
+  category: 'shock' | 'curiosity' | 'contrarian' | 'problem' | 'promise';
+  label: string; // Ex: 'Quebra de Padrão (0-3s)', 'Alerta Urgente', 'Pergunta Hipnótica'
+  spokenText: string; // O que falar exatamente nos primeiros 3 segundos
+  visualCue: string; // Instrução para a câmera (ex: Olhar firme, apontar, segurar objeto)
+  textOnScreen: string; // O que escrever em letras grandes no início
+  estimatedRetention: string; // Ex: '98% Retenção'
+}
+
+export interface VideoPackageHeadline {
+  id: string;
+  type: 'capa_reels' | 'thumbnail_yt' | 'curto' | 'curiosidade' | 'polemica';
+  label: string; // Ex: 'Capa de Reels / TikTok', 'Thumbnail YouTube', 'Manchete Curta'
+  text: string;
+  badge: string;
+}
+
+export interface VideoPackageDescription {
+  id: string;
+  platform: 'instagram_reels' | 'tiktok' | 'youtube_shorts' | 'geral';
+  platformLabel: string;
+  title: string;
+  hookLine: string;
+  body: string;
+  bullets: string[];
+  cta: string;
+  hashtags: string[];
+  fullCaption: string; // Legenda pronta formatada com quebras de linha
+  charCount: number;
+}
+
+export interface VideoPackageCreative {
+  id: string;
+  title: string; // Ex: 'Criativo #1: Tráfego Pago / Anúncio Direto'
+  angle: 'anuncio_vendas' | 'ugc_depoimento' | 'pilula_rapida_15s' | 'contra_intuitivo' | 'storytelling';
+  angleLabel: string;
+  hook: string;
+  spokenScript: string; // Roteiro completo falado
+  visualDirection: string; // Instruções de cena, B-roll e gestos
+  callToAction: string;
+  estimatedDuration: string; // Ex: '30s', '45s'
+}
+
+export interface VideoPackageBRoll {
+  id: string;
+  term: string; // Termo de busca em português / inglês
+  sceneContext: string; // Instrução de uso na cena
+  downloadLinks: {
+    pexelsUrl: string;
+    pixabayUrl: string;
+    mixkitUrl: string;
+    coverrUrl: string;
+    unsplashUrl: string;
+  };
+  sampleImageUrl?: string;
+}
+
+export interface VideoPublishPackage {
+  id: string;
+  sourceTitle: string;
+  detectedTopic: string;
+  secondaryTopic?: string;
+  hooks: VideoPackageHook[];
+  headlines: VideoPackageHeadline[];
+  descriptions: VideoPackageDescription[];
+  hashtags: {
+    nicheTags: string[];
+    broadTags: string[];
+    viralTags: string[];
+    allTags: string[];
+    formattedAll: string;
+  };
+  creatives: VideoPackageCreative[];
+  brolls?: VideoPackageBRoll[];
+  generatedAt: string;
+  modeUsed: 'ai' | 'algorithmic';
+  providerName?: string;
+}
+
 export interface CalendarPostItem {
   id: string;
   day: 'Segunda' | 'Terça' | 'Quarta' | 'Quinta' | 'Sexta' | 'Sábado' | 'Domingo';

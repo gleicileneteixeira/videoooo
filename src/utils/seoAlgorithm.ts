@@ -1,3 +1,12 @@
+import {
+  VideoPublishPackage,
+  VideoPackageHook,
+  VideoPackageHeadline,
+  VideoPackageDescription,
+  VideoPackageCreative,
+  VideoPackageBRoll,
+} from '../types';
+
 /**
  * Pure Client-Side Algorithmic SEO & Headline Generator
  * Generates viral headlines, SEO descriptions, and 3-5 contextual hashtags
@@ -282,4 +291,365 @@ export function generateAlgorithmicSeo(params: {
   }
 
   return packages;
+}
+
+/**
+ * Generates a complete 5-Pillar Publishing & Creative Package:
+ * 1. Hooks (0-3s retention triggers)
+ * 2. Headlines (High CTR cover titles)
+ * 3. Descriptions (Instagram, TikTok, Shorts ready-to-post captions)
+ * 4. Hashtags (Niche, broad, viral)
+ * 5. Creatives / Crio (Ad & video variants derived from the video speech)
+ */
+export function generateAlgorithmicVideoPackage(params: {
+  title?: string;
+  hook?: string;
+  summary?: string;
+  fullText: string;
+  tone?: string;
+}): VideoPublishPackage {
+  const { title = '', hook = '', summary = '', fullText = '', tone = 'viral' } = params;
+  const { mainTopic, secondaryTopic, actionTerm, keywords } = detectSpokenTopic(fullText, title);
+
+  const cleanHook = hook && hook.trim().length > 10
+    ? hook.trim().replace(/[.,;]+$/, '')
+    : `O que você precisa saber sobre ${mainTopic}`;
+
+  const cleanSummary = summary && summary.trim().length > 15
+    ? summary.trim()
+    : cleanSpokenSpeechToSummary(fullText);
+
+  // 1. Ganchos Magnéticos (Hooks Virais 0-3s)
+  const hooks: VideoPackageHook[] = [
+    {
+      id: 'hk_contrarian_' + Date.now(),
+      category: 'contrarian',
+      label: 'Quebra de Padrão (Contra-intuitivo)',
+      spokenText: `Se você ainda tenta dominar ${mainTopic} do jeito tradicional, pare agora antes de perder mais tempo!`,
+      visualCue: 'Olhar sério nos olhos da lente, fazer sinal de "pare" com a palma da mão.',
+      textOnScreen: `PARE DE FAZER ISSO COM ${mainTopic.toUpperCase()}`,
+      estimatedRetention: '98% Retenção',
+    },
+    {
+      id: 'hk_curiosity_' + Date.now(),
+      category: 'curiosity',
+      label: 'Curiosidade Magnética (Loop Aberto)',
+      spokenText: `Existe um detalhe sobre ${mainTopic} que ninguém te conta, e que muda completamente o seu resultado.`,
+      visualCue: 'Aproximar o rosto da câmera com tom confidencial ou tom de segredo revelado.',
+      textOnScreen: `O SEGREDO QUE NÃO TE CONTAM 🤫`,
+      estimatedRetention: '95% Retenção',
+    },
+    {
+      id: 'hk_shock_' + Date.now(),
+      category: 'shock',
+      label: 'Choque de Realidade / Alerta',
+      spokenText: `90% das pessoas erram feio quando o assunto é ${mainTopic}. E provavelmente você está cometendo esse mesmo erro!`,
+      visualCue: 'Expressão de alerta, apontar o dedo indicador para a câmera ou balançar a cabeça.',
+      textOnScreen: `O MAIOR ERRO COM ${mainTopic.toUpperCase()}`,
+      estimatedRetention: '97% Retenção',
+    },
+    {
+      id: 'hk_problem_' + Date.now(),
+      category: 'problem',
+      label: 'Dor Direta / Identificação',
+      spokenText: `Você já se sentiu travado tentando ter consistência com ${secondaryTopic}? Deixa eu te mostrar o caminho mais rápido.`,
+      visualCue: 'Tom empático, respiração inicial e sorriso de quem tem a solução exata.',
+      textOnScreen: `CANSADO DE FICAR TRAVADO?`,
+      estimatedRetention: '92% Retenção',
+    },
+    {
+      id: 'hk_promise_' + Date.now(),
+      category: 'promise',
+      label: 'Transformação / Promessa Clara',
+      spokenText: `Em menos de 1 minuto eu vou te entregar o método prático para destravar ${mainTopic} de uma vez por todas!`,
+      visualCue: 'Gesto rápido com as duas mãos, energia alta e postura firme de autoridade.',
+      textOnScreen: `MÉTODO DEFINITIVO: ${mainTopic.toUpperCase()}`,
+      estimatedRetention: '94% Retenção',
+    },
+  ];
+
+  // 2. Headlines de Alto Impacto
+  const headlines: VideoPackageHeadline[] = [
+    {
+      id: 'hl_cover_reels_' + Date.now(),
+      type: 'capa_reels',
+      label: 'Capa Reels & TikTok (Curto & Legível)',
+      text: `${mainTopic.toUpperCase()}: COMO FAZER CERTO`,
+      badge: 'Capa 9:16',
+    },
+    {
+      id: 'hl_yt_thumb_' + Date.now(),
+      type: 'thumbnail_yt',
+      label: 'Thumbnail YouTube Shorts / Capa Carrossel',
+      text: `A Verdade Sobre ${mainTopic} Que Mudou Tudo`,
+      badge: 'Thumbnail',
+    },
+    {
+      id: 'hl_question_' + Date.now(),
+      type: 'curiosidade',
+      label: 'Headline em Pergunta Hipnótica',
+      text: `Você Ainda Faz Isso com ${secondaryTopic}? Veja a Forma Certa`,
+      badge: 'CTR Alto',
+    },
+    {
+      id: 'hl_warning_' + Date.now(),
+      type: 'polemica',
+      label: 'Headline de Alerta / Quebra de Crença',
+      text: `PARE de Errar com ${mainTopic}: Aplique Isso Hoje Mesmo`,
+      badge: 'Polêmico',
+    },
+    {
+      id: 'hl_step_' + Date.now(),
+      type: 'curto',
+      label: 'Headline Passo a Passo / Método',
+      text: `O Método Simples para Destravar ${mainTopic} sem Enrolação`,
+      badge: 'Método',
+    },
+  ];
+
+  // 3. Hashtags Estratégicas
+  const nicheTags = [
+    toHashtag(mainTopic.split(/\s+/)[0]),
+    ...(mainTopic.includes(' ') ? [toHashtag(mainTopic.replace(/\s+/g, ''))] : []),
+    toHashtag(secondaryTopic),
+    toHashtag(actionTerm),
+  ].filter(t => t.length > 3);
+
+  const broadTags = keywords.slice(0, 4).map(toHashtag).filter(t => !nicheTags.includes(t) && t.length > 3);
+  const viralTags = ['#viral', '#dicas', '#foryou', '#desenvolvimento', '#estrategia'];
+  const allTags = Array.from(new Set([...nicheTags, ...broadTags, ...viralTags])).slice(0, 10);
+  const formattedAll = allTags.join(' ');
+
+  // 4. Descrições Otimizadas para Plataformas
+  const igCaption = `🔥 ${headlines[0].text}\n\n${cleanHook}\n\n${cleanSummary}\n\n📌 O que você precisa guardar deste vídeo:\n• O maior erro é insistir no método tradicional sem testar atalhos comprovados\n• Foco total em consistência e aplicação prática de ${mainTopic}\n• Menos complicação e mais execução com ${secondaryTopic}\n\n💡 Salve este post na bandeirinha para consultar sempre que for aplicar!\n\n👇 Me conta nos comentários: você já conhecia essa estratégia ou ainda fazia do jeito antigo?\n\n${formattedAll}`;
+
+  const ttCaption = `🎯 ${headlines[2].text}\n\n${cleanSummary} Assiste até o final e me diz se você concorda! 🚀\n\n📌 Salve para não esquecer e compartilhe com um amigo que precisa ver isso.\n\n${allTags.slice(0, 6).join(' ')}`;
+
+  const ytCaption = `${headlines[1].text}\n\n${cleanSummary}\n\nNeste vídeo rápido você vai entender como dominar ${mainTopic} e melhorar seus resultados com ${secondaryTopic}.\n\nInscreva-se no canal e ative o sininho para mais conteúdos como esse toda semana!\n\n${formattedAll}`;
+
+  const descriptions: VideoPackageDescription[] = [
+    {
+      id: 'desc_ig_' + Date.now(),
+      platform: 'instagram_reels',
+      platformLabel: 'Instagram Reels / Feed',
+      title: 'Legenda Estruturada com Alta Conversão',
+      hookLine: `🔥 ${headlines[0].text}`,
+      body: cleanSummary,
+      bullets: [
+        `Foco total em consistência e aplicação prática de ${mainTopic}`,
+        `Menos complicação e mais execução com ${secondaryTopic}`,
+        `Dica de ouro: aplique de imediato para sentir a diferença`,
+      ],
+      cta: '💡 Salve este post na bandeirinha e comente a sua opinião!',
+      hashtags: allTags,
+      fullCaption: igCaption,
+      charCount: igCaption.length,
+    },
+    {
+      id: 'desc_tt_' + Date.now(),
+      platform: 'tiktok',
+      platformLabel: 'TikTok (Foco em TikTok Search)',
+      title: 'Legenda Curta & Otimizada para Busca',
+      hookLine: `🎯 ${headlines[2].text}`,
+      body: cleanSummary,
+      bullets: [
+        'Retenção alta no algoritmo',
+        'Palavras-chave indexáveis nos primeiros segundos',
+      ],
+      cta: '📌 Salve o vídeo e compartilhe com um amigo!',
+      hashtags: allTags.slice(0, 6),
+      fullCaption: ttCaption,
+      charCount: ttCaption.length,
+    },
+    {
+      id: 'desc_yt_' + Date.now(),
+      platform: 'youtube_shorts',
+      platformLabel: 'YouTube Shorts',
+      title: 'Descrição Rica em Palavras-Chave',
+      hookLine: headlines[1].text,
+      body: cleanSummary,
+      bullets: [
+        `Como destravar ${mainTopic}`,
+        `Estratégia prática com ${secondaryTopic}`,
+      ],
+      cta: 'Inscreva-se no canal para mais vídeos rápidos!',
+      hashtags: allTags,
+      fullCaption: ytCaption,
+      charCount: ytCaption.length,
+    },
+  ];
+
+  // 5. Criativos & Remodelagens (Crio)
+  const creatives: VideoPackageCreative[] = [
+    {
+      id: 'crio_ads_' + Date.now(),
+      title: 'Criativo #1: Tráfego Pago / Anúncio de Conversão',
+      angle: 'anuncio_vendas',
+      angleLabel: 'Anúncio Direto (Problema > Solução > Oferta)',
+      hook: `Se você quer resultados reais com ${mainTopic}, você não pode ignorar este aviso.`,
+      spokenScript: `Muita gente passa meses tentando destravar ${mainTopic} batendo a cabeça no mesmo erro. Eu vejo as pessoas gastando energia com coisas que não funcionam. Mas quando você aplica a metodologia certa focada em ${secondaryTopic}, tudo fica mais simples e direto. Se você quer ter acesso ao passo a passo mastigado que vai te economizar semanas de frustração, clica no botão aqui embaixo e veja como funciona.`,
+      visualDirection: 'Gravação em plano médio (busto), iluminação clara, olhar convicto para a lente. No momento da transição da solução, inserir corte de zoom leve. No CTA final, apontar para baixo indicando o botão "Saiba Mais".',
+      callToAction: 'Clique no link abaixo e garanta seu acesso com condição especial hoje!',
+      estimatedDuration: '35s',
+    },
+    {
+      id: 'crio_ugc_' + Date.now(),
+      title: 'Criativo #2: UGC Depoimento Natural / Relato Pessoal',
+      angle: 'ugc_depoimento',
+      angleLabel: 'UGC Orgânico (Como se fosse gravado de improviso no celular)',
+      hook: `Gente, eu juro que não ia gravar isso, mas eu precisava compartilhar o que aconteceu comigo com ${mainTopic}...`,
+      spokenScript: `Eu sempre achei que precisava complicar para conseguir resultado com ${secondaryTopic}. Ficava testando mil fórmulas da internet e só me estressava. Aí eu decidi mudar a postura e focar exatamente nisso que mostrei: simplificar o processo e seguir uma rotina objetiva. O resultado veio muito mais rápido do que eu imaginava. Se você também está na mesma situação, para de complicar e salva essa dica agora.`,
+      visualDirection: 'Câmera na mão estilo selfie com leve movimento natural. Cenário do dia a dia (quarto, escritório ou caminhando). Expressão espontânea, sem parecer ator lendo script.',
+      callToAction: 'Comenta "QUERO" aqui embaixo que eu te envio o link no direct!',
+      estimatedDuration: '40s',
+    },
+    {
+      id: 'crio_15s_' + Date.now(),
+      title: 'Criativo #3: Pílula Rápida de 15 Segundos (Corte Acelerado)',
+      angle: 'pilula_rapida_15s',
+      angleLabel: 'Fast Content / Retenção Extrema (15s)',
+      hook: `3 coisas que você precisa parar de fazer agora em ${mainTopic}:`,
+      spokenScript: `Número um: achar que precisa de horas de teoria sem prática. Número dois: ignorar a consistência em ${secondaryTopic}. E número três: desistir antes de ver os primeiros frutos. Salva esse vídeo e volta aqui amanhã para ver a diferença!`,
+      visualDirection: 'Cortes rápidos a cada número (zoom-in em "Número 1", zoom-out em "Número 2", troca de ângulo em "Número 3"). Legendas dinâmicas amarelas piscando no centro.',
+      callToAction: 'Toque em seguir para não perder as próximas dicas rápidas!',
+      estimatedDuration: '15s',
+    },
+    {
+      id: 'crio_contra_' + Date.now(),
+      title: 'Criativo #4: Quebra de Mito / Contra-Intuitivo',
+      angle: 'contra_intuitivo',
+      angleLabel: 'Quebra de Crença (Cria debate nos comentários)',
+      hook: `Todo mundo te ensina que para dominar ${mainTopic} você precisa fazer X. Mas a verdade é bem diferente...`,
+      spokenScript: `Enquanto todo mundo fica repetindo a mesma ladainha ultrapassada, quem realmente tem resultado foca em ${secondaryTopic} e na execução prática sem enrolação. Não é sobre fazer mais, é sobre fazer o que realmente funciona. Você concorda com isso ou ainda acha que o método tradicional é o melhor?`,
+      visualDirection: 'Tom provocativo com sobrancelha levantada, postura confiante. No final, gesto de dúvida com as mãos convidando para o debate.',
+      callToAction: 'Deixe sua opinião sincera nos comentários!',
+      estimatedDuration: '30s',
+    },
+  ];
+
+  // 6. Sugestões de B-Roll (Birou's) & Links de Apoio para Baixar Vídeos e Imagens contextualizados
+  const fullTextLower = `${title} ${fullText || ''}`.toLowerCase();
+
+  let contextualTerms: string[] = [];
+  let contextualPhotos: string[] = [];
+
+  if (/carro|tr[aâ]nsito|cnh|detran|motorista|ve[ií]culo|far[oó]is|dire[çc][aã]o|estrada|placa/i.test(fullTextLower)) {
+    // Tema: Trânsito, Autoescola, Carros, Detran
+    contextualTerms = [
+      'tela de carro com faróis no trânsito',
+      'pessoa estudando simulado no celular',
+      'sinalização e semáforo na cidade',
+      'motorista com as mãos no volante',
+      'caderno de estudos e caneta',
+      'comemorando aprovação na CNH',
+    ];
+    contextualPhotos = [
+      'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80', // Carro faróis
+      'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=800&q=80', // Celular estudo
+      'https://images.unsplash.com/photo-1508962914676-134849a727f0?auto=format&fit=crop&w=800&q=80', // Trânsito semáforo
+      'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=800&q=80', // Dirigindo
+      'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=800&q=80', // Estudando caderno
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80', // Comemorando
+    ];
+  } else if (/dinheiro|finan[çc]|sal[aá]rio|renda|invest|lucro|pre[çc]o|gasto|d[ií]vida|banco|cart[aã]o/i.test(fullTextLower)) {
+    // Tema: Finanças, Dinheiro, Economia
+    contextualTerms = [
+      'contando cédulas de dinheiro',
+      'gráfico de crescimento e lucros na tela',
+      'calculadora e extrato bancário',
+      'pessoa preocupada com boletos',
+      'usando aplicativo de banco no celular',
+      'comemorando independência financeira',
+    ];
+    contextualPhotos = [
+      'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80', // Dinheiro
+      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80', // Gráficos
+      'https://images.unsplash.com/photo-1554224154-26032ffc0d07?auto=format&fit=crop&w=800&q=80', // Calculadora
+      'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=800&q=80', // Homem negócios
+      'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=800&q=80', // App financeiro
+      'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80', // Equipe comemorando
+    ];
+  } else if (/treino|academia|sa[uú]de|dieta|emagrec|m[uú]scul|exerc[ií]cio|corpo|peso/i.test(fullTextLower)) {
+    // Tema: Saúde, Fitness, Treino
+    contextualTerms = [
+      'treino de força na academia',
+      'prato de refeição saudável equilibrada',
+      'olhando o resultado no espelho',
+      'amarrando o tênis e cronômetro',
+      'suor e determinação no exercício',
+      'comemorando conquista física e saúde',
+    ];
+    contextualPhotos = [
+      'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80',
+    ];
+  } else {
+    // Tema Padrão: Tecnologia, Negócios, Criação de Conteúdo, Dicas
+    contextualTerms = [
+      `${mainTopic} na prática do dia a dia`,
+      `anotações estratégicas sobre ${secondaryTopic}`,
+      'pessoa gravando com celular e iluminação',
+      'tela de computador com dados e ferramentas',
+      'olhando para a câmera pensativo',
+      'comemorando resultado e conquista',
+    ];
+    contextualPhotos = [
+      'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80',
+    ];
+  }
+
+  const brolls: VideoPackageBRoll[] = contextualTerms.map((term, bIdx) => ({
+    id: `broll_${Date.now()}_${bIdx}`,
+    term,
+    sceneContext: bIdx === 0
+      ? 'Corte nos primeiros 3s (Gancho) para prender a atenção visual'
+      : bIdx === 1
+      ? 'Inserir no meio da explicação da dor/história'
+      : bIdx === 2
+      ? 'Inserir para ilustrar a execução na prática'
+      : bIdx === 3
+      ? 'Inserir mostrando dados, telas ou prova social'
+      : bIdx === 4
+      ? 'Inserir na quebra de objeção do espectador'
+      : 'Inserir no encerramento junto com a Chamada para Ação (CTA)',
+    downloadLinks: {
+      pexelsUrl: `https://www.pexels.com/pt-br/procurar/videos/${encodeURIComponent(term)}/`,
+      pixabayUrl: `https://pixabay.com/pt/videos/search/${encodeURIComponent(term)}/`,
+      mixkitUrl: `https://mixkit.co/free-stock-video/${encodeURIComponent(term)}/`,
+      coverrUrl: `https://coverr.co/s?q=${encodeURIComponent(term)}`,
+      unsplashUrl: `https://unsplash.com/pt-br/s/fotografias/${encodeURIComponent(term)}`,
+    },
+    sampleImageUrl: contextualPhotos[bIdx % contextualPhotos.length],
+  }));
+
+  return {
+    id: 'pack_' + Date.now(),
+    sourceTitle: title || 'Vídeo Gravado',
+    detectedTopic: mainTopic,
+    secondaryTopic,
+    hooks,
+    headlines,
+    descriptions,
+    hashtags: {
+      nicheTags,
+      broadTags,
+      viralTags,
+      allTags,
+      formattedAll,
+    },
+    creatives,
+    brolls,
+    generatedAt: new Date().toISOString(),
+    modeUsed: 'algorithmic',
+    providerName: 'Motor Heurístico Instantâneo (Zero Custo)',
+  };
 }
