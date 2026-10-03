@@ -41,7 +41,7 @@ export const NAV_ITEMS: NavItem[] = [
   { icon: Store, label: 'Fabrica de Posts', route: '/studio' },
   { icon: CalendarDays, label: 'Calendario', route: '/calendar' },
   { icon: Share2, label: 'Publicacao', route: '/publish' },
-  { icon: FileStack, label: 'Juntar PDF', route: '/pdf-merge' },
+  { icon: FileStack, label: 'Separador & PDF', route: '/pdf-merge' },
   { icon: Video, label: 'Videos', route: '/videos' },
   { icon: Paintbrush, label: 'SpeedPaint', route: '/speed-paint' },
 ];

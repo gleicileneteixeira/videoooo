@@ -12,6 +12,7 @@ import {
   Scissors,
   CheckCircle2,
   Bookmark,
+  Split,
 } from 'lucide-react';
 import { ViralScript, DownloadedMedia } from '../types';
 
@@ -119,7 +120,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       {/* Quick Launchpad */}
       <div className="space-y-3">
         <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wider">Ações Rápidas de Criação</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <button
             onClick={() => onNavigate('/script')}
             className="group flex items-start gap-4 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-4 text-left transition-all hover:border-purple-500/40 hover:bg-slate-800/40"
@@ -150,6 +151,23 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               </h3>
               <p className="text-xs text-slate-400 mt-1">
                 Concatenação sem re-encode ou com transições suaves e áudio padronizado.
+              </p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => onNavigate('/pdf-merge')}
+            className="group flex items-start gap-4 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-4 text-left transition-all hover:border-purple-500/40 hover:bg-slate-800/40"
+          >
+            <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400 group-hover:scale-110 transition-transform">
+              <Split className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors">
+                Separador de PDF (1000+ fls)
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Fragmente livros em folhas soltas com download individual de cada página.
               </p>
             </div>
           </button>
