@@ -9,14 +9,25 @@
  */
 
 // Stopwords para limpeza de termos de busca (PT)
+// Inclui substantivos vagos e verbos genéricos que aparecem em toda
+// transcrição ruidosa ("parte da parte da parte...") mas não dizem nada visual.
 const SEARCH_STOPWORDS = new Set([
   'vídeos', 'video', 'vídeo', 'primeira', 'primeiro', 'habilidade', 'habilidades',
   'prática', 'pratica', 'dia', 'hoje', 'agora', 'aqui', 'você', 'voce', 'isso',
   'isto', 'muito', 'mais', 'sobre', 'como', 'para', 'para', 'com', 'sem', 'uma',
-  'algo', 'coisa', 'gente', 'olha', 'então', 'entao', 'estratégia', 'estrategia',
-  'conteúdo', 'conteudo', 'resultado', 'resultados', 'dicas', 'forma', 'jeito',
+  'algo', 'coisa', 'coisas', 'gente', 'olha', 'então', 'entao', 'estratégia', 'estrategia',
+  'conteúdo', 'conteudo', 'resultado', 'resultados', 'dicas', 'dica', 'forma', 'jeito',
   'mundo', 'vida', 'pessoa', 'pessoas', 'teste', 'falando', 'falar', 'falado',
   'fazendo', 'fazer', 'mostrar', 'mostrando', 'usar', 'usando', 'ter', 'tendo',
+  'parte', 'partes', 'exemplo', 'exemplos', 'momento', 'vez', 'vezes', 'modo',
+  'nada', 'tudo', 'toda', 'todo', 'todos', 'todas', 'dizer', 'trazendo', 'trazer',
+  'sabendo', 'saber', 'funciona', 'funcionar', 'completa', 'completo', 'proximo',
+  'próximo', 'próxima', 'acordo', 'nível', 'nivel', 'pesado', 'suave', 'complicado',
+  'complicada', 'igual', 'sempre', 'nunca', 'estou', 'quero', 'tiver', 'meu',
+  'minha', 'meus', 'minhas', 'esse', 'essa',
+  'vocês', 'voces', 'verdade', 'aquela', 'aquele', 'aquilo', 'trabalho',
+  'estado', 'estados', 'contrapalho', 'disponível', 'disponivel', 'coloca',
+  'colocam', 'colocar', 'projeto', 'minas', 'sou', 'foi', 'ser',
 ]);
 
 // Frases genéricas que NUNCA devem virar termo de busca sozinhas
@@ -68,42 +79,43 @@ interface VisualTrigger {
 
 // 70+ gatilhos -> termo curto de 1-3 palavras (nunca frase)
 const VISUAL_TRIGGERS: VisualTrigger[] = [
-  { trigger: /volante|dirigindo|motorista|cnh|autoescola/i, pt: 'carro volante' },
+  { trigger: /habili|abiliza|\bcnh\b|detran|autoescola|exame de dire/i, pt: 'carro volante' },
+  { trigger: /simula[dt][oi]|prova te[oó]rica/i, pt: 'caderno caneta' },
+  { trigger: /\bvolante\b|dirigindo|motorista/i, pt: 'carro volante' },
   { trigger: /carro|veículo|veiculo|trânsito|transito|estrada/i, pt: 'carro trânsito' },
   { trigger: /farol|faróis|farois/i, pt: 'farol carro' },
   { trigger: /semáforo|semaforo|sinaliza|placa de/i, pt: 'semáforo cidade' },
-  { trigger: /detran|simulado|prova teórica|teorica/i, pt: 'caderno caneta' },
-  { trigger: /celular|smartphone|whatsapp|app\b/i, pt: 'celular mão' },
-  { trigger: /notebook|computador|pc\b|teclado|digitar/i, pt: 'notebook mesa' },
+  { trigger: /celular|smartphone|whatsapp|\bapp\b/i, pt: 'celular mão' },
+  { trigger: /notebook|computador|\bpc\b|teclado|digitar/i, pt: 'notebook mesa' },
   { trigger: /caderno|caneta|anota|escrev|resumo/i, pt: 'caderno caneta' },
   { trigger: /dinheiro|cédula|cedula|nota de|salário|salario/i, pt: 'dinheiro mãos' },
-  { trigger: /calculadora|boleto|conta|orçamento|orcamento/i, pt: 'calculadora mesa' },
-  { trigger: /gráfico|grafico|planilha|dados|relatório|relatorio/i, pt: 'gráfico tela' },
-  { trigger: /banco|cartão|cartao|fatura|pix/i, pt: 'celular mesa' },
+  { trigger: /calculadora|boleto|\bconta\b|orçamento|orcamento/i, pt: 'calculadora mesa' },
+  { trigger: /gráfico|grafico|planilha|\bdados\b|relatório|relatorio/i, pt: 'gráfico tela' },
+  { trigger: /banco|cartão|cartao|fatura|\bpix\b/i, pt: 'celular mesa' },
   { trigger: /invest|bolsa|ações|acoes|cripto/i, pt: 'gráfico tela' },
   { trigger: /academia|muscula|supino|haltere/i, pt: 'academia treino' },
   { trigger: /corrida|correr|caminhada|treino/i, pt: 'corrida rua' },
   { trigger: /dieta|emagrec|receita|prato|comida|cozinha/i, pt: 'prato saudável' },
   { trigger: /médico|medico|consulta|hospital|saúde|saude/i, pt: 'médico consulta' },
-  { trigger: /livro|leitura|ler\b|biblioteca/i, pt: 'livro leitura' },
-  { trigger: /estud|escola|faculdade|curso|aula|prova/i, pt: 'estudante caderno' },
-  { trigger: /trabalho|escritório|escritorio|reunião|reuniao/i, pt: 'reunião escritório' },
-  { trigger: /relógio|relogio|cronômetro|cronometro|tempo|prazo/i, pt: 'relógio pulso' },
-  { trigger: /cachorro|cão|cao|pet/i, pt: 'cachorro parque' },
+  { trigger: /livro|leitura|\bler\b|biblioteca/i, pt: 'livro leitura' },
+  { trigger: /estud|escola|faculdade|curso|aula|\bprova\b/i, pt: 'estudante caderno' },
+  { trigger: /\bescritório\b|\bescritorio\b|\breunião\b|\breuniao\b|\bchefe\b|\bempresa\b|\bcoworking\b/i, pt: 'reunião escritório' },
+  { trigger: /relógio|relogio|cronômetro|cronometro|\btempo\b|prazo/i, pt: 'relógio pulso' },
+  { trigger: /\bcachorro\b|\bcão\b|\bcao\b|\bpet\b/i, pt: 'cachorro parque' },
   { trigger: /gato|gata/i, pt: 'gato casa' },
-  { trigger: /praia|mar|areia|sol\b/i, pt: 'praia mar' },
-  { trigger: /cidade|prédio|predio|rua\b|avenida/i, pt: 'cidade noite' },
+  { trigger: /\bpraia\b|\bmar\b|\bareia\b|\bsol\b/i, pt: 'praia mar' },
+  { trigger: /cidade|prédio|predio|\brua\b|avenida/i, pt: 'cidade noite' },
   { trigger: /café|cafe|xícara|xicara/i, pt: 'café xícara' },
-  { trigger: /família|familia|filho|filha|casa\b/i, pt: 'família casa' },
+  { trigger: /família|familia|filho|filha|\bcasa\b/i, pt: 'família casa' },
   { trigger: /criança|crianca|bebê|bebe|brincar/i, pt: 'criança brincando' },
-  { trigger: /oração|oracao|igreja|fé|fe\b|bíblia|biblia/i, pt: 'igreja oração' },
+  { trigger: /oração|oracao|igreja|\bfé\b|\bfe\b|bíblia|biblia/i, pt: 'igreja oração' },
   { trigger: /loja|roupa|moda|vitrine/i, pt: 'loja roupas' },
   { trigger: /mercado|compra|supermercado|preço|preco/i, pt: 'supermercado corredor' },
   { trigger: /cabelo|maquiagem|beleza|estética|estetica/i, pt: 'rosto câmera' },
   { trigger: /festa|comemora|aniversário|aniversario|parabéns|parabens/i, pt: 'mãos aplauso' },
   { trigger: /casamento|noiva|noivo|aliança|alianca/i, pt: 'mãos aplauso' },
-  { trigger: /churrasco|cerveja|bar\b/i, pt: 'cozinha preparo' },
-  { trigger: /futebol|jogo|torcida|estádio|estadio/i, pt: 'cidade noite' },
+  { trigger: /churrasco|cerveja|\bbar\b/i, pt: 'cozinha preparo' },
+  { trigger: /futebol|\bjogo\b|torcida|estádio|estadio/i, pt: 'cidade noite' },
   { trigger: /resgate|bombeiro|socorro|ambulância|ambulancia/i, pt: 'cidade noite' },
   { trigger: /natureza|árvore|arvore|floresta|cachoeira/i, pt: 'praia mar' },
   { trigger: /gravando|filmando|câmera|camera|tripé|tripe/i, pt: 'celular mão' },
@@ -111,9 +123,21 @@ const VISUAL_TRIGGERS: VisualTrigger[] = [
   { trigger: /sorriso|feliz|alegre|conquista|vitória|vitoria/i, pt: 'mãos aplauso' },
 ];
 
+
+const RELATED_TERMS: Record<string, string[]> = {
+  'carro volante': ['carro trânsito', 'semáforo cidade', 'farol carro'],
+  'carro trânsito': ['carro volante', 'semáforo cidade', 'caderno caneta'],
+  'caderno caneta': ['estudante caderno', 'livro leitura', 'celular mesa'],
+  'estudante caderno': ['caderno caneta', 'livro leitura', 'notebook mesa'],
+  'dinheiro mãos': ['calculadora mesa', 'gráfico tela', 'celular mesa'],
+  'academia treino': ['corrida rua', 'prato saudável', 'relógio pulso'],
+  'médico consulta': ['hospital corredor', 'prato saudável', 'rosto câmera'],
+  'reunião escritório': ['notebook mesa', 'gráfico tela', 'celular mesa'],
+};
+
 const GENERIC_CONCRETE_FALLBACK = [
   'rosto câmera',
-  'mãos trabalho',
+  'café xícara',
   'celular mesa',
   'notebook mesa',
   'caderno caneta',
@@ -169,6 +193,18 @@ export function extractShortBrollTerms(fullText = '', title = '', count = 6): st
   for (const t of VISUAL_TRIGGERS) {
     if (t.trigger.test(combined) && !found.includes(t.pt)) {
       found.push(t.pt);
+      if (found.length >= count) break;
+    }
+  }
+
+  // Se achou tema, completa com termos do MESMO tema (coerência > palavra solta)
+  if (found.length < count) {
+    const snapshot = [...found];
+    for (const t of snapshot) {
+      for (const r of RELATED_TERMS[t] || []) {
+        if (found.length >= count) break;
+        if (!found.includes(r)) found.push(r);
+      }
       if (found.length >= count) break;
     }
   }

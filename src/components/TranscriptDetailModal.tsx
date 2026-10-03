@@ -52,8 +52,8 @@ export const TranscriptDetailModal: React.FC<TranscriptDetailModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
       <div className="relative w-full max-w-4xl rounded-2xl border border-slate-700/80 bg-slate-900 shadow-2xl shadow-slate-950 flex flex-col max-h-[92vh] overflow-hidden my-auto">
         
-        {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 bg-slate-950/90 px-5 py-4">
+        {/* Modal Header (altura fixa) */}
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-800 bg-slate-950/90 px-5 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-600/20 border border-purple-500/30 text-purple-400">
               <FileText className="h-5 w-5" />
@@ -88,8 +88,8 @@ export const TranscriptDetailModal: React.FC<TranscriptDetailModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Actions Toolbar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 bg-slate-900/95 px-5 py-3 text-xs">
+        {/* Modal Actions Toolbar (altura fixa) */}
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-slate-800 bg-slate-900/95 px-5 py-3 text-xs">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -133,8 +133,8 @@ export const TranscriptDetailModal: React.FC<TranscriptDetailModalProps> = ({
           </div>
         </div>
 
-        {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+        {/* Modal Body (única região com scroll) */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-5">
           {/* Gancho & Resumo */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div className="rounded-xl bg-slate-950/90 p-4 border border-amber-500/20 space-y-1.5">

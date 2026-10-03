@@ -290,8 +290,8 @@ export const ViralMediaPackageModal: React.FC<ViralMediaPackageModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
       <div className="relative w-full max-w-5xl rounded-2xl border border-slate-700/80 bg-slate-900 shadow-2xl shadow-slate-950 flex flex-col max-h-[94vh] overflow-hidden my-auto">
         
-        {/* Top Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 bg-slate-950/95 px-5 py-4">
+        {/* Top Header (altura fixa: nunca encolhe com o conteúdo) */}
+        <div className="flex shrink-0 flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 bg-slate-950/95 px-5 py-4">
           <div className="flex items-start sm:items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 text-white shadow-lg shadow-rose-500/20">
               <Flame className="h-6 w-6" />
@@ -320,8 +320,8 @@ export const ViralMediaPackageModal: React.FC<ViralMediaPackageModalProps> = ({
           </button>
         </div>
 
-        {/* Global Action Bar & Mode Switcher */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 bg-slate-900/90 px-5 py-3 text-xs">
+        {/* Global Action Bar & Mode Switcher (altura fixa) */}
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-slate-800 bg-slate-900/90 px-5 py-3 text-xs">
           {/* Tone Selector & AI Toggle */}
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
@@ -417,13 +417,13 @@ export const ViralMediaPackageModal: React.FC<ViralMediaPackageModalProps> = ({
           </div>
         </div>
 
-        {/* Pillar Tabs Navigation */}
-        <div className="flex border-b border-slate-800 bg-slate-950/80 px-4 overflow-x-auto text-xs font-bold scrollbar-none">
+        {/* Pillar Tabs Navigation (altura fixa + scroll só no painel abaixo) */}
+        <div className="flex shrink-0 border-b border-slate-800 bg-slate-950/80 px-4 overflow-x-auto text-xs font-bold scrollbar-none">
           {/* ⭐ ABA 1 DEDICADA: B-ROLLS & IMAGENS (BIROU'S) */}
           <button
             type="button"
             onClick={() => setActiveTab('brolls')}
-            className={`flex items-center gap-2 border-b-2 px-4 py-3 whitespace-nowrap transition ${
+            className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 whitespace-nowrap transition ${
               activeTab === 'brolls'
                 ? 'border-cyan-400 text-cyan-300 bg-cyan-500/10'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -439,7 +439,7 @@ export const ViralMediaPackageModal: React.FC<ViralMediaPackageModalProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('headlines')}
-            className={`flex items-center gap-2 border-b-2 px-4 py-3 whitespace-nowrap transition ${
+            className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 whitespace-nowrap transition ${
               activeTab === 'headlines'
                 ? 'border-rose-400 text-rose-300 bg-rose-500/10'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -455,7 +455,7 @@ export const ViralMediaPackageModal: React.FC<ViralMediaPackageModalProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('descriptions')}
-            className={`flex items-center gap-2 border-b-2 px-4 py-3 whitespace-nowrap transition ${
+            className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 whitespace-nowrap transition ${
               activeTab === 'descriptions'
                 ? 'border-purple-400 text-purple-300 bg-purple-500/10'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -471,7 +471,7 @@ export const ViralMediaPackageModal: React.FC<ViralMediaPackageModalProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('hashtags')}
-            className={`flex items-center gap-2 border-b-2 px-4 py-3 whitespace-nowrap transition ${
+            className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 whitespace-nowrap transition ${
               activeTab === 'hashtags'
                 ? 'border-teal-400 text-teal-300 bg-teal-500/10'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -487,7 +487,7 @@ export const ViralMediaPackageModal: React.FC<ViralMediaPackageModalProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('creatives')}
-            className={`flex items-center gap-2 border-b-2 px-4 py-3 whitespace-nowrap transition ${
+            className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 whitespace-nowrap transition ${
               activeTab === 'creatives'
                 ? 'border-emerald-400 text-emerald-300 bg-emerald-500/10'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -503,7 +503,7 @@ export const ViralMediaPackageModal: React.FC<ViralMediaPackageModalProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('all')}
-            className={`flex items-center gap-2 border-b-2 px-4 py-3 whitespace-nowrap transition ${
+            className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 whitespace-nowrap transition ${
               activeTab === 'all'
                 ? 'border-slate-300 text-white bg-slate-800/40'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -514,8 +514,8 @@ export const ViralMediaPackageModal: React.FC<ViralMediaPackageModalProps> = ({
           </button>
         </div>
 
-        {/* Tab Content Area */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
+        {/* Tab Content Area (única região com scroll) */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-6">
           {isLoading && (
             <div className="flex flex-col items-center justify-center py-16 space-y-3">
               <div className="relative">

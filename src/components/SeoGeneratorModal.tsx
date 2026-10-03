@@ -175,8 +175,8 @@ export const SeoGeneratorModal: React.FC<SeoGeneratorModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
       <div className="relative w-full max-w-5xl rounded-2xl border border-slate-700/80 bg-slate-900 shadow-2xl shadow-purple-950/50 flex flex-col max-h-[92vh] overflow-hidden my-auto">
         
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 bg-slate-950/80 px-5 py-4">
+        {/* Header (altura fixa) */}
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-800 bg-slate-950/80 px-5 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-purple-600 via-pink-600 to-amber-500 shadow-lg shadow-purple-500/20 text-white shrink-0">
               <Hash className="h-5 w-5" />
@@ -336,7 +336,7 @@ export const SeoGeneratorModal: React.FC<SeoGeneratorModalProps> = ({
         </div>
 
         {/* Content Body: Grid de Opções */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-5">
           {isLoading && (
             <div className="py-12 text-center space-y-3">
               <div className="mx-auto h-8 w-8 animate-spin rounded-full border-3 border-purple-500 border-t-transparent" />
