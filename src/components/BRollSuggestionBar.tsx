@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ExternalLink, Film, Copy, Check, Plus, Search, Sparkles } from 'lucide-react';
+import { extractShortBrollTerms, shortenSearchTerm, toEnglishStockQuery } from '../utils/brollKeywords';
 
 interface BRollSuggestionBarProps {
   /** Array of short keyword phrases (e.g. ["tela de carro com faróis", "gráfico da camada de ozônio"]) */
@@ -16,11 +17,15 @@ interface BRollSuggestionBarProps {
 
 /**
  * Intelligent parser that converts raw descriptive visual cues
- * into short, concrete 2-4 word search terms suitable for stock video APIs
+ * into short, concrete 1-3 word search terms suitable for stock video APIs.
+ * REGRA: nunca retorna frases longas — sempre 1 a 3 palavras.
  */
 export function extractBRollKeywords(raw?: string, fallbackTopic?: string): string[] {
+  const fromUtil = extractShortBrollTerms(raw || '', fallbackTopic || '', 6);
+  if (fromUtil.length > 0) return fromUtil;
+
   if (!raw && !fallbackTopic) {
-    return ['vídeo de apoio', 'pessoa gravando celular', 'plano detalhe'];
+    return ['celular mesa', 'caderno caneta', 'rosto câmera'];
   }
 
   const baseText = (raw || '').trim();
@@ -30,72 +35,38 @@ export function extractBRollKeywords(raw?: string, fallbackTopic?: string): stri
   if (baseText.includes(',') || baseText.includes(';') || baseText.includes('|') || baseText.includes('/')) {
     const parts = baseText.split(/[,;|/]+/).map(p => p.trim()).filter(p => p.length > 2);
     for (const part of parts) {
-      const clean = cleanKeyword(part);
+      const clean = shortenSearchTerm(part);
       if (clean && !results.includes(clean)) results.push(clean);
+      if (results.length >= 6) break;
     }
   }
 
-  // If no parts found or text is a descriptive sentence (e.g. "Prática dinâmica caderno caneta mostrando anotações")
+  // Fallback: usa extrator por gatilhos visuais (termos curtos)
   if (results.length === 0 && baseText) {
-    // Look for visual nouns and key objects
-    const lower = baseText.toLowerCase();
-
-    // Specific domain phrase extractions
-    const candidates = [
-      { trigger: /caderno|caneta|anotaç/i, term: 'caderno e caneta' },
-      { trigger: /anotaç|escrev/i, term: 'anotações na mesa' },
-      { trigger: /prancheta/i, term: 'prancheta' },
-      { trigger: /carro|farol|faróis|trânsito/i, term: 'tela de carro com faróis' },
-      { trigger: /trânsito|sinal/i, term: 'sinalização de trânsito' },
-      { trigger: /gráfico|dados|estatíst/i, term: 'gráfico na tela' },
-      { trigger: /resgate|bombeiro|socorr/i, term: 'equipe de resgate' },
-      { trigger: /celular|smartphone|app/i, term: 'pessoa usando celular' },
-      { trigger: /computador|notebook|teclado/i, term: 'digitando no notebook' },
-      { trigger: /dinheiro|cifrão|nota/i, term: 'contando dinheiro' },
-      { trigger: /relógio|tempo|cronômetr/i, term: 'relógio correndo' },
-      { trigger: /academia|treino|exercício/i, term: 'treino na academia' },
-      { trigger: /comida|prato|cozinha/i, term: 'preparando receita' },
-      { trigger: /sorriso|feliz|conquista/i, term: 'comemorando conquista' },
-      { trigger: /estresse|preocup/i, term: 'pessoa pensativa estressada' },
-      { trigger: /natureza|árvore|céu/i, term: 'natureza aérea timelapse' },
-    ];
-
-    for (const cand of candidates) {
-      if (cand.trigger.test(lower) && !results.includes(cand.term)) {
-        results.push(cand.term);
-      }
-    }
-
-    // If still empty, clean the phrase by stripping conversational fluff
-    if (results.length === 0) {
-      const cleaned = cleanKeyword(baseText);
-      if (cleaned) results.push(cleaned);
+    const viaTriggers = extractShortBrollTerms(baseText, '', 6);
+    for (const t of viaTriggers) {
+      if (!results.includes(t)) results.push(t);
     }
   }
 
-  // Add fallback based on topic if list is small
+  // Add fallback based on topic if list is small (sempre encurtado)
   if (results.length < 3 && fallbackTopic) {
-    const cleanTopic = cleanKeyword(fallbackTopic);
+    const cleanTopic = shortenSearchTerm(fallbackTopic);
     if (cleanTopic && !results.includes(cleanTopic)) {
       results.push(cleanTopic);
     }
   }
 
-  // Ensure 3 to 5 clean terms
+  // Ensure 3 to 6 clean SHORT terms (nunca frases genéricas longas)
   if (results.length === 0) {
-    results.push('tecnologia dinâmica', 'pessoas trabalhando', 'close-up prático');
+    results.push('celular mesa', 'caderno caneta', 'rosto câmera');
   }
 
   return results.slice(0, 6);
 }
 
 function cleanKeyword(str: string): string {
-  return str
-    .replace(/^(mostrando|com|em|de|uma|um|o|a|os|as|plano de|take de|b-roll de|cena com|olhar|expressão|gesto)\s+/gi, '')
-    .replace(/\s+(mostrando|com|em|de|uma|um|em câmera lenta|ao fundo|com corte rápido)\s*$/gi, '')
-    .replace(/[."':;!?()[\]{}]/g, '')
-    .trim()
-    .toLowerCase();
+  return shortenSearchTerm(str);
 }
 
 export const BRollSuggestionBar: React.FC<BRollSuggestionBarProps> = ({
@@ -145,6 +116,7 @@ export const BRollSuggestionBar: React.FC<BRollSuggestionBarProps> = ({
   };
 
   // Supported Stock Sites with 1-click pre-filled search URLs
+  // Pexels/Pixabay/Unsplash aceitam PT; Mixkit/Coverr rendem melhor em EN.
   const stockSites = [
     {
       name: 'Pexels',
@@ -159,12 +131,12 @@ export const BRollSuggestionBar: React.FC<BRollSuggestionBarProps> = ({
     {
       name: 'Mixkit',
       badgeClass: 'border-pink-500/40 text-pink-300 bg-pink-950/40 hover:bg-pink-900/60 hover:border-pink-400',
-      getUrl: (query: string) => `https://mixkit.co/free-stock-video/${encodeURIComponent(query)}/`,
+      getUrl: (query: string) => `https://mixkit.co/free-stock-video/${encodeURIComponent(toEnglishStockQuery(query))}/`,
     },
     {
       name: 'Coverr',
       badgeClass: 'border-amber-500/40 text-amber-300 bg-amber-950/40 hover:bg-amber-900/60 hover:border-amber-400',
-      getUrl: (query: string) => `https://coverr.co/s?q=${encodeURIComponent(query)}`,
+      getUrl: (query: string) => `https://coverr.co/s?q=${encodeURIComponent(toEnglishStockQuery(query))}`,
     },
     {
       name: 'Unsplash (Fotos)',

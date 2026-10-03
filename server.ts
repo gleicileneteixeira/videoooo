@@ -1,4 +1,7 @@
 import express from "express";
+import helmet from "helmet";
+import cors from "cors";
+import rateLimit from "express-rate-limit";
 import path from "path";
 import fs from "fs";
 import os from "os";
@@ -17,9 +20,99 @@ dotenv.config();
 
 const app = express();
 const PORT = 3000;
+const isProd = process.env.NODE_ENV === "production";
 
-app.use(express.json({ limit: "200mb" }));
-app.use(express.urlencoded({ limit: "200mb", extended: true }));
+// Segurança base: headers, CORS restrito e rate-limit
+app.set("trust proxy", 1);
+app.use(helmet({ crossOriginResourcePolicy: { policy: "same-site" } }));
+app.use(
+  cors({
+    origin: isProd ? false : true,
+    methods: ["GET", "POST", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    maxAge: 86400,
+  })
+);
+
+const generalApiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 300,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { error: "Muitas requisições. Tente novamente em alguns minutos." },
+});
+const heavyApiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { error: "Limite de operações pesadas atingido. Aguarde alguns minutos." },
+});
+app.use("/api/", generalApiLimiter);
+app.use("/api/download-media", heavyApiLimiter);
+app.use("/api/transcribe-media", heavyApiLimiter);
+app.use("/api/video/concatenate", heavyApiLimiter);
+
+// Domínios permitidos para download (anti-SSRF)
+const ALLOWED_DOWNLOAD_HOSTS = [
+  "tiktok.com",
+  "www.tiktok.com",
+  "vm.tiktok.com",
+  "vt.tiktok.com",
+  "instagram.com",
+  "www.instagram.com",
+  "facebook.com",
+  "www.facebook.com",
+  "fb.watch",
+  "fb.com",
+  "youtube.com",
+  "www.youtube.com",
+  "youtu.be",
+  "twitter.com",
+  "x.com",
+  "www.twitter.com",
+];
+
+function isAllowedDownloadUrl(raw: string): boolean {
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== "http:" && u.protocol !== "https:") return false;
+    if (u.username || u.password) return false;
+    const host = u.hostname.toLowerCase();
+    // Bloqueia hosts locais / metadata cloud / IPs privados
+    if (
+      host === "localhost" ||
+      host.endsWith(".local") ||
+      host === "169.254.169.254" ||
+      host.startsWith("10.") ||
+      host.startsWith("192.168.") ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
+      host === "127.0.0.1" ||
+      host === "::1" ||
+      host === "[::1]"
+    ) {
+      return false;
+    }
+    return ALLOWED_DOWNLOAD_HOSTS.some((d) => host === d || host.endsWith("." + d));
+  } catch {
+    return false;
+  }
+}
+
+function clampInt(value: unknown, fallback: number, min: number, max: number): number {
+  const n = typeof value === "string" ? parseInt(value, 10) : typeof value === "number" ? Math.floor(value) : NaN;
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
+function clampFloat(value: unknown, fallback: number, min: number, max: number): number {
+  const n = typeof value === "string" ? parseFloat(value) : typeof value === "number" ? value : NaN;
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
+app.use(express.json({ limit: "60mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
 // Serve downloaded media files statically with video range support
 const downloadsDir = path.join(process.cwd(), "public", "downloads");
@@ -2657,12 +2750,12 @@ app.post("/api/generate-video-package", async (req, res) => {
           },
         ],
         brolls: [
-          `${topic} na prática`,
-          `estudos e anotações sobre ${secondary}`,
-          "pessoa usando celular e digitando",
-          "tela de computador com dados e gráficos",
-          "olhando para a câmera pensativo",
-          "comemorando conquista e resultado positivo",
+          "carro volante",
+          "caderno caneta",
+          "celular mesa",
+          "notebook mesa",
+          "rosto câmera",
+          "mãos aplauso",
         ].map((term, bIdx) => ({
           id: `broll_${Date.now()}_${bIdx}`,
           term,
@@ -2715,6 +2808,7 @@ Você vai receber a transcrição de um vídeo que o usuário já gravou e preci
 3. DESCRIÇÕES COMPLETAS DE POST: 3 legendas completas e formatadas com emojis, gancho, tópicos e CTA forte (Instagram, TikTok e Shorts).
 4. HASHTAGS ESTRATÉGICAS: Tags de nicho, de amplo alcance e virais.
 5. CRIATIVOS REMODELADOS (CRIO): 4 novos roteiros de criativos para anúncios ou novos posts (Anúncio Direto, UGC Natural, Pílula 15s, Contra-intuitivo).
+6. B-ROLLS: 6 termos de busca CURTOS (1 a 3 palavras, em português, concretos e visuais como "carro volante", "caderno caneta", "celular mesa"). PROIBIDO frases longas. PROIBIDO "na prática do dia a dia", "estratégia prática", títulos inteiros. Cada termo precisa funcionar sozinho na busca do Pexels/Pixabay.
 
 Responda EXCLUSIVAMENTE em formato JSON estrito, sem nenhum texto introdutório ou markdown fora do JSON.`;
 
@@ -2776,23 +2870,70 @@ ${fullText.slice(0, 3500)}
   "creatives": [
     {
       "id": "crio_1",
-      "title": "Criativo #1: Tráfego Pago / Anúncio Direto",
-      "angle": "anuncio_vendas",
-      "angleLabel": "Anúncio Direto (Problema > Solução > Oferta)",
+      "type": "anuncio_vendas",
+      "label": "Anúncio Direto (Problema > Solução > Oferta)",
       "hook": "Gancho do anúncio",
       "spokenScript": "Roteiro completo falado da fala do anúncio",
       "visualDirection": "Instruções de cena e enquadramento",
       "callToAction": "Chamada para ação final do anúncio",
       "estimatedDuration": "35s"
     }
+  ],
+  "brolls": [
+    { "id": "broll_1", "term": "carro volante", "sceneContext": "Corte nos primeiros 3s" },
+    { "id": "broll_2", "term": "caderno caneta", "sceneContext": "Meio da explicação" },
+    { "id": "broll_3", "term": "celular mesa", "sceneContext": "Execução na prática" },
+    { "id": "broll_4", "term": "notebook mesa", "sceneContext": "Dados e telas" },
+    { "id": "broll_5", "term": "rosto câmera", "sceneContext": "Quebra de objeção" },
+    { "id": "broll_6", "term": "mãos aplauso", "sceneContext": "Encerramento com CTA" }
   ]
 }
+REGRAS OBRIGATÓRIAS PARA BROLLS: cada "term" tem 1 a 3 palavras, português simples, objeto visível + contexto (ex: "carro volante"). NUNCA use o título inteiro, NUNCA frases com mais de 4 palavras, NUNCA "na prática do dia a dia".
 `;
 
     let aiPackage: any = null;
     let usedProvider = "groq";
     let usedModel = "llama-3.3-70b";
     let isFallback = false;
+
+    // Sanitiza termos de B-roll da IA: no máx 3 palavras, sem frases longas
+    const sanitizeBrollTerm = (raw: unknown): string => {
+      if (typeof raw !== "string") return "";
+      let s = raw
+        .toLowerCase()
+        .replace(/[."':;!?()[\]{}_*#@|/=+<>]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      // Remove prefixos verborrágicos comuns da IA
+      s = s.replace(/^(vídeos? de|fotos? de|imagens? de|mostrando|pessoa|uma|um|o|a|os|as)\s+/i, "").trim();
+      s = s.replace(/\s+(na prática.*|do dia.*|mostrando.*|ao fundo.*)$/i, "").trim();
+      const stop = new Set(["vídeos", "video", "vídeo", "primeira", "primeiro", "habilidade", "prática", "pratica", "dia", "sobre", "como", "para", "com", "uma", "estratégia", "estrategia", "conteúdo", "conteudo", "resultado", "resultados", "dicas"]);
+      const words = s.split(" ").filter((w) => w.length > 1 && !stop.has(w));
+      return words.slice(0, 3).join(" ");
+    };
+    const sanitizeBrolls = (list: any[]): any[] => {
+      const out: any[] = [];
+      const seen = new Set<string>();
+      for (const b of list || []) {
+        const term = sanitizeBrollTerm(typeof b === "string" ? b : b?.term);
+        if (!term || seen.has(term)) continue;
+        seen.add(term);
+        const en = term; // links PT usam o termo; EN é derivado no frontend
+        out.push({
+          ...(typeof b === "object" && b ? b : {}),
+          term,
+          downloadLinks: {
+            pexelsUrl: `https://www.pexels.com/pt-br/procurar/videos/${encodeURIComponent(term)}/`,
+            pixabayUrl: `https://pixabay.com/pt/videos/search/${encodeURIComponent(term)}/`,
+            mixkitUrl: `https://mixkit.co/free-stock-video/${encodeURIComponent(en)}/`,
+            coverrUrl: `https://coverr.co/s?q=${encodeURIComponent(en)}`,
+            unsplashUrl: `https://unsplash.com/pt-br/s/fotografias/${encodeURIComponent(term)}`,
+          },
+        });
+        if (out.length >= 6) break;
+      }
+      return out;
+    };
 
     try {
       const aiResponse = await executeWithDynamicFallback(
@@ -2833,7 +2974,11 @@ ${fullText.slice(0, 3500)}
         formattedAll: "",
       },
       creatives: aiPackage.creatives || [],
-      brolls: aiPackage.brolls && aiPackage.brolls.length > 0 ? aiPackage.brolls : generateFallbackPackage().brolls,
+      brolls: (() => {
+        const raw = aiPackage.brolls && aiPackage.brolls.length > 0 ? aiPackage.brolls : generateFallbackPackage().brolls;
+        const clean = sanitizeBrolls(raw);
+        return clean.length > 0 ? clean : generateFallbackPackage().brolls;
+      })(),
       generatedAt: new Date().toISOString(),
       modeUsed: isFallback ? "algorithmic" : "ai",
       providerName: isFallback ? "Motor Heurístico Instantâneo" : `${usedProvider.toUpperCase()} (${usedModel})`,
@@ -3065,18 +3210,36 @@ Retorne em formato JSON:
 
 // Endpoint: Transcribe Media & Identify Hook (Free extraction)
 // Supports both JSON body (mediaBase64) and multipart/form-data (file upload)
+const ALLOWED_TRANSCRIBE_MIMES = new Set([
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/wav",
+  "audio/x-wav",
+  "audio/wave",
+  "audio/ogg",
+  "audio/webm",
+  "audio/mp4",
+  "audio/aac",
+  "audio/flac",
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "video/x-matroska",
+]);
 const audioUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 200 * 1024 * 1024 }, // 200MB max
+  limits: { fileSize: 100 * 1024 * 1024, files: 1, fields: 20 }, // 100MB max
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_TRANSCRIBE_MIMES.has(file.mimetype)) return cb(null, true);
+    // Permite por extensão como fallback (alguns browsers mandam octet-stream)
+    if (/\.(mp3|wav|ogg|webm|mp4|m4a|aac|flac|mov|mkv)$/i.test(file.originalname || "")) {
+      return cb(null, true);
+    }
+    cb(new Error("Tipo de arquivo não permitido. Envie áudio ou vídeo."));
+  },
 });
 
 app.post("/api/transcribe-media", audioUpload.single("file"), async (req, res) => {
-  // ALWAYS log what the server received — first thing
-  console.log("=========================================");
-  console.log("[transcribe-media] req.body:", JSON.stringify(req.body).substring(0, 500));
-  console.log("[transcribe-media] req.file:", req.file ? { name: req.file.originalname, size: req.file.size, mime: req.file.mimetype } : "UNDEFINED");
-  console.log("[transcribe-media] req.files:", req.files || "UNDEFINED");
-  console.log("=========================================");
 
   try {
     let textContent = "";
@@ -3093,8 +3256,8 @@ app.post("/api/transcribe-media", audioUpload.single("file"), async (req, res) =
         mimeType = req.file.mimetype || "audio/wav";
         console.log(`[CASE 1 - MULTER] file=${fileName}, base64 length=${mediaBase64.length}`);
       } catch (fileErr: any) {
-        console.error("[CASE 1 - MULTER] ERRO:", fileErr.message, fileErr.stack);
-        return res.status(500).json({ error: `Falha ao processar arquivo: ${fileErr.message}`, stack: fileErr.stack });
+        console.error("[CASE 1 - MULTER] ERRO:", fileErr.message);
+        return res.status(500).json({ error: "Falha ao processar arquivo enviado." });
       }
     }
 
@@ -3127,8 +3290,8 @@ app.post("/api/transcribe-media", audioUpload.single("file"), async (req, res) =
           console.log(`[CASE 3 - RAW FALLBACK] parsed: mediaBase64 len=${mediaBase64.length}`);
         }
       } catch (rawErr: any) {
-        console.error("[CASE 3 - RAW FALLBACK] ERRO:", rawErr.message, rawErr.stack);
-        return res.status(500).json({ error: `Falha ao ler body: ${rawErr.message}`, stack: rawErr.stack });
+        console.error("[CASE 3 - RAW FALLBACK] ERRO:", rawErr.message);
+        return res.status(500).json({ error: "Falha ao ler corpo da requisição." });
       }
     }
 
@@ -3396,9 +3559,8 @@ Retorne no formato JSON:
     console.error(`[transcribe-media] >>> Nenhum dado fornecido. textContent=${!!textContent}, mediaBase64=${!!mediaBase64}`);
     throw new Error("Arquivo de áudio/vídeo ou texto não fornecido.");
   } catch (error: any) {
-    console.error("[transcribe-media] >>> ERRO GERAL:", error.message);
-    console.error("[transcribe-media] >>> STACK:", error.stack);
-    res.status(500).json({ error: error.message || "Falha ao processar e transcrever mídia.", stack: error.stack });
+    console.error("[transcribe-media] ERRO GERAL:", error.message);
+    res.status(500).json({ error: "Falha ao processar e transcrever mídia." });
   }
 });
 
@@ -3412,7 +3574,10 @@ app.post("/api/download-media", async (req, res) => {
       return res.status(400).json({ error: "O link do vídeo é obrigatório." });
     }
 
-    const cleanUrl = url.trim();
+    const cleanUrl = url.trim().slice(0, 2048);
+    if (cleanUrl.length < 10 || !isAllowedDownloadUrl(cleanUrl)) {
+      return res.status(400).json({ error: "URL não permitida. Use links públicos de TikTok, Instagram, Facebook, YouTube ou X." });
+    }
 
     // Determine platform
     let platform: "tiktok" | "instagram" | "facebook" | "youtube" | "twitter" | "other" = "other";
@@ -4188,21 +4353,57 @@ sudo ufw allow 'Nginx Full' && sudo ufw allow OpenSSH && sudo ufw --force enable
 });
 
 // Configure multer for video concatenation uploads
+const ALLOWED_CONCAT_MIMES = new Set([
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "video/x-matroska",
+  "video/x-msvideo",
+]);
 const videoUpload = multer({
   dest: path.join(os.tmpdir(), "viralscript_uploads"),
-  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB
+  limits: { fileSize: 300 * 1024 * 1024, files: 10, fields: 20 }, // 300MB por arquivo, máx 10
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_CONCAT_MIMES.has(file.mimetype)) return cb(null, true);
+    if (/\.(mp4|webm|mov|mkv|avi)$/i.test(file.originalname || "")) return cb(null, true);
+    cb(new Error("Tipo de vídeo não permitido. Envie mp4, webm, mov, mkv ou avi."));
+  },
 });
+
+const ALLOWED_CONCAT_MODES = new Set(["fast", "auto", "compat"]);
+const ALLOWED_TRANSITIONS = new Set([
+  "none",
+  "fade",
+  "dissolve",
+  "fadeblack",
+  "fadewhite",
+  "wipeleft",
+  "wiperight",
+  "wipeup",
+  "wipedown",
+  "slideup",
+  "slidedown",
+  "smoothleft",
+  "smoothright",
+  "circleopen",
+  "circleclose",
+  "distance",
+]);
 
 // Video Concatenation API Endpoint (Server Fallback)
 app.post("/api/video/concatenate", videoUpload.any(), async (req, res) => {
   const tempDir = path.join(os.tmpdir(), `vs_concat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`);
-  
+
   try {
     fs.mkdirSync(tempDir, { recursive: true });
 
     const files = (req.files as Express.Multer.File[]) || [];
     if (files.length === 0) {
       return res.status(400).send("Nenhum arquivo de vídeo enviado.");
+    }
+    if (files.length > 10) {
+      for (const f of files) { try { fs.unlinkSync(f.path); } catch {} }
+      return res.status(400).send("Máximo de 10 vídeos por concatenação.");
     }
 
     // Sort files by fieldname (video_0, video_1, etc.)
@@ -4212,12 +4413,14 @@ app.post("/api/video/concatenate", videoUpload.any(), async (req, res) => {
       return idxA - idxB;
     });
 
-    const mode = (req.body.mode as string) || "auto";
-    const transition = (req.body.transition as string) || "none";
-    const transitionDuration = parseFloat(req.body.transitionDuration) || 0.5;
-    const targetW = parseInt(req.body.targetWidth) || 1080;
-    const targetH = parseInt(req.body.targetHeight) || 1920;
-    const fps = parseInt(req.body.fps) || 30;
+    const rawMode = typeof req.body.mode === "string" ? req.body.mode : "auto";
+    const rawTransition = typeof req.body.transition === "string" ? req.body.transition : "none";
+    const mode = ALLOWED_CONCAT_MODES.has(rawMode) ? rawMode : "auto";
+    const transition = ALLOWED_TRANSITIONS.has(rawTransition) ? rawTransition : "none";
+    const transitionDuration = clampFloat(req.body.transitionDuration, 0.5, 0.1, 2);
+    const targetW = clampInt(req.body.targetWidth, 1080, 240, 2160);
+    const targetH = clampInt(req.body.targetHeight, 1920, 240, 3840);
+    const fps = clampInt(req.body.fps, 30, 15, 60);
 
     // Move uploaded files into tempDir as input_0.mp4, input_1.mp4, etc.
     const inputPaths: string[] = [];
@@ -4395,14 +4598,34 @@ app.post("/api/video/concatenate", videoUpload.any(), async (req, res) => {
       } catch {}
     });
   } catch (err: any) {
-    console.error("Erro na concatenação de vídeo:", err);
+    console.error("Erro na concatenação de vídeo:", err?.message || err);
     try {
       fs.rmSync(tempDir, { recursive: true, force: true });
     } catch {}
     if (!res.headersSent) {
-      res.status(500).send(err.message || "Erro no servidor de concatenação.");
+      res.status(500).send("Erro no servidor de concatenação.");
     }
   }
+});
+
+// Handler global: multer, JSON grande, tipos inválidos — sem vazar stack
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  if (err?.code === "LIMIT_FILE_SIZE") {
+    return res.status(413).json({ error: "Arquivo muito grande. Reduza o tamanho e tente novamente." });
+  }
+  if (err?.code === "LIMIT_FILE_COUNT" || err?.code === "LIMIT_UNEXPECTED_FILE") {
+    return res.status(400).json({ error: err.message || "Upload inválido." });
+  }
+  if (err?.type === "entity.too.large") {
+    return res.status(413).json({ error: "Corpo da requisição muito grande." });
+  }
+  if (err instanceof SyntaxError) {
+    return res.status(400).json({ error: "JSON inválido." });
+  }
+  console.error("[api] erro:", err?.message || err);
+  if (res.headersSent) return;
+  res.status(500).json({ error: "Erro interno no servidor." });
 });
 
 // Vite middleware & Static serving

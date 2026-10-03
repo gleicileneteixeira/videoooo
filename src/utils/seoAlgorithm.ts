@@ -6,6 +6,7 @@ import {
   VideoPackageCreative,
   VideoPackageBRoll,
 } from '../types';
+import { extractShortBrollTerms, toEnglishStockQuery } from './brollKeywords';
 
 /**
  * Pure Client-Side Algorithmic SEO & Headline Generator
@@ -534,14 +535,14 @@ export function generateAlgorithmicVideoPackage(params: {
   let contextualPhotos: string[] = [];
 
   if (/carro|tr[aâ]nsito|cnh|detran|motorista|ve[ií]culo|far[oó]is|dire[çc][aã]o|estrada|placa/i.test(fullTextLower)) {
-    // Tema: Trânsito, Autoescola, Carros, Detran
+    // Tema: Trânsito, Autoescola, Carros, Detran — termos curtos (1-3 palavras)
     contextualTerms = [
-      'tela de carro com faróis no trânsito',
-      'pessoa estudando simulado no celular',
-      'sinalização e semáforo na cidade',
-      'motorista com as mãos no volante',
-      'caderno de estudos e caneta',
-      'comemorando aprovação na CNH',
+      'carro volante',
+      'celular mesa',
+      'semáforo cidade',
+      'carro trânsito',
+      'caderno caneta',
+      'mãos aplauso',
     ];
     contextualPhotos = [
       'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80', // Carro faróis
@@ -552,14 +553,14 @@ export function generateAlgorithmicVideoPackage(params: {
       'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80', // Comemorando
     ];
   } else if (/dinheiro|finan[çc]|sal[aá]rio|renda|invest|lucro|pre[çc]o|gasto|d[ií]vida|banco|cart[aã]o/i.test(fullTextLower)) {
-    // Tema: Finanças, Dinheiro, Economia
+    // Tema: Finanças, Dinheiro, Economia — termos curtos
     contextualTerms = [
-      'contando cédulas de dinheiro',
-      'gráfico de crescimento e lucros na tela',
-      'calculadora e extrato bancário',
-      'pessoa preocupada com boletos',
-      'usando aplicativo de banco no celular',
-      'comemorando independência financeira',
+      'dinheiro mãos',
+      'gráfico tela',
+      'calculadora mesa',
+      'reunião escritório',
+      'celular mesa',
+      'mãos aplauso',
     ];
     contextualPhotos = [
       'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80', // Dinheiro
@@ -570,14 +571,14 @@ export function generateAlgorithmicVideoPackage(params: {
       'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80', // Equipe comemorando
     ];
   } else if (/treino|academia|sa[uú]de|dieta|emagrec|m[uú]scul|exerc[ií]cio|corpo|peso/i.test(fullTextLower)) {
-    // Tema: Saúde, Fitness, Treino
+    // Tema: Saúde, Fitness, Treino — termos curtos
     contextualTerms = [
-      'treino de força na academia',
-      'prato de refeição saudável equilibrada',
-      'olhando o resultado no espelho',
-      'amarrando o tênis e cronômetro',
-      'suor e determinação no exercício',
-      'comemorando conquista física e saúde',
+      'academia treino',
+      'prato saudável',
+      'rosto câmera',
+      'corrida rua',
+      'relógio pulso',
+      'mãos aplauso',
     ];
     contextualPhotos = [
       'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80',
@@ -588,15 +589,9 @@ export function generateAlgorithmicVideoPackage(params: {
       'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80',
     ];
   } else {
-    // Tema Padrão: Tecnologia, Negócios, Criação de Conteúdo, Dicas
-    contextualTerms = [
-      `${mainTopic} na prática do dia a dia`,
-      `anotações estratégicas sobre ${secondaryTopic}`,
-      'pessoa gravando com celular e iluminação',
-      'tela de computador com dados e ferramentas',
-      'olhando para a câmera pensativo',
-      'comemorando resultado e conquista',
-    ];
+    // Tema genérico: extrai termos curtos e concretos do texto.
+    // NUNCA usa o título inteiro ("... na prática do dia a dia") — isso misturava a busca.
+    contextualTerms = extractShortBrollTerms(fullText, title, 6);
     contextualPhotos = [
       'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=800&q=80',
       'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=800&q=80',
@@ -607,7 +602,9 @@ export function generateAlgorithmicVideoPackage(params: {
     ];
   }
 
-  const brolls: VideoPackageBRoll[] = contextualTerms.map((term, bIdx) => ({
+  const brolls: VideoPackageBRoll[] = contextualTerms.map((term, bIdx) => {
+    const enQuery = toEnglishStockQuery(term);
+    return {
     id: `broll_${Date.now()}_${bIdx}`,
     term,
     sceneContext: bIdx === 0
@@ -624,12 +621,13 @@ export function generateAlgorithmicVideoPackage(params: {
     downloadLinks: {
       pexelsUrl: `https://www.pexels.com/pt-br/procurar/videos/${encodeURIComponent(term)}/`,
       pixabayUrl: `https://pixabay.com/pt/videos/search/${encodeURIComponent(term)}/`,
-      mixkitUrl: `https://mixkit.co/free-stock-video/${encodeURIComponent(term)}/`,
-      coverrUrl: `https://coverr.co/s?q=${encodeURIComponent(term)}`,
+      mixkitUrl: `https://mixkit.co/free-stock-video/${encodeURIComponent(enQuery)}/`,
+      coverrUrl: `https://coverr.co/s?q=${encodeURIComponent(enQuery)}`,
       unsplashUrl: `https://unsplash.com/pt-br/s/fotografias/${encodeURIComponent(term)}`,
     },
     sampleImageUrl: contextualPhotos[bIdx % contextualPhotos.length],
-  }));
+    };
+  });
 
   return {
     id: 'pack_' + Date.now(),
