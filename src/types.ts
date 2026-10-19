@@ -286,7 +286,7 @@ export interface ExtractedTranscript {
   hookIdentified: string;
   originalDuration?: string;
   wordCount: number;
-  sourceType: 'upload_video' | 'upload_audio' | 'download_link';
+  sourceType: 'upload_video' | 'upload_audio' | 'download_link' | 'manual_text';
   sourceFileName?: string;
   sourceUrl?: string;
   mediaUrl?: string;

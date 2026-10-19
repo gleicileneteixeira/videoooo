@@ -59,6 +59,7 @@ import { MediaDownloader } from './MediaDownloader';
 import { MediaGallery } from './MediaGallery';
 import { SavedScriptsList } from './SavedScriptsList';
 import { StrategicBriefingCard } from './StrategicBriefingCard';
+import { sanitizeTranscript } from '../utils/transcriptSanitizer';
 
 interface ScriptGeneratorFormProps {
   onGenerate: (data: ScriptRequest) => void;
@@ -240,12 +241,19 @@ Pontos de Atenção e Argumentação do Roteiro:
   React.useEffect(() => {
     if (sourceTranscript) {
       setCreationMode('remodel');
-      setRemodelText(sourceTranscript);
+      const cleanSource = sanitizeTranscript(sourceTranscript);
+      setRemodelText(cleanSource);
+      const derivedTopic = sourceVideoTitle || extractOriginalHookCandidate(cleanSource) || 'Remodelagem de Vídeo';
+      setTopic(derivedTopic);
       setSubTab('create');
+      setInterpretedBriefing(null);
     } else if (initialTopic) {
       setTopic(initialTopic);
+      setInterpretedBriefing(null);
+    } else if (!sourceTranscript && !initialTopic) {
+      setInterpretedBriefing(null);
     }
-  }, [sourceTranscript, initialTopic]);
+  }, [sourceTranscript, initialTopic, sourceVideoTitle]);
 
   // Handler unificado de remodelagem chamado de qualquer aba (Extractor, Downloader, Galeria, Histórico)
   const handleTriggerRemodel = (transcriptInput: any, title?: string) => {
@@ -257,10 +265,14 @@ Pontos de Atenção e Argumentação do Roteiro:
     } else if (typeof transcriptInput === 'string') {
       actualText = transcriptInput;
     }
+    const cleanActual = sanitizeTranscript(actualText);
     setCreationMode('remodel');
-    setRemodelText(actualText);
+    setRemodelText(cleanActual);
+    const derivedTopic = actualTitle || extractOriginalHookCandidate(cleanActual) || 'Remodelagem de Vídeo';
+    setTopic(derivedTopic);
+    setInterpretedBriefing(null);
     setSubTab('create');
-    onRemodelTranscript?.(actualText, actualTitle);
+    onRemodelTranscript?.(cleanActual, actualTitle);
   };
 
   // Compute live breakdown for the chosen duration
@@ -419,13 +431,26 @@ Pontos de Atenção e Argumentação do Roteiro:
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const isRemodel = creationMode === 'remodel';
-    const effectiveTranscript = isRemodel ? remodelText.trim() : undefined;
+    const cleanRemodel = isRemodel ? sanitizeTranscript(remodelText.trim()) : '';
+    const effectiveTranscript = isRemodel ? cleanRemodel : undefined;
     const effectiveTopic = isRemodel
-      ? (topic.trim() || sourceVideoTitle || (remodelText.trim() ? extractOriginalHookCandidate(remodelText) : 'Remodelagem de Vídeo Viral'))
+      ? (sourceVideoTitle || (cleanRemodel ? extractOriginalHookCandidate(cleanRemodel) : '') || topic.trim() || 'Remodelagem de Vídeo Viral')
       : topic.trim();
 
     if (isRemodel && !effectiveTranscript) return;
     if (!isRemodel && !effectiveTopic) return;
+
+    // Checagem de segurança: não enviar briefing estratégico de um tema anterior se o tema atual for outro
+    let safeBriefing = interpretedBriefing;
+    if (safeBriefing && safeBriefing.videoTheme) {
+      const bTheme = safeBriefing.videoTheme.toLowerCase();
+      const curr = (effectiveTopic + ' ' + (effectiveTranscript || '')).toLowerCase();
+      const isBriefingDetran = bTheme.includes('detran') || bTheme.includes('cnh') || bTheme.includes('simulado');
+      const isCurrDetran = curr.includes('detran') || curr.includes('cnh') || curr.includes('simulado') || curr.includes('autoescola') || curr.includes('habilita');
+      if (isBriefingDetran && !isCurrDetran) {
+        safeBriefing = null;
+      }
+    }
 
     const cleanObjectives = getCleanObjectives();
     onGenerate({
@@ -444,7 +469,7 @@ Pontos de Atenção e Argumentação do Roteiro:
       useAi,
       quantity,
       objectives: cleanObjectives.length > 0 ? cleanObjectives : undefined,
-      strategicBriefing: interpretedBriefing || undefined,
+      strategicBriefing: safeBriefing || undefined,
     });
   };
 
@@ -554,7 +579,10 @@ Pontos de Atenção e Argumentação do Roteiro:
           <button
             type="button"
             id="btn-mode-idea"
-            onClick={() => setCreationMode('idea')}
+            onClick={() => {
+              setCreationMode('idea');
+              setInterpretedBriefing(null);
+            }}
             className={`flex items-center gap-3 p-3.5 rounded-xl text-left transition-all ${
               creationMode === 'idea'
                 ? 'bg-gradient-to-r from-rose-600/20 via-pink-600/15 to-transparent border border-rose-500/40 text-white shadow-lg'
@@ -588,7 +616,10 @@ Pontos de Atenção e Argumentação do Roteiro:
           <button
             type="button"
             id="btn-mode-remodel"
-            onClick={() => setCreationMode('remodel')}
+            onClick={() => {
+              setCreationMode('remodel');
+              setInterpretedBriefing(null);
+            }}
             className={`flex items-center gap-3 p-3.5 rounded-xl text-left transition-all ${
               creationMode === 'remodel'
                 ? 'bg-gradient-to-r from-purple-600/20 via-indigo-600/15 to-transparent border border-purple-500/40 text-white shadow-lg'
@@ -759,7 +790,10 @@ Pontos de Atenção e Argumentação do Roteiro:
                 <textarea
                   id="input-remodel-text"
                   value={remodelText}
-                  onChange={(e) => setRemodelText(e.target.value)}
+                  onChange={(e) => {
+                    setRemodelText(e.target.value);
+                    if (interpretedBriefing) setInterpretedBriefing(null);
+                  }}
                   placeholder="Cole aqui a fala ou áudio extraído de um vídeo viral (TikTok, Reels, Shorts) para ser remodelado..."
                   rows={6}
                   required
@@ -833,7 +867,10 @@ Pontos de Atenção e Argumentação do Roteiro:
               <textarea
                 id="input-topic"
                 value={topic}
-                onChange={(e) => setTopic(e.target.value)}
+                onChange={(e) => {
+                  setTopic(e.target.value);
+                  if (interpretedBriefing) setInterpretedBriefing(null);
+                }}
                 placeholder="Ex: Como economizar R$ 1.000 em 30 dias sem abrir mão do que você gosta..."
                 rows={topic.length > 180 ? 6 : 3}
                 required

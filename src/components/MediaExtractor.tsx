@@ -22,11 +22,16 @@ import {
   Download,
   ExternalLink,
   Image as ImageIcon,
+  Edit3,
+  Save,
+  RotateCcw,
+  CheckCircle2,
 } from 'lucide-react';
 import { ExtractedTranscript } from '../types';
 import { attachApiKeysPayload } from '../utils/apiHelper';
 import { extractAndCompressAudio } from '../utils/audioExtractor';
 import { LocalWhisperService, type WhisperModelId } from '../services/localWhisperService';
+import { sanitizeTranscript, detectRepetitionAnomaly } from '../utils/transcriptSanitizer';
 import { SeoGeneratorModal } from './SeoGeneratorModal';
 import { TranscriptDetailModal } from './TranscriptDetailModal';
 import { ViralMediaPackageModal } from './ViralMediaPackageModal';
@@ -58,7 +63,11 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
   const [manualText, setManualText] = useState<string>('');
   const [isManualMode, setIsManualMode] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [modelMode, setModelMode] = useState<'tiny' | 'base'>('tiny');
+  const [modelMode, setModelMode] = useState<'cloud' | 'base' | 'tiny'>('cloud');
+  const [isCleaningWithAi, setIsCleaningWithAi] = useState(false);
+  const [isEditingTranscript, setIsEditingTranscript] = useState(false);
+  const [editedTranscriptText, setEditedTranscriptText] = useState('');
+  const [loopsCleanedNotice, setLoopsCleanedNotice] = useState<string | null>(null);
 
   // SEO & Detail Modals State
   const [isSeoModalOpen, setIsSeoModalOpen] = useState(false);
@@ -70,8 +79,21 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
   const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
   const [packageTargetTranscript, setPackageTargetTranscript] = useState<ExtractedTranscript | null>(null);
 
+  const [inlinePasteText, setInlinePasteText] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const topResultRef = useRef<HTMLDivElement>(null);
+  const manualTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleSwitchToManualMode = () => {
+    setIsManualMode(true);
+    setErrorMessage(null);
+    setTimeout(() => {
+      if (manualTextareaRef.current) {
+        manualTextareaRef.current.focus();
+        manualTextareaRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 80);
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -115,26 +137,43 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
 
     try {
       const selectedModel: WhisperModelId =
-        modelMode === 'base' ? 'Xenova/whisper-base' : 'Xenova/whisper-tiny';
+        modelMode === 'cloud'
+          ? 'cloud'
+          : modelMode === 'base'
+          ? 'Xenova/whisper-base'
+          : 'Xenova/whisper-tiny';
 
-      setProgressStatus('Iniciando motor Whisper neural gratuito...');
+      setProgressStatus(
+        modelMode === 'cloud'
+          ? 'Transcrevendo áudio com Whisper Large v3 Turbo (alta precisão)...'
+          : 'Iniciando motor Whisper neural local no navegador...'
+      );
 
-      // Executa a transcrição diretamente via biblioteca gratuita Whisper (Local Transformers.js)
-      const transcribedText = await LocalWhisperService.transcribeFile(
+      // Executa a transcrição diretamente via Whisper
+      const rawTranscribedText = await LocalWhisperService.transcribeFile(
         file,
         selectedModel,
         (pct, status) => {
           setProgressStatus(status);
-        }
+        },
+        undefined,
+        modelMode === 'cloud'
       );
 
-      if (!transcribedText || transcribedText.trim().length === 0) {
+      if (!rawTranscribedText || rawTranscribedText.trim().length === 0) {
         throw new Error(
           'Nenhuma fala audível foi detectada no arquivo. Verifique se o vídeo possui áudio ou cole a transcrição manualmente.'
         );
       }
 
-      const cleanText = transcribedText.trim();
+      // Higienização algorítmica profunda contra repetições infinitas
+      const cleanText = sanitizeTranscript(rawTranscribedText.trim());
+      const anomaly = detectRepetitionAnomaly(rawTranscribedText);
+      if (anomaly.hasAnomaly) {
+        setLoopsCleanedNotice('✨ Repetições em loop detectadas e removidas automaticamente!');
+        setTimeout(() => setLoopsCleanedNotice(null), 6000);
+      }
+
       const words = cleanText.split(/\s+/).filter(Boolean);
       const sentences = cleanText
         .split(/[.!?]+/)
@@ -184,7 +223,7 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
         spread: 60,
       });
     } catch (err: any) {
-      console.error('Erro na transcrição gratuita:', err);
+      console.error('Erro na transcrição:', err);
       setErrorMessage(
         err.message ||
           'Não foi possível transcrever esse arquivo. Você também pode colar a transcrição manualmente.'
@@ -195,33 +234,128 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
     }
   };
 
-  const handleProcessManualText = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!manualText.trim()) return;
+  const handleCleanWithAi = async () => {
+    if (!currentTranscript?.fullText) return;
+    setIsCleaningWithAi(true);
+    try {
+      const res = await fetch('/api/clean-transcript', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(attachApiKeysPayload({
+          text: currentTranscript.fullText,
+          useAi: true,
+        })),
+      });
+
+      if (!res.ok) throw new Error('Falha ao limpar transcrição.');
+      const data = await res.json();
+      if (data.cleanedText) {
+        const cleanWords = data.cleanedText.split(/\s+/).filter(Boolean);
+        const updatedTranscript: ExtractedTranscript = {
+          ...currentTranscript,
+          fullText: data.cleanedText,
+          wordCount: cleanWords.length,
+          summary: data.cleanedText.slice(0, 180) + '...',
+        };
+        setCurrentTranscript(updatedTranscript);
+        onSelectRecentTranscript(updatedTranscript);
+        setLoopsCleanedNotice(`✨ Transcrição higienizada com sucesso! ${data.originalLength - data.cleanedLength > 0 ? `(${data.originalLength - data.cleanedLength} caracteres de ruído removidos)` : ''}`);
+        confetti({ particleCount: 40, spread: 60 });
+        setTimeout(() => setLoopsCleanedNotice(null), 6000);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert('Não foi possível higienizar a transcrição via IA.');
+    } finally {
+      setIsCleaningWithAi(false);
+    }
+  };
+
+  const handleSaveEditedText = () => {
+    if (!currentTranscript) return;
+    const cleanText = sanitizeTranscript(editedTranscriptText.trim());
+    const words = cleanText.split(/\s+/).filter(Boolean);
+    const updated: ExtractedTranscript = {
+      ...currentTranscript,
+      fullText: cleanText,
+      wordCount: words.length,
+    };
+    setCurrentTranscript(updated);
+    onSelectRecentTranscript(updated);
+    setIsEditingTranscript(false);
+    setLoopsCleanedNotice('✨ Alterações manuais salvas com sucesso!');
+    setTimeout(() => setLoopsCleanedNotice(null), 4000);
+  };
+
+  const handleProcessManualText = async (e?: React.FormEvent, directText?: string) => {
+    if (e) e.preventDefault();
+    const raw = (directText !== undefined ? directText : manualText).trim();
+    if (!raw) return;
+
+    // Higieniza contra loops e repetições mecânicas (Whisper)
+    const cleaned = sanitizeTranscript(raw);
+    const anomaly = detectRepetitionAnomaly(raw);
+    if (anomaly.hasAnomaly) {
+      setLoopsCleanedNotice('✨ Repetições e loops do áudio foram removidos e o texto foi higienizado!');
+      setTimeout(() => setLoopsCleanedNotice(null), 6000);
+    }
 
     setIsProcessing(true);
-    setProgressStatus('Analisando e formatando transcrição de texto...');
+    setProgressStatus('Analisando e estruturando transcrição do texto...');
 
     try {
       const res = await fetch('/api/transcribe-media', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(attachApiKeysPayload({
-          textContent: manualText.trim(),
+          textContent: cleaned,
           fileName: 'Texto_Colado.txt',
         })),
       });
 
-      if (!res.ok) throw new Error('Falha ao processar texto.');
+      if (!res.ok) throw new Error('Falha ao processar texto no servidor.');
 
       const transcriptData: ExtractedTranscript = await res.json();
       setCurrentTranscript(transcriptData);
       onSelectRecentTranscript(transcriptData);
+      setIsManualMode(false);
+      setErrorMessage(null);
+      setInlinePasteText('');
+      setManualText('');
 
       confetti({ particleCount: 40, spread: 50 });
     } catch (err) {
-      console.error(err);
-      alert('Erro ao processar texto.');
+      console.warn('Fallback local instantâneo acionado para transcrição manual:', err);
+      // Fallback local instantâneo — usuário NUNCA fica bloqueado
+      const words = cleaned.split(/\s+/).filter(Boolean);
+      const sentences = cleaned
+        .split(/[.!?]+/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 5);
+
+      const fallbackData: ExtractedTranscript = {
+        id: 'transc_' + Date.now(),
+        title: 'Transcrição de Mídia',
+        fullText: cleaned,
+        hookIdentified: sentences[0] || cleaned.slice(0, 100) + '...',
+        summary: sentences.slice(0, 3).join('. ') + (sentences.length > 3 ? '.' : ''),
+        keyPoints:
+          sentences.length >= 3
+            ? sentences.slice(0, 4)
+            : ['Conteúdo transcrito com sucesso', 'Pronto para remodelagem de roteiro'],
+        wordCount: words.length,
+        originalDuration: `${Math.max(15, Math.round(words.length / 2.5))}s`,
+        sourceType: 'manual_text',
+        createdAt: new Date().toISOString(),
+      };
+
+      setCurrentTranscript(fallbackData);
+      onSelectRecentTranscript(fallbackData);
+      setIsManualMode(false);
+      setErrorMessage(null);
+      setInlinePasteText('');
+      setManualText('');
+      confetti({ particleCount: 35, spread: 45 });
     } finally {
       setIsProcessing(false);
       setProgressStatus('');
@@ -260,19 +394,21 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
           </div>
 
           {/* Model Switcher Chips */}
-          <div className="flex items-center gap-2 self-start text-xs font-semibold text-slate-400">
-            <span>Modelo:</span>
-            <div className="flex items-center rounded-lg bg-slate-950 p-1 border border-slate-800">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 self-start text-xs font-semibold text-slate-400">
+            <span className="text-[11px] uppercase tracking-wider text-slate-500 font-bold">Motor:</span>
+            <div className="flex flex-wrap items-center rounded-lg bg-slate-950 p-1 border border-slate-800 gap-1">
               <button
                 type="button"
-                onClick={() => setModelMode('tiny')}
-                className={`rounded-md px-2.5 py-1 text-[11px] font-bold transition ${
-                  modelMode === 'tiny'
-                    ? 'bg-purple-600/30 text-purple-300 border border-purple-500/30'
-                    : 'text-slate-500 hover:text-slate-300'
+                onClick={() => setModelMode('cloud')}
+                className={`rounded-md px-2.5 py-1 text-[11px] font-bold transition flex items-center gap-1.5 ${
+                  modelMode === 'cloud'
+                    ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
                 }`}
+                title="Whisper Large v3 Turbo na nuvem - Alta precisão em português e sem repetições"
               >
-                Tiny (Rápido ~39MB)
+                <Zap className="h-3 w-3 text-emerald-400" />
+                <span>Nuvem Turbo (Recomendado)</span>
               </button>
               <button
                 type="button"
@@ -280,17 +416,64 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
                 className={`rounded-md px-2.5 py-1 text-[11px] font-bold transition ${
                   modelMode === 'base'
                     ? 'bg-purple-600/30 text-purple-300 border border-purple-500/30'
-                    : 'text-slate-500 hover:text-slate-300'
+                    : 'text-slate-400 hover:text-slate-200'
                 }`}
+                title="Whisper Base Local no Navegador (~145MB)"
               >
-                Base (Mais preciso ~145MB)
+                Local Base (~145MB)
+              </button>
+              <button
+                type="button"
+                onClick={() => setModelMode('tiny')}
+                className={`rounded-md px-2.5 py-1 text-[11px] font-bold transition ${
+                  modelMode === 'tiny'
+                    ? 'bg-purple-600/30 text-purple-300 border border-purple-500/30'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Whisper Tiny Local no Navegador (~39MB)"
+              >
+                Local Tiny (~39MB)
               </button>
             </div>
           </div>
         </div>
 
+        {/* Alternância Direta de Modos: Upload vs Transcrição Manual */}
+        <div className="mt-6 flex flex-wrap items-center gap-2 border-b border-slate-800/80 pb-3">
+          <button
+            type="button"
+            id="tab-mode-upload"
+            onClick={() => {
+              setIsManualMode(false);
+              setErrorMessage(null);
+            }}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
+              !isManualMode
+                ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 border border-transparent'
+            }`}
+          >
+            <UploadCloud className="h-4 w-4" />
+            <span>Upload de Vídeo / Áudio (Reels, MP4, WAV)</span>
+          </button>
+
+          <button
+            type="button"
+            id="tab-mode-manual"
+            onClick={handleSwitchToManualMode}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
+              isManualMode
+                ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 border border-transparent'
+            }`}
+          >
+            <FileText className="h-4 w-4" />
+            <span>Colar Texto / Transcrição Manual</span>
+          </button>
+        </div>
+
         {/* Upload Dropzone / Mode Switcher */}
-        <div className="mt-6 space-y-4">
+        <div className="mt-4 space-y-4">
           {!isManualMode ? (
             <div
               onDragOver={handleDragOver}
@@ -325,7 +508,7 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
               <div className="mt-4 flex items-center gap-1.5 text-[11px] text-purple-300/80 bg-purple-950/30 px-3 py-1.5 rounded-lg border border-purple-500/20">
                 <Sparkles className="h-3.5 w-3.5 text-purple-400 flex-shrink-0" />
                 <span>
-                  <strong>Multi-modelo de IA:</strong> Extração profunda da fala, identificação do gancho original e preparação para remodelagem.
+                  <strong>Normalização FFmpeg Automática:</strong> Converte e amplifica o áudio em PCM mono 16kHz nos padrões Whisper para máxima fidelidade.
                 </span>
               </div>
             </div>
@@ -335,29 +518,47 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
                 Cole a fala ou transcrição do vídeo:
               </label>
               <textarea
+                ref={manualTextareaRef}
                 value={manualText}
                 onChange={(e) => setManualText(e.target.value)}
-                placeholder="Cole aqui o texto falado no vídeo original que você quer remodelar..."
-                rows={5}
+                placeholder="Cole aqui o texto falado no vídeo original que você quer remodelar ou extrair..."
+                rows={6}
                 required
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 p-4 text-xs sm:text-sm text-slate-100 placeholder-slate-500 outline-none focus:border-emerald-500"
+                autoFocus
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 p-4 text-xs sm:text-sm text-slate-100 placeholder-slate-500 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
               />
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-between items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsManualMode(false)}
-                  className="rounded-xl border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs text-slate-400 hover:text-white"
+                  onClick={() => {
+                    const cleaned = sanitizeTranscript(manualText);
+                    setManualText(cleaned);
+                  }}
+                  className="rounded-xl border border-emerald-500/30 bg-emerald-950/30 px-3 py-1.5 text-xs text-emerald-300 hover:bg-emerald-950/60 transition cursor-pointer"
+                  title="Remove repetições e loops do texto colado"
                 >
-                  Voltar para Upload de Arquivo
+                  ✨ Limpar Loops do Texto
                 </button>
-                <button
-                  type="submit"
-                  disabled={isProcessing || !manualText.trim()}
-                  className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 shadow-lg shadow-emerald-600/20"
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  <span>Processar Transcrição</span>
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsManualMode(false);
+                      setErrorMessage(null);
+                    }}
+                    className="rounded-xl border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs text-slate-400 hover:text-white transition cursor-pointer"
+                  >
+                    Voltar para Upload de Arquivo
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isProcessing || !manualText.trim()}
+                    className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 shadow-lg shadow-emerald-600/20 transition disabled:opacity-50 cursor-pointer"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span>Processar Transcrição</span>
+                  </button>
+                </div>
               </div>
             </form>
           )}
@@ -366,8 +567,8 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
             <div className="flex justify-center">
               <button
                 type="button"
-                onClick={() => setIsManualMode(true)}
-                className="text-xs text-slate-400 hover:text-emerald-400 underline font-medium"
+                onClick={handleSwitchToManualMode}
+                className="text-xs text-slate-400 hover:text-emerald-400 underline font-medium cursor-pointer"
               >
                 Prefere colar o texto/transcrição manualmente? Clique aqui
               </button>
@@ -390,20 +591,64 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
                   <p className="text-slate-300 leading-relaxed">{errorMessage}</p>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-rose-900/40 text-[11px]">
-                {selectedFile && (
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-rose-900/40 text-[11px]">
+                <div className="flex items-center gap-2">
+                  {selectedFile && (
+                    <button
+                      type="button"
+                      onClick={() => extractAudioFromMedia(selectedFile)}
+                      className="flex items-center gap-1.5 rounded-lg bg-rose-600/80 hover:bg-rose-500 text-white font-bold px-3 py-1.5 transition-colors cursor-pointer"
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                      <span>Tentar Novamente</span>
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => extractAudioFromMedia(selectedFile)}
-                    className="flex items-center gap-1.5 rounded-lg bg-rose-600/80 hover:bg-rose-500 text-white font-bold px-3 py-1.5 transition-colors"
+                    onClick={handleSwitchToManualMode}
+                    className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3.5 py-1.5 transition-colors shadow-sm cursor-pointer"
                   >
-                    <RefreshCw className="h-3 w-3" />
-                    <span>Tentar Novamente</span>
+                    <FileText className="h-3.5 w-3.5" />
+                    <span>Colar Transcrição Manualmente</span>
                   </button>
-                )}
+                </div>
                 <span className="text-slate-400">
-                  💡 <strong>Dica:</strong> Se o modelo estiver ocupado, tente novamente ou cole o texto na aba "Texto / Transcrição Manual".
+                  💡 <strong>Alternativa direta:</strong> Se o vídeo do Instagram não tiver fala audível, cole o texto abaixo para continuar.
                 </span>
+              </div>
+
+              {/* Inserção Direta Imediata no Card de Alerta */}
+              <div className="mt-2 pt-3 border-t border-rose-900/40 space-y-2">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-bold text-slate-200">
+                    ✍️ Ou cole o texto / fala do vídeo aqui para processar agora mesmo:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleSwitchToManualMode}
+                    className="text-emerald-400 hover:text-emerald-300 underline font-semibold cursor-pointer"
+                  >
+                    Alternar para formulário completo →
+                  </button>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <textarea
+                    value={inlinePasteText}
+                    onChange={(e) => setInlinePasteText(e.target.value)}
+                    placeholder="Cole aqui o texto ou transcrição do vídeo para remodelar..."
+                    rows={2}
+                    className="flex-1 rounded-xl border border-slate-700 bg-slate-900/90 p-2.5 text-xs text-slate-100 placeholder-slate-500 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  />
+                  <button
+                    type="button"
+                    disabled={isProcessing || !inlinePasteText.trim()}
+                    onClick={() => handleProcessManualText(undefined, inlinePasteText)}
+                    className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 text-xs transition disabled:opacity-50 sm:self-stretch shadow-md cursor-pointer"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span>Processar Texto</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -487,15 +732,85 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
               </div>
             </div>
 
-            {/* Texto Completo Extraído */}
-            <div className="space-y-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                <FileText className="h-3.5 w-3.5 text-emerald-400" />
-                Texto do que foi falado no vídeo:
-              </span>
-              <div className="rounded-xl bg-slate-950 p-4 border border-slate-800 text-xs sm:text-sm text-slate-200 leading-relaxed font-sans max-h-60 overflow-y-auto whitespace-pre-line select-text shadow-inner">
-                {currentTranscript.fullText}
+            {/* Aviso de remoção de loops se houver */}
+            {loopsCleanedNotice && (
+              <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-3.5 py-2 text-xs font-semibold text-emerald-300">
+                <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                <span>{loopsCleanedNotice}</span>
               </div>
+            )}
+
+            {/* Texto Completo Extraído */}
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <FileText className="h-3.5 w-3.5 text-emerald-400" />
+                  Texto do que foi falado no vídeo:
+                </span>
+
+                <div className="flex items-center gap-2">
+                  {/* Botão Higienizar com IA */}
+                  <button
+                    type="button"
+                    onClick={handleCleanWithAi}
+                    disabled={isCleaningWithAi}
+                    className="flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-300 hover:bg-amber-500/20 transition disabled:opacity-50"
+                    title="Remover ruídos, repetições de áudio e corrigir pontuação automaticamente com IA"
+                  >
+                    <Sparkles className={`h-3.5 w-3.5 text-amber-400 ${isCleaningWithAi ? 'animate-spin' : ''}`} />
+                    <span>{isCleaningWithAi ? 'Higienizando...' : 'Limpar Ruídos / Restaurar com IA'}</span>
+                  </button>
+
+                  {/* Botão Editar Texto */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isEditingTranscript) {
+                        setEditedTranscriptText(currentTranscript.fullText);
+                      }
+                      setIsEditingTranscript(!isEditingTranscript);
+                    }}
+                    className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/80 px-2.5 py-1 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition"
+                    title="Editar texto da fala manualmente"
+                  >
+                    <Edit3 className="h-3.5 w-3.5 text-cyan-400" />
+                    <span>{isEditingTranscript ? 'Cancelar Edição' : 'Editar Texto'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {isEditingTranscript ? (
+                <div className="space-y-2">
+                  <textarea
+                    value={editedTranscriptText}
+                    onChange={(e) => setEditedTranscriptText(e.target.value)}
+                    rows={8}
+                    className="w-full rounded-xl bg-slate-950 p-4 border border-cyan-500/50 text-xs sm:text-sm text-slate-100 font-sans leading-relaxed focus:outline-none focus:ring-2 focus:ring-cyan-500 shadow-inner"
+                    placeholder="Edite ou ajuste o texto transcrito aqui..."
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingTranscript(false)}
+                      className="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-xs font-semibold text-slate-300 hover:bg-slate-700"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveEditedText}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white transition shadow-sm"
+                    >
+                      <Save className="h-3.5 w-3.5" />
+                      <span>Salvar Alterações</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl bg-slate-950 p-4 border border-slate-800 text-xs sm:text-sm text-slate-200 leading-relaxed font-sans max-h-60 overflow-y-auto whitespace-pre-line select-text shadow-inner">
+                  {currentTranscript.fullText}
+                </div>
+              )}
             </div>
 
             {/* O QUE VOCÊ DESEJA FAZER COM ESSE TEXTO? */}

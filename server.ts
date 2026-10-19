@@ -13,6 +13,7 @@ import { ZipArchive } from "archiver";
 import { GoogleGenAI, Type } from "@google/genai";
 import { createServer as createViteServer } from "vite";
 import * as cheerio from "cheerio";
+import { sanitizeTranscript, detectRepetitionAnomaly } from "./src/utils/transcriptSanitizer";
 
 const execFileAsync = promisify(execFile);
 
@@ -22,12 +23,20 @@ const app = express();
 const PORT = 3000;
 const isProd = process.env.NODE_ENV === "production";
 
-// Segurança base: headers, CORS restrito e rate-limit
+// Segurança base: headers compatíveis com iFrame do AI Studio, CORS e rate-limit
 app.set("trust proxy", 1);
-app.use(helmet({ crossOriginResourcePolicy: { policy: "same-site" } }));
+app.use(
+  helmet({
+    frameguard: false, // Necessário para permitir visualização no iframe do AI Studio / Web Preview
+    contentSecurityPolicy: false, // Vite HMR, scripts dinâmicos, WebAssembly (@xenova/transformers) e media blobs
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: false,
+  })
+);
 app.use(
   cors({
-    origin: isProd ? false : true,
+    origin: true,
+    credentials: true,
     methods: ["GET", "POST", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     maxAge: 86400,
@@ -36,14 +45,14 @@ app.use(
 
 const generalApiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 300,
+  limit: 600,
   standardHeaders: "draft-7",
   legacyHeaders: false,
   message: { error: "Muitas requisições. Tente novamente em alguns minutos." },
 });
 const heavyApiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 20,
+  limit: 60,
   standardHeaders: "draft-7",
   legacyHeaders: false,
   message: { error: "Limite de operações pesadas atingido. Aguarde alguns minutos." },
@@ -237,8 +246,6 @@ const DEFAULT_MODEL_CHAIN: CandidateModel[] = [
   // 3. GEMINI (Standard Free Tier)
   { provider: "gemini", model: "gemini-2.5-flash", name: "Google Gemini 2.5 Flash", isFree: true },
   { provider: "gemini", model: "gemini-2.5-pro", name: "Google Gemini 2.5 Pro", isFree: true },
-  { provider: "gemini", model: "gemini-2.0-flash", name: "Google Gemini 2.0 Flash", isFree: true },
-  { provider: "gemini", model: "gemini-1.5-flash", name: "Google Gemini 1.5 Flash", isFree: true },
 ];
 
 // Helper to sanitize and parse JSON response
@@ -351,7 +358,7 @@ async function callOpenRouterAPI(apiKey: string, model: string, prompt: string, 
 }
 
 // Call Google Gemini API
-async function callGeminiAPI(apiKey: string, model: string, prompt: string, schema?: any) {
+async function callGeminiAPI(apiKey: string, model: string, prompt: string, schema?: any, systemInstruction?: string) {
   const ai = new GoogleGenAI({
     apiKey: apiKey.trim(),
     httpOptions: {
@@ -365,9 +372,12 @@ async function callGeminiAPI(apiKey: string, model: string, prompt: string, sche
   if (schema) {
     config.responseSchema = schema;
   }
+  if (systemInstruction) {
+    config.systemInstruction = systemInstruction;
+  }
 
   const response = await ai.models.generateContent({
-    model: model || "gemini-3.8-flash",
+    model: model || "gemini-2.5-flash",
     contents: prompt,
     config,
   });
@@ -530,7 +540,7 @@ async function executeWithDynamicFallback(
       if (!geminiKey) continue;
       const startTime = Date.now();
       try {
-        const resultData = await callGeminiAPI(geminiKey, candidate.model, prompt, geminiSchema);
+        const resultData = await callGeminiAPI(geminiKey, candidate.model, prompt, geminiSchema, systemPrompt);
         if (resultData && typeof resultData === "object" && Object.keys(resultData).length > 0) {
           const durationMs = Date.now() - startTime;
           attemptsLogs.push({
@@ -1440,14 +1450,8 @@ function generateAlgorithmicIdeaInterpretation(idea: string, niche?: string, pro
   const cleanIdea = (idea || "").trim();
   const lower = cleanIdea.toLowerCase();
   const isDrivingTest =
-    lower.includes("simulado") ||
-    lower.includes("detran") ||
-    lower.includes("cnh") ||
-    lower.includes("prova") ||
-    lower.includes("habilita") ||
-    lower.includes("reprov") ||
-    lower.includes("autoescola") ||
-    lower.includes("teorica");
+    (lower.includes("detran") || lower.includes("cnh") || lower.includes("autoescola") || lower.includes("primeira habilitação")) &&
+    (lower.includes("prova") || lower.includes("simulado") || lower.includes("reprov"));
 
   if (isDrivingTest) {
     return {
@@ -1455,24 +1459,24 @@ function generateAlgorithmicIdeaInterpretation(idea: string, niche?: string, pro
       strategicObjective: "Alertar sobre o perigo de estudar por simulados genéricos e apresentar o meu simulado como a solução ideal e realista.",
       pointsOfAttentionAndArgumentation: {
         flawedTraditionalMethod: {
-          title: "O problema dos simulados tradicionais (ex: CNH Brasil e apps genéricos)",
-          dangerConcept: "Estudar só por eles é 'dar um tiro no pé'.",
-          stateContextOrStatistic: "Em Minas Gerais e em vários estados, o alto índice de reprovação acontece porque os alunos tiram 29 ou 30 pontos nesses simulados e acham que estão prontos.",
-          hardReality: "Na hora da prova real, a realidade é outra: perguntas muito mais bem elaboradas, pegadinhas e nível de exigência alto, levando à reprovação de quem não se preparou do jeito certo.",
+          title: "O problema dos simulados tradicionais (ex: apps genéricos e desatualizados)",
+          dangerConcept: "Estudar só por opções genéricas é 'dar um tiro no pé'.",
+          stateContextOrStatistic: "Muitos alunos tiram 29 ou 30 pontos nesses simulados fáceis e acham que estão prontos.",
+          hardReality: "Na prova real, pegadinhas e alta exigência causam reprovação de quem treinou fácil.",
         },
         idealSolution: {
-          title: "A Solução (Meu Simulado Calibrado)",
+          title: "A Solução (Simulado Calibrado e Atualizado)",
           coreDifferentiator: "Criado e atualizado com base no nível real das provas recentes, testado e aprovado por diversos alunos.",
         },
         socialProofOrRealCase: {
-          transitionHook: 'Veja o depoimento de uma aluna que já tinha reprovado, estava com medo e apostou no meu simulado.',
-          storySummary: "Nos simulados tradicionais (e até no do próprio Detran), ela tirava 30 pontos. No meu simulado, tirou entre 21 e 22 pontos na véspera. Na prova oficial, passou exatamente com 22 pontos.",
-          caseConclusion: "Isso prova que o meu simulado está perfeitamente alinhado com a dificuldade da prova real.",
-          suggestedAudioClip: 'Inserir trecho de 4 segundos do áudio de depoimento da aluna comemorando a aprovação de primeira.',
+          transitionHook: "Veja o depoimento real de quem já tinha reprovado e apostou no método calibrado.",
+          storySummary: "Tirava nota alta no genérico, testou o simulado real na véspera e passou com folga na prova oficial.",
+          caseConclusion: "Isso comprova o alinhamento com a dificuldade da prova real.",
+          suggestedAudioClip: "Inserir trecho de áudio comemorando a aprovação.",
         },
         dualCta: {
-          callToActionContext: "Se a pessoa quer saber se está realmente preparada para passar de primeira, deve testar um simulado no nível da prova real.",
-          action1Bio: "Clicar no link da bio para se cadastrar agora.",
+          callToActionContext: "Se você quer saber se está realmente preparado para passar de primeira:",
+          action1Bio: "Clicar no link da bio para acessar o simulado agora.",
           action2CommentWord: "Comentar 'QUERO' no vídeo para receber o link direto no privado.",
           keywordTrigger: "QUERO",
         },
@@ -1480,31 +1484,31 @@ function generateAlgorithmicIdeaInterpretation(idea: string, niche?: string, pro
     };
   }
 
-  // Fallback heurístico inteligente para qualquer nicho / produto
+  // Fallback heurístico inteligente e dinâmico para qualquer nicho / produto
   return {
     videoTheme: cleanIdea || `Estratégia de alto impacto para ${niche || "destravar resultados"}`,
-    strategicObjective: `Alertar sobre o erro clássico de confiar em métodos genéricos e posicionar ${productOrOffer || "a metodologia própria"} como a solução realista e de resultado comprovado.`,
+    strategicObjective: `Alertar sobre o erro clássico de seguir métodos superficiais e posicionar ${productOrOffer || "a solução prática recomendada"} como a alternativa com resultados comprovados.`,
     pointsOfAttentionAndArgumentation: {
       flawedTraditionalMethod: {
-        title: `O problema dos métodos e conteúdos genéricos de ${niche || "mercado"}`,
-        dangerConcept: "Seguir apenas fórmulas prontas e superficiais é 'dar um tiro no pé'.",
-        stateContextOrStatistic: "A maioria atinge uma falsa sensação de segurança com testes fáceis e acredita que já está preparada.",
-        hardReality: "Quando o teste prático real chega, as exigências profundas e os detalhes ocultos derrubam quem treinou no modo facilitado.",
+        title: `O erro comum e os métodos genéricos sobre ${cleanIdea || niche || "este tema"}`,
+        dangerConcept: "Seguir apenas fórmulas prontas ou conselhos rasos traz frustração e estagnação.",
+        stateContextOrStatistic: "A maioria atinge uma falsa sensação de segurança inicial, mas não vê resultado prático sustentável.",
+        hardReality: "Quando chega a hora de executar na vida real, os detalhes ignorados impedem o progresso.",
       },
       idealSolution: {
-        title: `A Solução Validada (${productOrOffer || "Método Calibrado"})`,
-        coreDifferentiator: "Desenvolvido e continuamente atualizado com base nas exigências reais mais recentes do mercado, testado e validado.",
+        title: `A Solução Prática (${productOrOffer || "Método Estruturado"})`,
+        coreDifferentiator: "Desenvolvido com foco no que realmente funciona no dia a dia, testado e validado.",
       },
       socialProofOrRealCase: {
-        transitionHook: "Veja o caso real de quem já tinha tentado outras vezes sem sucesso e apostou nesta estrutura.",
-        storySummary: "No método tradicional parecia tudo garantido, mas faltava o alinhamento crítico. Ao testar na véspera com o método calibrado, o resultado foi alcançado exatamente dentro do padrão esperado.",
-        caseConclusion: "Isso comprova que o preparo alinhado com a realidade é o único que traz segurança.",
-        suggestedAudioClip: "Inserir print ou áudio rápido de 3 a 5 segundos comprovando o resultado.",
+        transitionHook: "Veja o que acontece quando você troca a tentativa e erro por um passo a passo estruturado.",
+        storySummary: "Quem aplicava o método convencional demorava semanas sem sair do lugar; ao aplicar a virada prática, o resultado apareceu de forma imediata.",
+        caseConclusion: "Isso comprova que um direcionamento claro faz toda a diferença.",
+        suggestedAudioClip: "Inserir demonstração visual ou depoimento rápido comprovando a eficácia.",
       },
       dualCta: {
-        callToActionContext: "Se você quer ter certeza de que está realmente preparado para o resultado real:",
-        action1Bio: "Clica agora no link da bio para garantir o seu acesso direto.",
-        action2CommentWord: `Comente "QUERO" aqui embaixo para receber o material exclusivo direto no seu privado.`,
+        callToActionContext: "Se você quer destravar de vez e aplicar essa estratégia com segurança:",
+        action1Bio: "Clica agora no link da bio para conferir o material completo.",
+        action2CommentWord: `Comente "QUERO" aqui embaixo para receber as orientações direto no seu privado.`,
         keywordTrigger: "QUERO",
       },
     },
@@ -1524,15 +1528,16 @@ app.post("/api/interpret-idea", async (req, res) => {
     const baselineInterpretation = generateAlgorithmicIdeaInterpretation(idea, niche, productOrOffer);
 
     const systemPrompt = `Você é um renomado estrategista de conteúdo viral e mestre em copywriting persuasivo.
-Sua missão é receber qualquer ideia, comentário, dúvida ou tema bruto do usuário e estruturar um BRIEFING ESTRATÉGICO DE ALTA CONVERSÃO em 5 pilares fundamentais em PORTUGUÊS DO BRASIL:
-1. Tema do Vídeo: O ângulo central de impacto (ex: resposta a um comentário de alguém que reprovou, quebra de mito).
-2. Objetivo Estratégico: O objetivo psicológico e comercial (alertar contra métodos genéricos e ancorar a solução própria realista).
+Sua missão é receber a ideia, dúvida ou tema bruto do usuário e estruturar um BRIEFING ESTRATÉGICO DE ALTA CONVERSÃO em 5 pilares fundamentais em PORTUGUÊS DO BRASIL:
+1. Tema do Vídeo: O ângulo central de impacto (focado 100% no assunto enviado pelo usuário).
+2. Objetivo Estratégico: O objetivo psicológico e comercial (alertar contra erros comuns e ancorar a solução própria).
 3. Pontos de Atenção e Argumentação do Roteiro:
-   - O problema dos simulados/métodos tradicionais: por que estudar por eles é "dar um tiro no pé", a ilusão de notas altas em testes fáceis (29/30) e o choque na prova real cheia de pegadinhas e alta exigência.
-   - A Solução (Meu Simulado / Meu Produto): criado e atualizado com base no nível real das provas recentes, testado e aprovado.
-   - Prova Social / Caso Real: sugestão de transição ("Veja o depoimento de uma aluna que já tinha reprovado..."), história com contraste numérico real (tirava 30 no tradicional, tirou 21-22 no meu e passou com 22 na prova real), conclusão irrefutável e sugestão de áudio.
-   - Chamada para Ação (CTA Dual): Contexto forte + Ação 1 (Link na bio) + Ação 2 (Comentar "QUERO" para receber no privado).
+   - O problema dos métodos tradicionais ou erros comuns (por que o jeito antigo falha e frustra o público).
+   - A Solução (o método/dica/solução prática e seu diferencial).
+   - Prova Social / Caso Real (uma história rápida, contraste numérico ou exemplo que comprova a eficácia).
+   - Chamada para Ação Dual (Contexto forte + Ação 1 no link da bio + Ação 2 comentando palavra-chave).
 
+REGRA FUNDAMENTAL: Você DEVE personalizar 100% dos dados para o tema e nicho do usuário. NUNCA mencione autoescola, Detran ou simulados a menos que a ideia do usuário seja explicitamente sobre isso!
 Você SEMPRE responde estritamente em JSON puro e válido.`;
 
     const prompt = `
@@ -1543,34 +1548,34 @@ IDEIA DO CRIADOR:
 ${idea}
 """
 ${niche ? `- Nicho: ${niche}` : ""}
-${productOrOffer ? `- Produto/Oferta/Simulado: ${productOrOffer}` : ""}
+${productOrOffer ? `- Produto/Oferta/Método: ${productOrOffer}` : ""}
 ${extraDetails ? `- Detalhes Extras: ${extraDetails}` : ""}
 
-Retorne RIGOROSAMENTE neste formato JSON:
+Retorne RIGOROSAMENTE neste formato JSON, totalmente adaptado ao tema acima:
 {
-  "videoTheme": "Tema do Vídeo claro e focado",
+  "videoTheme": "Tema do Vídeo claro e focado no assunto fornecido",
   "strategicObjective": "Objetivo de persuasão e retenção do vídeo",
   "pointsOfAttentionAndArgumentation": {
     "flawedTraditionalMethod": {
-      "title": "O problema dos simulados tradicionais (ex: CNH Brasil / métodos genéricos)",
-      "dangerConcept": "Estudar só por eles é 'dar um tiro no pé'",
-      "stateContextOrStatistic": "Contexto regional ou estatístico de reprovação (ex: em Minas Gerais reprovam porque tiram 29 ou 30 e acham que estão prontos)",
-      "hardReality": "Na hora da prova real, a realidade é outra: perguntas elaboradas e pegadinhas levam à reprovação"
+      "title": "O problema dos métodos tradicionais ou erros comuns sobre o tema",
+      "dangerConcept": "Conceito de perigo, erro ou frustração que as pessoas enfrentam",
+      "stateContextOrStatistic": "Falsa sensação de progresso ou dado que engana o público",
+      "hardReality": "A consequência real de fazer do jeito errado"
     },
     "idealSolution": {
-      "title": "A Solução (Meu Simulado / Método)",
-      "coreDifferentiator": "Criado e atualizado com base no nível real das provas recentes, testado e aprovado"
+      "title": "A Solução Recomendada (Método / Produto / Dica Prática)",
+      "coreDifferentiator": "O diferencial comprovado e a aplicabilidade rápida"
     },
     "socialProofOrRealCase": {
-      "transitionHook": "Veja o depoimento de uma aluna que já tinha reprovado, estava com medo e apostou no meu simulado.",
-      "storySummary": "A história com contraste real: nos simulados tradicionais tirava 30; no meu tirou 21-22 na véspera; na prova oficial passou com 22.",
-      "caseConclusion": "Isso prova que o meu simulado está perfeitamente alinhado com a dificuldade da prova real.",
-      "suggestedAudioClip": "Sugestão de trecho/gancho para áudio de depoimento (ex: áudio de 4 segundos da aluna comemorando aprovação)"
+      "transitionHook": "Gancho de transição introduzindo um caso real ou exemplo",
+      "storySummary": "A história ou exemplo com contraste de antes vs depois com a solução",
+      "caseConclusion": "Conclusão incontestável que valida a eficácia",
+      "suggestedAudioClip": "Sugestão de elemento sonoro ou prova (ex: depoimento, print, som de sucesso)"
     },
     "dualCta": {
-      "callToActionContext": "Se a pessoa quer saber se está realmente preparada para passar de primeira, deve testar um simulado no nível da prova real.",
-      "action1Bio": "Clicar no link da bio para se cadastrar agora.",
-      "action2CommentWord": "Comentar 'QUERO' no vídeo para receber o link direto no privado.",
+      "callToActionContext": "Contexto persuasivo da chamada para ação",
+      "action1Bio": "Ação principal (ex: Clicar no link da bio para conferir)",
+      "action2CommentWord": "Comentar uma palavra-chave para receber no privado",
       "keywordTrigger": "QUERO"
     }
   }
@@ -1739,51 +1744,60 @@ DADOS DA SOLICITAÇÃO:
 ${extraDetails ? `- Detalhes Extras: ${extraDetails}` : ""}
 ${productOrBrand ? `- Marca / Produto: ${productOrBrand}` : ""}
 ${sourceTranscript ? `
-🔥 ESTRATÉGIA OBRIGATÓRIA DE REMODELAGEM DE VÍDEO VIRAL:
-Você está remodelando a fala/áudio original extraída deste vídeo:
+🔥 ESTRATÉGIA OBRIGATÓRIA DE REMODELAGEM DE VÍDEO VIRAL A PARTIR DA TRANSCRIÇÃO:
+Você está remodelando a fala/áudio original extraída deste vídeo de referência:
 """
 ${sourceTranscript}
 """
-${detectedOriginalHook ? `[GANCHO ORIGINAL RECONHECIDO NO VÍDEO]: "${detectedOriginalHook}"` : ""}
+${detectedOriginalHook ? `[GANCHO ORIGINAL RECONHECIDO NO ÁUDIO]: "${detectedOriginalHook}"` : ""}
 
-REGRAS RÍGIDAS DE GANCHOS PARA REMODELAGEM (OBRIGATÓRIO):
-1. GANCHO #1 (hook_1): DEVE COMEÇAR COM EXATAMENTE O MESMO GANCHO ORIGINAL DO VÍDEO (a frase inicial que capturou as visualizações no vídeo original: "${detectedOriginalHook || 'o início da fala'}"). Mantenha as mesmas palavras e o mesmo impacto que fizeram o vídeo viralizar!
-2. DEMAIS GANCHOS (hook_2 até hook_${targetQuantity}): DEVEM MANTER RIGOROSAMENTE A MESMA IDEIA CENTRAL, O MESMO SENTIDO E O MESMO GATILHO DO GANCHO ORIGINAL!
-   - Você pode variar a ordem das palavras, usar sinônimos ou testar pequenas palavras de ênfase ("Presta atenção nisso...", "Olha só isso..."), MAS O SENTIDO E O OBJETIVO DEVEM SER 100% OS MESMOS.
-   - NUNCA invente outro assunto ou promessa diferente para os ganchos. Todas as ${targetQuantity} versões devem partir do mesmo gancho validado!
+REGRAS RÍGIDAS DE REMODELAGEM (100% FIEL AO ÁUDIO):
+1. GANCHOS (HOOKS) [Gere EXATAMENTE ${targetQuantity} variações]:
+   - GANCHO #1 (hook_1): DEVE COMEÇAR COM EXATAMENTE O MESMO GANCHO ORIGINAL DO VÍDEO (a frase inicial que capturou as visualizações no vídeo original: "${detectedOriginalHook || 'o início da fala'}"). Mantenha as mesmas palavras e o mesmo impacto que fizeram o vídeo viralizar!
+   - DEMAIS GANCHOS (hook_2 até hook_${targetQuantity}): DEVEM MANTER RIGOROSAMENTE A MESMA IDEIA CENTRAL, O MESMO SENTIDO E O MESMO GATILHO DO GANCHO ORIGINAL!
+     * Você pode variar a ordem das palavras, usar sinônimos ou testar pequenas palavras de ênfase ("Presta atenção nisso...", "Olha só isso..."), MAS O SENTIDO E O OBJETIVO DEVEM SER 100% OS MESMOS.
+     * NUNCA invente outro assunto ou promessa diferente para os ganchos. Todas as ${targetQuantity} versões devem partir do mesmo gancho validado!
 
-REGRAS PARA O DESENVOLVIMENTO (DORES, SOLUÇÕES E CTAS):
-- Aqui sim você DEVE remodelar o conteúdo: troque palavras, termos e analogias em ${targetQuantity} variações ricas para que o criador possa gravar takes diferentes e testar até ${Math.pow(targetQuantity, 4)} combinações!
-` : ""}
+2. DORES (PAINS) [Gere EXATAMENTE ${targetQuantity} variações]:
+   - Extraia as dores, conflitos, erros comuns, dificuldades ou dúvidas REAIS abordadas NESTA transcrição acima!
+   - Não invente dores de outros assuntos. Foque no problema que o autor do vídeo aborda.
+   - REGRA DO CONECTOR DE ENTRADA OBRIGATÓRIA: TODOS os ${targetQuantity} blocos de Dor DEVEM começar com: "A grande questão é que..."
+
+3. DESENVOLVIMENTO & SOLUÇÕES (SOLUTIONS) [Gere EXATAMENTE ${targetQuantity} variações]:
+   - Extraia a explicação real, o método, o passo a passo ou a virada de chave ensinada NESTA transcrição acima!
+   - Remodele o conteúdo com riqueza de detalhes para que o criador grave takes com ritmo e impacto viral.
+   - REGRA DO CONECTOR DE ENTRADA OBRIGATÓRIA: TODOS os ${targetQuantity} blocos de Solução DEVEM começar com: "E é exatamente por isso que..."
+
+4. CTAS [Gere EXATAMENTE ${targetQuantity} variações]:
+   - Chamada para ação natural alinhada ao encerramento deste vídeo e ao objetivo de ${ctaGoal}.
+   - REGRA DO CONECTOR DE ENTRADA OBRIGATÓRIA: TODOS os ${targetQuantity} blocos de CTA DEVEM começar com: "Então faz o seguinte:..."
+` : `
+🔥 ESTRATÉGIA PARA NOVO ROTEIRO BASEADO NO TEMA:
+Tema Principal: "${topic || "Estratégia Viral"}"
+Nicho: "${niche || "Geral"}"
+
+1. GANCHOS (HOOKS) [Gere EXATAMENTE ${targetQuantity} variações]:
+   - Frases magnéticas de 0-3 segundos baseadas 100% no tema "${topic}".
+2. DORES (PAINS) [Gere EXATAMENTE ${targetQuantity} variações]:
+   - Apresente a dor real, a frustração ou o erro invisível que a audiência enfrenta sobre "${topic}".
+   - Conector obrigatório: "A grande questão é que..."
+3. SOLUÇÕES (SOLUTIONS) [Gere EXATAMENTE ${targetQuantity} variações]:
+   - Apresente a virada de chave, o método em etapas ou a solução prática simplificada para "${topic}".
+   - Conector obrigatório: "E é exatamente por isso que..."
+4. CTAS [Gere EXATAMENTE ${targetQuantity} variações]:
+   - Chamada para ação clara e irresistível alinhada ao objetivo de ${ctaGoal}.
+   - Conector obrigatório: "Então faz o seguinte:..."
+`}
 
 REGRAS DE CONECTORES E INTERCAMBIABILIDADE OBRIGATÓRIAS:
-1. BLOCO 1 - GANCHOS (HOOKS) [Gere EXATAMENTE ${targetQuantity} variações]:
-   - Frases magnéticas que agarram a atenção nos primeiros 3 segundos.
-   - Regra de término: Sintaticamente fechado, termina abrindo a curiosidade sem exigir uma palavra gramatical exata no bloco seguinte.
+- BLOCO 1 - GANCHOS: Frases magnéticas que agarram a atenção nos primeiros 3 segundos.
+- BLOCO 2 - DORES: Todos iniciam com "A grande questão é que..."
+- BLOCO 3 - SOLUÇÕES: Todos iniciam com "E é exatamente por isso que..."
+- BLOCO 4 - CTAS: Todos iniciam com "Então faz o seguinte:..."
 
-2. BLOCO 2 - DORES (PAINS) [Gere EXATAMENTE ${targetQuantity} variações]:
-   - Apresenta a dor real, a frustração ou o erro invisível que a audiência enfrenta.
-   - REGRA DO CONECTOR DE ENTRADA OBRIGATÓRIA: TODOS os ${targetQuantity} blocos de Dor DEVEM começar com EXATAMENTE o mesmo conector contextual: "A grande questão é que..."
-
-3. BLOCO 3 - SOLUÇÕES (SOLUTIONS) [Gere EXATAMENTE ${targetQuantity} variações]:
-   - Apresenta a virada de chave, o método em etapas ou a solução prática simplificada.
-   - REGRA DO CONECTOR DE ENTRADA OBRIGATÓRIA: TODOS os ${targetQuantity} blocos de Solução DEVEM começar com EXATAMENTE o mesmo conector de virada de chave: "E é exatamente por isso que..."
-
-4. BLOCO 4 - CTAS [Gere EXATAMENTE ${targetQuantity} variações]:
-   - Chamada para ação clara e irresistível alinhada ao objetivo de ${ctaGoal}.
-   - REGRA DO CONECTOR DE ENTRADA OBRIGATÓRIA: TODOS os ${targetQuantity} blocos de CTA DEVEM começar com EXATAMENTE o mesmo conector de ação: "Então faz o seguinte:..."
-
-REGRAS DE PROIBIÇÃO E COESÃO:
-- ❌ PROIBIDO iniciar os blocos 2, 3 ou 4 com pronomes relativos ou demonstrativos soltos ("Ele...", "Por causa disso...", "Esse teste...").
-- ❌ PROIBIDO citar cidades ou especificidades regionais desconectadas.
-- ✔️ OBRIGATÓRIO: Nomear a entidade/conceito principal de forma explícita e autônoma em todos os blocos.
-
-🎯 DIRETRIZES DE PERSUASÃO E ARGUMENTAÇÃO DO ROTEIRO (ALTA CONVERSÃO):
-Ao construir a narrativa para qualquer ideia (especialmente temas de simulados, provas, estudos, ou métodos onde pessoas sofrem com opções genéricas):
-1. GANCHOS: Podem abrir respondendo a um comentário de alguém que reprovou ou está frustrado (ex: "Respondendo quem reprovou 5 vezes na prova teórica..."), alerta de choque ou denúncia de armadilha.
-2. DORES: Denuncie que estudar por simulados/métodos tradicionais e genéricos (ex: CNH Brasil) é "dar um tiro no pé". As pessoas tiram 29 ou 30 pontos neles e acham que estão prontas, mas na prova real o nível de exigência e as pegadinhas reprovam quem treinou fácil.
-3. SOLUÇÕES: Apresente o seu simulado/método como a solução criada e atualizada com base no nível real das provas recentes, testada e aprovada. Conecte com prova social / caso real de contraste numérico (tirava 30 no tradicional, tirou 21-22 no meu e passou exatamente com 22 na prova real).
-4. CTAS (CTA DUAL): Feche com CTA de duplo canal: se quer testar o simulado no nível da prova real para passar de primeira, Ação 1 é clicar no link da bio e Ação 2 é comentar "QUERO" para receber direto no direct.
+⚠️ REGRA ABSOLUTA DE ISOLAMENTO DE CONTEXTO (PROIBIDO MISTURAR TEMAS):
+- Todo o roteiro (Ganchos, Dores, Desenvolvimento/Soluções e CTAs) DEVE tratar EXCLUSIVAMENTE sobre "${topic || sourceVideoTitle || "o tema do vídeo"}" e o conteúdo da transcrição fornecida.
+- NUNCA mencione simulados, provas de autoescola, Detran, CNH Brasil ou casos de outros vídeos a não ser que o usuário tenha pedido exatamente isso!
 
 FORMATO DE RETORNO JSON:
 {
@@ -1793,25 +1807,25 @@ FORMATO DE RETORNO JSON:
     "strategicObjective": "Objetivo de persuasão e retenção do vídeo",
     "pointsOfAttentionAndArgumentation": {
       "flawedTraditionalMethod": {
-        "title": "O problema dos simulados tradicionais (ex: CNH Brasil)",
-        "dangerConcept": "Estudar só por eles é 'dar um tiro no pé'",
-        "stateContextOrStatistic": "Alunos tiram 29 ou 30 e acham que estão prontos",
-        "hardReality": "Na prova real, pegadinhas e alta exigência causam reprovação"
+        "title": "O método comum ineficaz sobre este tema",
+        "dangerConcept": "O perigo ou erro invisível que as pessoas cometem",
+        "stateContextOrStatistic": "Falsa sensação de segurança ou detalhe que atrapalha",
+        "hardReality": "A consequência real de fazer do jeito tradicional"
       },
       "idealSolution": {
-        "title": "A Solução (Meu Simulado / Método)",
-        "coreDifferentiator": "Criado e atualizado com base no nível real das provas recentes"
+        "title": "A Solução ou Método Correto",
+        "coreDifferentiator": "O diferencial prático e aplicabilidade imediata"
       },
       "socialProofOrRealCase": {
-        "transitionHook": "Veja o depoimento de uma aluna que já tinha reprovado...",
-        "storySummary": "Tirava 30 no tradicional, tirou 21-22 no meu e passou com 22 na oficial",
-        "caseConclusion": "Isso prova o alinhamento com o nível real da prova",
-        "suggestedAudioClip": "Inserir trecho de áudio da aluna comemorando a aprovação"
+        "transitionHook": "Gancho de transição para exemplo ou caso",
+        "storySummary": "Exemplo prático de antes vs depois com a solução",
+        "caseConclusion": "Conclusão irrefutável que valida a eficácia",
+        "suggestedAudioClip": "Sugestão de elemento sonoro ou prova visual/áudio"
       },
       "dualCta": {
-        "callToActionContext": "Se quer saber se está realmente preparado para passar de primeira...",
-        "action1Bio": "Clicar no link da bio para se cadastrar agora",
-        "action2CommentWord": "Comentar 'QUERO' no vídeo para receber no privado",
+        "callToActionContext": "Contexto persuasivo da chamada para ação",
+        "action1Bio": "Ação no link do perfil ou bio",
+        "action2CommentWord": "Comentar palavra-chave no vídeo",
         "keywordTrigger": "QUERO"
       }
     }
@@ -2126,12 +2140,25 @@ FORMATO DE RETORNO JSON:
       retentionTrigger: "Gatilho de curiosidade e retenção imediata",
     }));
 
+    // Validação de sanidade do strategicBriefing: se o briefing enviado veio de um tema anterior (ex: Detran/CNH) e o tema atual é outro, descartá-lo
+    let validStrategicBriefing = req.body.strategicBriefing;
+    if (validStrategicBriefing && validStrategicBriefing.videoTheme) {
+      const bTheme = String(validStrategicBriefing.videoTheme).toLowerCase();
+      const currTopic = String(topic || sourceVideoTitle || sourceTranscript || "").toLowerCase();
+      const isBriefingDetran = bTheme.includes("detran") || bTheme.includes("cnh") || bTheme.includes("simulado") || bTheme.includes("autoescola");
+      const isTopicDetran = currTopic.includes("detran") || currTopic.includes("cnh") || currTopic.includes("simulado") || currTopic.includes("autoescola") || currTopic.includes("habilita");
+      if (isBriefingDetran && !isTopicDetran) {
+        console.log("Descartando strategicBriefing obsoleto de Detran/CNH pois o tema atual é:", topic || sourceTranscript?.slice(0, 50));
+        validStrategicBriefing = undefined;
+      }
+    }
+
     // Formatted complete script object
     const completeScript = {
       id: "script_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7),
       ...parsed,
       title: parsed.title || baseline.title,
-      strategicBriefing: req.body.strategicBriefing || parsed.strategicBriefing || baseline.strategicBriefing || generateAlgorithmicIdeaInterpretation(topic, niche, productOrBrand),
+      strategicBriefing: validStrategicBriefing || parsed.strategicBriefing || baseline.strategicBriefing || generateAlgorithmicIdeaInterpretation(topic, niche, productOrBrand),
       fourParts,
       hooks: legacyHooks,
       scenes,
@@ -3365,6 +3392,72 @@ Retorne no formato JSON:
         ? `${durationSec}s` 
         : `${Math.floor(durationSec / 60)}m ${durationSec % 60 ? `${durationSec % 60}s` : ''}`.trim();
 
+      // === FFMPEG AUDIO EXTRACTION & NORMALIZATION ===
+      // Converte qualquer vídeo do Instagram (.mp4), TikTok, WebM ou áudio com AAC variável
+      // em uma faixa de áudio PCM mono 16kHz via ffmpeg:
+      // ffmpeg -i input_media -vn -acodec pcm_s16le -ar 16000 -ac 1 output.wav
+      const tempId = `transc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const fileExt = path.extname(fileName || "video.mp4") || ".mp4";
+      const tempInPath = path.join(os.tmpdir(), `${tempId}_input${fileExt}`);
+      const tempWavPath = path.join(os.tmpdir(), `${tempId}_norm.wav`);
+
+      try {
+        fs.writeFileSync(tempInPath, Buffer.from(mediaBase64, "base64"));
+        
+        let ffmpegSuccess = false;
+        try {
+          // Passo Principal Solicitado: Normalização prévia no FFmpeg para PCM mono 16kHz
+          // ffmpeg -i input_media -vn -acodec pcm_s16le -ar 16000 -ac 1 output.wav
+          await execFileAsync("ffmpeg", [
+            "-i", tempInPath,
+            "-vn",
+            "-acodec", "pcm_s16le",
+            "-ar", "16000",
+            "-ac", "1",
+            "-y",
+            tempWavPath
+          ], { timeout: 35000 });
+          ffmpegSuccess = fs.existsSync(tempWavPath) && fs.statSync(tempWavPath).size > 1000;
+        } catch (fErr: any) {
+          console.warn("[transcribe-media] ffmpeg normalização primária falhou, tentando com mapeamento e ganho:", fErr?.message || fErr);
+        }
+
+        if (!ffmpegSuccess) {
+          try {
+            // Passo de Recuperação: Mapeamento de trilha de áudio (Instagram/Reels) com ganho de volume (+6dB)
+            await execFileAsync("ffmpeg", [
+              "-i", tempInPath,
+              "-map", "0:a:0?",
+              "-vn",
+              "-acodec", "pcm_s16le",
+              "-ar", "16000",
+              "-ac", "1",
+              "-af", "volume=2.0",
+              "-y",
+              tempWavPath
+            ], { timeout: 35000 });
+            ffmpegSuccess = fs.existsSync(tempWavPath) && fs.statSync(tempWavPath).size > 1000;
+          } catch (fErr2: any) {
+            console.warn("[transcribe-media] ffmpeg recuperação também falhou:", fErr2?.message || fErr2);
+          }
+        }
+
+        if (ffmpegSuccess) {
+          const wavBuffer = fs.readFileSync(tempWavPath);
+          console.log(`[transcribe-media] Áudio extraído e normalizado via ffmpeg: ${(wavBuffer.length / 1024).toFixed(1)} KB (original: ${(Buffer.byteLength(mediaBase64, "base64") / 1024).toFixed(1)} KB)`);
+          mediaBase64 = wavBuffer.toString("base64");
+          mimeType = "audio/wav";
+          fileName = (fileName || "audio").replace(/\.[^/.]+$/, "") + ".wav";
+        } else {
+          console.warn("[transcribe-media] ffmpeg não gerou WAV válido. Mantendo buffer original como fallback.");
+        }
+      } catch (prepErr: any) {
+        console.warn("[transcribe-media] Falha no pré-processamento ffmpeg:", prepErr.message);
+      } finally {
+        try { if (fs.existsSync(tempInPath)) fs.unlinkSync(tempInPath); } catch {}
+        try { if (fs.existsSync(tempWavPath)) fs.unlinkSync(tempWavPath); } catch {}
+      }
+
       const groqPool = normalizeKeyPool(groqInput, process.env.GROQ_API_KEY);
       console.log(`[transcribe-media] >>> Groq pool size: ${groqPool.length}, Gemini key exists: ${!!process.env.GEMINI_API_KEY?.trim()}`);
       let transcribedText = "";
@@ -3382,6 +3475,8 @@ Retorne no formato JSON:
             formData.append("model", "whisper-large-v3-turbo");
             formData.append("language", "pt");
             formData.append("response_format", "json");
+            formData.append("temperature", "0");
+            formData.append("prompt", "Transcrição fiel em português do Brasil sem repetições de frases.");
 
             const whisperRes = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
               method: "POST",
@@ -3394,7 +3489,8 @@ Retorne no formato JSON:
             if (whisperRes.ok) {
               const whisperData: any = await whisperRes.json();
               if (whisperData.text && whisperData.text.trim()) {
-                transcribedText = whisperData.text.trim();
+                const rawText = whisperData.text.trim();
+                transcribedText = sanitizeTranscript(rawText);
                 usedMethod = `Groq Whisper Turbo (${keyItem.name})`;
                 break;
               }
@@ -3441,6 +3537,9 @@ Retorne no formato JSON:
             id: "transc_" + Date.now(),
             title: analysis.title || fileName || "Gravação de Mídia",
             fullText: transcribedText,
+            transcript: transcribedText,
+            fullTranscript: transcribedText,
+            text: transcribedText,
             summary: analysis.summary || "Conteúdo transcrito com sucesso.",
             keyPoints: analysis.keyPoints || ["Ponto principal identificado"],
             hookIdentified: analysis.hookIdentified || transcribedText.slice(0, 100),
@@ -3457,6 +3556,9 @@ Retorne no formato JSON:
             id: "transc_" + Date.now(),
             title: fileName || "Gravação de Mídia",
             fullText: transcribedText,
+            transcript: transcribedText,
+            fullTranscript: transcribedText,
+            text: transcribedText,
             summary: "Conteúdo transcrito via Groq Whisper.",
             keyPoints: ["Transcrição direta de fala"],
             hookIdentified: transcribedText.slice(0, 100),
@@ -3480,10 +3582,7 @@ Retorne no formato JSON:
         const ai = new GoogleGenAI({ apiKey: geminiKey });
         const candidateAudioModels = [
           "gemini-2.5-flash",
-          "gemini-2.5-flash-lite",
-          "gemini-2.0-flash",
-          "gemini-1.5-flash",
-          "gemini-1.5-pro",
+          "gemini-3.5-transcribe",
         ];
 
         let lastGeminiError: any = null;
@@ -3512,11 +3611,15 @@ Retorne no formato JSON:
 
               const parsed = cleanAndParseJSON(response.text || "{}");
               if (parsed && (parsed.fullText || parsed.transcript || parsed.summary)) {
-                const fullText = parsed.fullText || parsed.transcript || "Fala extraída do áudio.";
+                const rawFull = parsed.fullText || parsed.transcript || "Fala extraída do áudio.";
+                const fullText = sanitizeTranscript(rawFull);
                 const transcriptData = {
                   id: "transc_" + Date.now(),
                   title: parsed.title || fileName || "Gravação de Mídia",
                   fullText,
+                  transcript: fullText,
+                  fullTranscript: fullText,
+                  text: fullText,
                   summary: parsed.summary || "Conteúdo extraído com sucesso.",
                   keyPoints: parsed.keyPoints || ["Ponto 1"],
                   hookIdentified: parsed.hookIdentified || fullText.slice(0, 100),
@@ -3561,6 +3664,77 @@ Retorne no formato JSON:
   } catch (error: any) {
     console.error("[transcribe-media] ERRO GERAL:", error.message);
     res.status(500).json({ error: "Falha ao processar e transcrever mídia." });
+  }
+});
+
+// Endpoint: Higienização e restauração inteligente de transcrições com IA
+app.post("/api/clean-transcript", async (req, res) => {
+  try {
+    const { text, useAi } = req.body || {};
+    if (!text || typeof text !== "string" || !text.trim()) {
+      return res.status(400).json({ error: "O texto da transcrição é obrigatório." });
+    }
+
+    const raw = text.trim();
+    // 1. Limpeza algorítmica instantânea de n-gramas e dígitos repetidos
+    const algorithmicCleaned = sanitizeTranscript(raw);
+    const anomaly = detectRepetitionAnomaly(raw);
+
+    // Se o usuário solicitou explicitamente restauração inteligente com IA
+    if (useAi === true) {
+      const { groqInput, openRouterInput } = extractKeysFromBody(req.body);
+      const systemPrompt = `Você é um especialista em revisão de áudio e fala espontânea em português do Brasil. Sua missão é limpar transcrições imperfeitas geradas por modelos de voz (Whisper).`;
+      const prompt = `A transcrição abaixo foi gerada por um modelo de áudio e contém ruídos de alucinação (frases repetidas em loop como "mas eu vou fazer uma segunda vez" repetido dezenas de vezes, "eu não sei se", sequências de "0.0.0", ou termos foneticamente trocados).
+
+Instruções rigorosas:
+1. Elimine TODOS os loops de repetição de frases, palavras e dígitos.
+2. Corrija foneticamente palavras que o modelo de áudio errou em português (exemplo: se o locutor fala de simulado para a prova do Detran / CNH / habilitação, corrija palavras truncadas como "simular do que você é negar Brasil" -> "simulado do Detran Brasil", "não querorvar" -> "não quer reprovar").
+3. Mantenha 100% da mensagem real, dos argumentos e do tom original falado pelo autor. NÃO resuma, preserve a fala completa e natural.
+4. Pontue e formate em parágrafos legíveis.
+
+Texto com ruídos:
+"""
+${algorithmicCleaned}
+"""
+
+Retorne estritamente um objeto JSON com a propriedade "cleanedText":
+{
+  "cleanedText": "texto transcrito e corrigido de forma limpa, natural e sem repetições em português"
+}`;
+
+      try {
+        const { data } = await executeWithDynamicFallback(
+          groqInput,
+          openRouterInput,
+          prompt,
+          systemPrompt
+        );
+        if (data && data.cleanedText && data.cleanedText.trim().length > 15) {
+          const finalClean = sanitizeTranscript(data.cleanedText.trim());
+          return res.json({
+            cleanedText: finalClean,
+            originalLength: raw.length,
+            cleanedLength: finalClean.length,
+            usedAi: true,
+            hasAnomaly: anomaly.hasAnomaly,
+          });
+        }
+      } catch (aiErr) {
+        console.warn("[/api/clean-transcript] AI cleanup fallback acionado:", aiErr);
+      }
+    }
+
+    // Retorna a limpeza algorítmica instantânea
+    return res.json({
+      cleanedText: algorithmicCleaned,
+      originalLength: raw.length,
+      cleanedLength: algorithmicCleaned.length,
+      usedAi: false,
+      hasAnomaly: anomaly.hasAnomaly,
+    });
+  } catch (error: any) {
+    console.error("[/api/clean-transcript] Erro:", error);
+    res.status(500).json({ error: error.message || "Falha ao limpar transcrição." });
   }
 });
 
@@ -3947,24 +4121,39 @@ app.post("/api/download-media", async (req, res) => {
         "-i", videoOutPath,
         "-ar", "16000",
         "-ac", "1",
+        "-c:a", "pcm_s16le",
+        "-af", "volume=1.8,highpass=f=100,lowpass=f=3800",
         "-vn",
         "-y",
         audioOutPath,
-      ], { timeout: 30000 });
+      ], { timeout: 35000 }).catch(async () => {
+        // Fallback direto sem filtro
+        await execFileAsync("ffmpeg", [
+          "-i", videoOutPath,
+          "-ar", "16000",
+          "-ac", "1",
+          "-c:a", "pcm_s16le",
+          "-vn",
+          "-y",
+          audioOutPath,
+        ], { timeout: 30000 });
+      });
 
       if (fs.existsSync(audioOutPath) && fs.statSync(audioOutPath).size > 1000) {
         // 6.1 Tentativa com Groq Whisper gratuito
         const groqPool = normalizeKeyPool(groqInput, process.env.GROQ_API_KEY);
-        for (const key of groqPool) {
+        for (const keyItem of groqPool) {
           try {
+            const keyStr = typeof keyItem === 'object' && keyItem?.key ? keyItem.key.trim() : String(keyItem).trim();
             const audioBuffer = fs.readFileSync(audioOutPath);
             const boundary = "----WebKitFormBoundary" + Math.random().toString(36).substring(2);
             const formDataParts = [
               `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="audio.wav"\r\nContent-Type: audio/wav\r\n\r\n`,
               audioBuffer,
-              `\r\n--${boundary}\r\nContent-Disposition: form-data; name="model"\r\n\r\nwhisper-large-v3\r\n`,
+              `\r\n--${boundary}\r\nContent-Disposition: form-data; name="model"\r\n\r\nwhisper-large-v3-turbo\r\n`,
               `--${boundary}\r\nContent-Disposition: form-data; name="response_format"\r\n\r\njson\r\n`,
               `--${boundary}\r\nContent-Disposition: form-data; name="language"\r\n\r\npt\r\n`,
+              `--${boundary}\r\nContent-Disposition: form-data; name="temperature"\r\n\r\n0\r\n`,
               `--${boundary}--\r\n`,
             ];
 
@@ -3974,7 +4163,7 @@ app.post("/api/download-media", async (req, res) => {
             const groqRes = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
               method: "POST",
               headers: {
-                Authorization: `Bearer ${key}`,
+                Authorization: `Bearer ${keyStr}`,
                 "Content-Type": `multipart/form-data; boundary=${boundary}`,
               },
               body: fullBody,
@@ -3983,7 +4172,7 @@ app.post("/api/download-media", async (req, res) => {
             if (groqRes.ok) {
               const groqData = await groqRes.json();
               if (groqData.text) {
-                extractedTranscript = groqData.text.trim();
+                extractedTranscript = sanitizeTranscript(groqData.text.trim());
                 console.log(`[download-media] Áudio transcrito com Groq Whisper gratuito (${extractedTranscript.length} chars)`);
                 break;
               }

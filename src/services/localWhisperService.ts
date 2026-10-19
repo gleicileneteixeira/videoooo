@@ -1,6 +1,8 @@
 import { extractAudioFloat32Mono } from '../utils/audioExtractor';
+import { sanitizeTranscript, detectRepetitionAnomaly } from '../utils/transcriptSanitizer';
 
 export type WhisperModelId =
+  | 'cloud'
   | 'Xenova/whisper-tiny'
   | 'Xenova/whisper-base'
   | 'Xenova/whisper-small'
@@ -92,31 +94,39 @@ export class LocalWhisperService {
 
     onProgress?.(60, 'Transcrevendo áudio via WebAssembly (sem IA externa / 100% gratuito)...');
 
-    // 3. Executa a transcrição
+    // 3. Executa a transcrição com parâmetros reforçados contra loops e alucinações
     const output = await transcriber(samples, {
       chunk_length_s: 30,
       stride_length_s: 5,
       language: 'portuguese',
       task: 'transcribe',
       return_timestamps: false,
+      condition_on_previous_text: false,
+      repetition_penalty: 1.3,
+      no_repeat_ngram_size: 4,
+      temperature: 0,
     });
 
     if (signal?.aborted) throw new Error('Operacao cancelada pelo usuario.');
 
-    onProgress?.(100, 'Transcrição local concluída com sucesso!');
+    onProgress?.(95, 'Higienizando transcrição e removendo possíveis ruídos...');
 
-    const text = typeof output?.text === 'string' ? output.text.trim() : '';
-    return text;
+    const rawText = typeof output?.text === 'string' ? output.text.trim() : '';
+    // Higienização algorítmica profunda contra repetições infinitas
+    const cleanedText = sanitizeTranscript(rawText);
+
+    onProgress?.(100, 'Transcrição local concluída com sucesso!');
+    return cleanedText;
   }
 
   /**
    * Método universal de transcrição:
-   * Tenta primeiro a biblioteca local WebAssembly (Xenova Whisper) para CUSTO ZERO.
-   * Se o navegador do usuário falhar por limitação de hardware/memória, usa o fallback gratuito do servidor.
+   * Suporta modo 'cloud' direto (Whisper Large v3 / Gemini no servidor - alta fidelidade)
+   * ou biblioteca local WebAssembly (Xenova Whisper) para CUSTO ZERO.
    */
   static async transcribeFile(
     file: File | Blob,
-    model: WhisperModelId = 'Xenova/whisper-tiny',
+    model: WhisperModelId = 'cloud',
     onProgress?: (pct: number, msg: string) => void,
     signal?: AbortSignal,
     forceServerFallback = false
@@ -125,12 +135,19 @@ export class LocalWhisperService {
       throw new Error('Operacao cancelada pelo usuario.');
     }
 
-    if (!forceServerFallback) {
+    const shouldUseServer = forceServerFallback || model === 'cloud';
+
+    if (!shouldUseServer) {
       try {
         console.log('[LocalWhisperService] Iniciando transcrição com biblioteca local gratuita Transformers.js...');
         const localText = await this.transcribeLocal(file, model, onProgress, signal);
         if (localText && localText.trim().length > 0) {
-          return localText;
+          // Se o texto local estiver íntegro, retorna
+          const anomaly = detectRepetitionAnomaly(localText);
+          if (!anomaly.hasAnomaly) {
+            return localText;
+          }
+          console.warn('[LocalWhisperService] Anomalia de repetição detectada no Whisper local. Alternando para o canal de precisão do servidor...');
         }
       } catch (localErr: any) {
         if (localErr?.message === 'Operacao cancelada pelo usuario.') {
@@ -167,10 +184,12 @@ export class LocalWhisperService {
       onProgress?.(100, 'Transcrição concluída!');
 
       return (
+        data.fullText ||
         data.fullTranscript ||
         data.transcript ||
         data.text ||
         data.sourceText ||
+        data.summary ||
         ''
       ).trim();
     } catch (err: any) {
@@ -223,10 +242,12 @@ export class LocalWhisperService {
     onProgress?.(100, 'Transcrição concluída!');
 
     return (
+      data.fullText ||
       data.fullTranscript ||
       data.transcript ||
       data.text ||
       data.sourceText ||
+      data.summary ||
       ''
     ).trim();
   }

@@ -26,7 +26,14 @@ export async function extractAudioFloat32Mono(
   const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
   const audioCtx = new AudioCtxClass();
 
-  const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+  let audioBuffer: AudioBuffer;
+  try {
+    audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+  } catch (decodeErr: any) {
+    throw new Error(
+      'Navegador não conseguiu decodificar o contêiner de áudio diretamente. Alternando para o canal de precisão do servidor com ffmpeg...'
+    );
+  }
   const numChannels = audioBuffer.numberOfChannels;
   let monoSamples: Float32Array;
 

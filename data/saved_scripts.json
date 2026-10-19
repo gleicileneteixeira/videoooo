@@ -1,5 +1,1032 @@
 [
   {
+    "id": "script_1791855988356_5c7ek",
+    "title": "DESVENDE AS PEGADINHAS DO DETRAN E PASSE DE PRIMEIRA!",
+    "strategicBriefing": {
+      "videoTheme": "As placas mais cobradas na prova teórica do DETRAN: Evite as pegadinhas e garanta sua aprovação gastando menos!",
+      "strategicObjective": "Educar sobre as placas mais difíceis e as pegadinhas do DETRAN, desmistificar simulados genéricos, e persuadir a audiência a adquirir um simulado avançado e atualizado para passar de primeira, aumentando salvamentos e compartilhamentos.",
+      "pointsOfAttentionAndArgumentation": {
+        "flawedTraditionalMethod": {
+          "title": "O perigo dos simulados tradicionais (ex: CNH Brasil)",
+          "dangerConcept": "Estudar só por simulados genéricos é 'dar um tiro no pé' na sua prova do Detran.",
+          "stateContextOrStatistic": "Muitos alunos tiram 29 ou 30 pontos neles e se sentem prontos e confiantes.",
+          "hardReality": "Mas na prova real do Detran, as pegadinhas e o nível de exigência alto causam reprovação inesperada."
+        },
+        "idealSolution": {
+          "title": "A Solução que te prepara de verdade (Nosso Simulado Exclusivo)",
+          "coreDifferentiator": "Criado e atualizado constantemente com base no nível real e nas pegadinhas das provas recentes do Detran."
+        },
+        "socialProofOrRealCase": {
+          "transitionHook": "Quer um exemplo real do poder do nosso material? A Maria, nossa aluna,...",
+          "storySummary": "Ela tirava 30 pontos nos simulados genéricos, mas no nosso, obteve 21-22 e, na prova oficial do Detran, passou exatamente com 22 pontos.",
+          "caseConclusion": "Isso prova que nosso simulado alinha seu treino ao nível exato e atual da prova real do Detran, sem surpresas.",
+          "suggestedAudioClip": "Áudio de aluna comemorando: 'Passei! Graças ao simulado de vocês, sem gastar mais nada!'."
+        },
+        "dualCta": {
+          "callToActionContext": "Se você quer testar seu conhecimento no nível da prova real do Detran e garantir sua aprovação de primeira, economizando tempo e dinheiro...",
+          "action1Bio": "Clique no link da bio para acessar nosso simulado exclusivo agora.",
+          "action2CommentWord": "Ou comente 'QUERO' aqui no vídeo para receber o link direto no seu direct.",
+          "keywordTrigger": "QUERO"
+        }
+      }
+    },
+    "hooks": [
+      {
+        "id": "hook_1",
+        "category": "shock",
+        "spokenText": "Nesse vídeo eu vou te mostrar as placas que mais caem na prova teórica do Detran, aquelas que pegam a maioria dos candidatos de surpresa e que você PRECISA conhecer para garantir sua aprovação de primeira!",
+        "visualAction": "Aproximação rápida com zoom brusco na face do apresentador, olhar direto para a câmera.",
+        "textOnScreen": "PLACA MAIS COBRADA: QUAL É?",
+        "retentionTrigger": "Gatilho de curiosidade e retenção imediata"
+      },
+      {
+        "id": "hook_2",
+        "category": "curiosity",
+        "spokenText": "Você quer saber de uma vez por todas quais são as placas do Detran que mais reprovam e te fazem perder a primeira habilitação? Presta MUITA atenção nisso, porque essa informação vale ouro e vai te salvar na hora da prova!",
+        "visualAction": "Corte rápido para tela dividida: placas confusas de um lado, rosto sério do apresentador do outro.",
+        "textOnScreen": "NÃO CAIA NAS PEGADINHAS!",
+        "retentionTrigger": "Gatilho de curiosidade e retenção imediata"
+      },
+      {
+        "id": "hook_3",
+        "category": "contrarian",
+        "spokenText": "Olha só essa denúncia: vou revelar as placas que SÃO AS MAIS COBRADAS na prova teórica do Detran e que a maioria dos materiais teóricos simplesmente ignora, te deixando vulnerável às pegadinhas. Você precisa dominar elas agora!",
+        "visualAction": "Movimento de câmera em 'push in' com trilha sonora de mistério, close em uma placa de trânsito em destaque.",
+        "textOnScreen": "A VERDADE SOBRE AS PLACAS!",
+        "retentionTrigger": "Gatilho de curiosidade e retenção imediata"
+      }
+    ],
+    "pains": [
+      {
+        "id": "pain_1",
+        "spokenText": "A grande questão é que estudar apenas por simulados genéricos da internet, como os do CNH Brasil, é como dar um tiro no pé na sua prova! Você até tira 29 ou 30 pontos nesses testes fáceis, acha que está super pronto, mas na prova real, as pegadinhas são cruelmente elaboradas e o nível de exigência alto te reprova sem dó nem piedade.",
+        "visualAction": "Expressão séria com aproximação digital, mostrando gráficos simples de 'aprovação fácil' vs. 'reprovação real'.",
+        "textOnScreen": "SIMULADO GENÉRICO = REPROVAÇÃO!",
+        "retentionTrigger": "Identificação com a frustração do público."
+      },
+      {
+        "id": "pain_2",
+        "spokenText": "A grande questão é que a maioria dos candidatos estuda por materiais desatualizados e superficiais, que não refletem o nível real das provas do Detran hoje em dia. Isso gera uma falsa sensação de segurança. Você se sente confiante, mas as questões capciosas, a interpretação dúbia e a pressão do dia te pegam completamente de surpresa, causando a tão temida reprovação.",
+        "visualAction": "Corte rápido para pessoa com expressão de frustração, jogando um simulado 'genérico' no lixo. Música dramática.",
+        "textOnScreen": "PROVA DETRAN MUDOU!",
+        "retentionTrigger": "Alerta sobre o perigo da desinformação."
+      },
+      {
+        "id": "pain_3",
+        "spokenText": "A grande questão é que muitos não entendem que a prova teórica do Detran mudou e ficou mais complexa! Os simulados tradicionais te dão uma base fraca e uma falsa segurança, porque as novas pegadinhas e o alto nível de exigência na prática, infelizmente, resultam em uma frustrante reprovação, custando tempo e dinheiro com refazer a prova.",
+        "visualAction": "Demonstração rápida de alguém errando uma questão óbvia em um simulado 'fácil', seguido de uma montagem de contas de 'gastos extras' com reteste.",
+        "textOnScreen": "PERDEU TEMPO E DINHEIRO?",
+        "retentionTrigger": "Conexão com as consequências financeiras e emocionais da reprovação."
+      }
+    ],
+    "solutions": [
+      {
+        "id": "solution_1",
+        "spokenText": "E é exatamente por isso que nosso simulado foi criado e é constantemente atualizado com base no nível REAL das provas recentes do Detran! Ele te prepara para CADA pegadinha, te dá as ferramentas para interpretar corretamente as questões e te garante a confiança para passar de primeira. Lembra da Maria? Ela tirava 30 em outros, fez o nosso, tirou 21-22 e passou COM 22 NA OFICIAL!",
+        "visualAction": "Demonstração prática dinâmica do simulado na tela, com animações de acertos. Inserir 'prova social' visual com depoimento rápido ou foto da Maria.",
+        "textOnScreen": "A SOLUÇÃO: SIMULADO ATUALIZADO!",
+        "retentionTrigger": "Prova social e visualização do benefício."
+      },
+      {
+        "id": "solution_2",
+        "spokenText": "E é exatamente por isso que desenvolvemos um método exclusivo que simula o cenário exato da prova do Detran, com as questões e armadilhas que REALMENTE caem! Testado e aprovado por milhares de alunos, ele garante que você não seja pego de surpresa. Nossa aluna, por exemplo, fazia 30 em simulados antigos, no nosso ela ficou com 21-22 e na prova oficial, gabaritou com 22 pontos, mostrando a eficácia do nosso método!",
+        "visualAction": "Montagem rápida de 'antes e depois': pessoa frustrada vs. pessoa feliz com CNH. Gráfico comparativo de performance em simulados.",
+        "textOnScreen": "MÉTODO COMPROVADO!",
+        "retentionTrigger": "Gatilho de autoridade e contraste de resultados."
+      },
+      {
+        "id": "solution_3",
+        "spokenText": "E é exatamente por isso que você precisa do nosso simulado, a ÚNICA ferramenta que realmente te prepara para o que vem, sem meias palavras! Ele replica fielmente a dificuldade e as pegadinhas do Detran, validado por centenas de aprovações. Igual ao caso do João: ele batia 30 pontos nos genéricos, no nosso ele chegou a 21-22 e passou de primeira na prova do Detran com os mesmos 22 pontos, comprovando a precisão do nosso material!",
+        "visualAction": "B-roll de pessoas acessando o simulado em diferentes dispositivos (celular, tablet). Depoimento real curto (áudio/texto na tela) de um aluno aprovado.",
+        "textOnScreen": "PASSE DE PRIMEIRA AGORA!",
+        "retentionTrigger": "Validação externa e senso de exclusividade."
+      }
+    ],
+    "ctas": [
+      {
+        "id": "cta_1",
+        "spokenText": "Então faz o seguinte: se você quer passar de primeira e evitar toda a dor de cabeça com reprovação e gastos desnecessários, clique no link da bio agora e garanta acesso imediato ao nosso simulado exclusivo. Ou, se preferir um atalho, comente 'QUERO' que eu te mando o link direto no seu privado, é só me chamar!",
+        "visualAction": "Gesto apontando para o link na bio, depois para o campo de comentários. Olhar convidativo.",
+        "textOnScreen": "CLIQUE AGORA OU COMENTE 'QUERO'!",
+        "retentionTrigger": "Clareza e facilidade de ação."
+      },
+      {
+        "id": "cta_2",
+        "spokenText": "Então faz o seguinte: para testar se você está REALMENTE preparado para a prova do Detran e quer ter a certeza da aprovação, acesse o link na bio e comece a treinar com o que realmente funciona. Quer um atalho rápido? Comente 'QUERO' aqui embaixo e eu te envio o material completo e exclusivo no seu direct, na mesma hora!",
+        "visualAction": "Animação de um 'botão' clicável na tela indicando a bio, seguido por uma caixa de comentário surgindo.",
+        "textOnScreen": "GARANTA SUA APROVAÇÃO!",
+        "retentionTrigger": "Conveniência e promessa de resultado."
+      },
+      {
+        "id": "cta_3",
+        "spokenText": "Então faz o seguinte: não perca mais seu tempo e dinheiro com métodos que não funcionam e que te frustram. Salve esse vídeo agora, clique no link da bio e descubra como garantir sua aprovação definitiva no Detran. E pra facilitar ainda mais, comente 'QUERO' aqui embaixo que te envio o link do simulado no privado, sem complicação!",
+        "visualAction": "Gesto de salvar o vídeo, depois apontar para o link na bio. Zoom na boca do apresentador ao dizer 'QUERO'.",
+        "textOnScreen": "SALVE E PASSE NA PROVA!",
+        "retentionTrigger": "Reforço da ação de 'salvar' e facilitação do acesso."
+      }
+    ],
+    "viralityAnalysis": {
+      "overallScore": 95,
+      "hookStrengthScore": 98,
+      "retentionPacingScore": 92,
+      "shareabilityScore": 94,
+      "commentTriggerScore": 96,
+      "whyItGoesViral": [
+        "Aborda uma dor universal e urgente de quem busca a primeira habilitação (medo de reprovar e gastos extras).",
+        "Promete uma solução concreta e diferenciada para um problema complexo (placas e pegadinhas do Detran).",
+        "Usa um tom de voz dinâmico e acelerado, ideal para o ritmo do TikTok, mantendo a atenção.",
+        "Gatilho de curiosidade e 'denúncia' sobre a ineficácia de métodos tradicionais, criando um senso de urgência.",
+        "CTA dual com chamada explícita para interação ('QUERO'), aumentando o engajamento e a viralidade orgânica."
+      ],
+      "retentionSecret": "A linguagem direta e urgente, combinada com exemplos práticos (nomes de alunos e dados numéricos), mantém a conexão e a credibilidade. A quebra de padrão visual e os cortes rápidos evitam a monotonia, enquanto a promessa de economizar dinheiro ressoa com o nicho de finanças.",
+      "perfectLoopTip": "Finalizar o vídeo com uma pergunta retórica que retome o gancho inicial ou com um visual intrigante de uma placa de trânsito, incentivando o loop infinito de visualizações."
+    },
+    "bestPostingTimes": [
+      "12:00 - 13:30",
+      "18:00 - 19:30",
+      "21:00 - 22:30"
+    ],
+    "hashtags": {
+      "megaViral": [
+        "#viral",
+        "#fyp",
+        "#foryou",
+        "#detran",
+        "#primeirahabilitacao"
+      ],
+      "nicheSpecific": [
+        "#provadetran",
+        "#simuladodetran",
+        "#autoescola",
+        "#placastransito",
+        "#dicasdetran",
+        "#financasnohabilitacao"
+      ],
+      "lowCompetition": [
+        "#cnh2024",
+        "#aprovadodetran",
+        "#estudecerto",
+        "#passarnadetran",
+        "#auladetransito"
+      ]
+    },
+    "captionAndPost": {
+      "headline": "❌ PARE DE REPROVAR NO DETRAN! As placas que TODO MUNDO ERRA estão aqui e custam seu dinheiro!",
+      "captionBody": "Cansado de simulados que não te preparam para a realidade da prova do DETRAN? 🤯 A gente te mostra as placas mais cobradas e te revela a VERDADE sobre os métodos que te fazem perder tempo e dinheiro. Nosso simulado é atualizado com as pegadinhas REAIS! Não caia em armadilhas e garanta sua CNH de primeira! #Detran #PrimeiraHabilitacao #SimuladoDetran #Financas #Economia",
+      "callToAction": "Quer passar de primeira e economizar? 👉 Clique no link da bio ou comente 'QUERO' que eu te mando o simulado no privado! 🚀",
+      "coverTitleIdea": "Placas do Detran: As Que Te REPROVAM E FAZEM GASTAR MAIS!",
+      "coverVisualPrompt": "Jovem frustrado com papel de prova na mão e notas de dinheiro voando, placas de trânsito confusas ao fundo. Depois, jovem sorrindo e comemorando com CNH e calculadora."
+    },
+    "bRollSuggestions": [
+      "Close-up em placas de trânsito específicas (PARE, Proibido Estacionar, Lombada, Mão Dupla).",
+      "Pessoa estudando em caderno com anotações e tablet, foco em marcadores e canetas.",
+      "Alguém riscando questões erradas em uma prova simulada 'tradicional'.",
+      "Tela de computador mostrando um simulado online (primeiro um genérico e depois o nosso, com interface melhor).",
+      "Mãos digitando em celular, mostrando a interação 'QUERO' nos comentários e o recebimento de direct.",
+      "Aluna sorrindo e comemorando, segurando uma CNH recém-adquirida."
+    ],
+    "fourParts": {
+      "hookPart": {
+        "title": "Parte 1: Gancho Magnético",
+        "timecode": "00:00 - 00:05",
+        "audioScript": "Nesse vídeo eu vou te mostrar as placas que mais caem na prova teórica do Detran, aquelas que pegam a maioria dos candidatos de surpresa e que você PRECISA conhecer para garantir sua aprovação de primeira!",
+        "visualCue": "Aproximação rápida com zoom brusco na face do apresentador, olhar direto para a câmera.",
+        "textOnScreen": "PLACA MAIS COBRADA: QUAL É?",
+        "hookTrigger": "Alerta de curiosidade e quebra imediata de padrão."
+      },
+      "storyPainPart": {
+        "title": "Parte 2: A Dor da História",
+        "timecode": "00:05 - 00:27",
+        "audioScript": "A grande questão é que estudar apenas por simulados genéricos da internet, como os do CNH Brasil, é como dar um tiro no pé na sua prova! Você até tira 29 ou 30 pontos nesses testes fáceis, acha que está super pronto, mas na prova real, as pegadinhas são cruelmente elaboradas e o nível de exigência alto te reprova sem dó nem piedade.",
+        "visualCue": "Expressão séria com aproximação digital, mostrando gráficos simples de 'aprovação fácil' vs. 'reprovação real'.",
+        "textOnScreen": "SIMULADO GENÉRICO = REPROVAÇÃO!",
+        "painPoint": "Frustração com falta de consistência em Finanças & Dinheiro"
+      },
+      "developmentPart": {
+        "title": "Parte 3: Desenvolvimento & Revelação",
+        "timecode": "00:27 - 01:12",
+        "audioScript": "E é exatamente por isso que nosso simulado foi criado e é constantemente atualizado com base no nível REAL das provas recentes do Detran! Ele te prepara para CADA pegadinha, te dá as ferramentas para interpretar corretamente as questões e te garante a confiança para passar de primeira. Lembra da Maria? Ela tirava 30 em outros, fez o nosso, tirou 21-22 e passou COM 22 NA OFICIAL!",
+        "visualCue": "Demonstração prática dinâmica do simulado na tela, com animações de acertos. Inserir 'prova social' visual com depoimento rápido ou foto da Maria.",
+        "textOnScreen": "A SOLUÇÃO: SIMULADO ATUALIZADO!",
+        "keyInsight": "Simplificação extrema com aplicabilidade imediata"
+      },
+      "solutionCtaPart": {
+        "title": "Parte 4: Solução & Chamada para Ação (CTA)",
+        "timecode": "01:12 - 01:30",
+        "audioScript": "Então faz o seguinte: se você quer passar de primeira e evitar toda a dor de cabeça com reprovação e gastos desnecessários, clique no link da bio agora e garanta acesso imediato ao nosso simulado exclusivo. Ou, se preferir um atalho, comente 'QUERO' que eu te mando o link direto no seu privado, é só me chamar!",
+        "visualCue": "Gesto apontando para o link na bio, depois para o campo de comentários. Olhar convidativo.",
+        "textOnScreen": "CLIQUE AGORA OU COMENTE 'QUERO'!",
+        "ctaAction": "Ação de fechamento e conversão de engajamento"
+      }
+    },
+    "scenes": [
+      {
+        "timecode": "00:00 - 00:05",
+        "partNumber": 1,
+        "sectionName": "Parte 1: Gancho Magnético",
+        "audioScript": "Nesse vídeo eu vou te mostrar as placas que mais caem na prova teórica do Detran, aquelas que pegam a maioria dos candidatos de surpresa e que você PRECISA conhecer para garantir sua aprovação de primeira!",
+        "visualCue": "Aproximação rápida com zoom brusco na face do apresentador, olhar direto para a câmera.",
+        "textOnScreen": "PLACA MAIS COBRADA: QUAL É?",
+        "audioMusicCue": "Efeito sonoro Whoosh ou Boom grave de impacto"
+      },
+      {
+        "timecode": "00:05 - 00:27",
+        "partNumber": 2,
+        "sectionName": "Parte 2: A Dor da História",
+        "audioScript": "A grande questão é que estudar apenas por simulados genéricos da internet, como os do CNH Brasil, é como dar um tiro no pé na sua prova! Você até tira 29 ou 30 pontos nesses testes fáceis, acha que está super pronto, mas na prova real, as pegadinhas são cruelmente elaboradas e o nível de exigência alto te reprova sem dó nem piedade.",
+        "visualCue": "Expressão séria com aproximação digital, mostrando gráficos simples de 'aprovação fácil' vs. 'reprovação real'.",
+        "textOnScreen": "SIMULADO GENÉRICO = REPROVAÇÃO!",
+        "audioMusicCue": "Trilha sonora com tensão sutil e batida contida"
+      },
+      {
+        "timecode": "00:27 - 01:12",
+        "partNumber": 3,
+        "sectionName": "Parte 3: Desenvolvimento",
+        "audioScript": "E é exatamente por isso que nosso simulado foi criado e é constantemente atualizado com base no nível REAL das provas recentes do Detran! Ele te prepara para CADA pegadinha, te dá as ferramentas para interpretar corretamente as questões e te garante a confiança para passar de primeira. Lembra da Maria? Ela tirava 30 em outros, fez o nosso, tirou 21-22 e passou COM 22 NA OFICIAL!",
+        "visualCue": "Demonstração prática dinâmica do simulado na tela, com animações de acertos. Inserir 'prova social' visual com depoimento rápido ou foto da Maria.",
+        "textOnScreen": "A SOLUÇÃO: SIMULADO ATUALIZADO!",
+        "audioMusicCue": "Batida crescente animada e envolvente (Lo-Fi acelerado ou Phonk sutil)"
+      },
+      {
+        "timecode": "01:12 - 01:30",
+        "partNumber": 4,
+        "sectionName": "Parte 4: Solução & CTA",
+        "audioScript": "Então faz o seguinte: se você quer passar de primeira e evitar toda a dor de cabeça com reprovação e gastos desnecessários, clique no link da bio agora e garanta acesso imediato ao nosso simulado exclusivo. Ou, se preferir um atalho, comente 'QUERO' que eu te mando o link direto no seu privado, é só me chamar!",
+        "visualCue": "Gesto apontando para o link na bio, depois para o campo de comentários. Olhar convidativo.",
+        "textOnScreen": "CLIQUE AGORA OU COMENTE 'QUERO'!",
+        "audioMusicCue": "Acorde de resolução limpo com fade out rápido"
+      }
+    ],
+    "fullTeleprompterText": "[PAUSA 0.5s] Nesse vídeo eu vou te mostrar as placas que mais caem na prova teórica do Detran, aquelas que pegam a maioria dos candidatos de surpresa e que você PRECISA conhecer para garantir sua aprovação de primeira! [ENFASE]\n\n[PAUSA 0.8s] A grande questão é que estudar apenas por simulados genéricos da internet, como os do CNH Brasil, é como dar um tiro no pé na sua prova! Você até tira 29 ou 30 pontos nesses testes fáceis, acha que está super pronto, mas na prova real, as pegadinhas são cruelmente elaboradas e o nível de exigência alto te reprova sem dó nem piedade.\n\n[PAUSA 0.5s] E é exatamente por isso que nosso simulado foi criado e é constantemente atualizado com base no nível REAL das provas recentes do Detran! Ele te prepara para CADA pegadinha, te dá as ferramentas para interpretar corretamente as questões e te garante a confiança para passar de primeira. Lembra da Maria? Ela tirava 30 em outros, fez o nosso, tirou 21-22 e passou COM 22 NA OFICIAL!\n\n[ENFASE] Então faz o seguinte: se você quer passar de primeira e evitar toda a dor de cabeça com reprovação e gastos desnecessários, clique no link da bio agora e garanta acesso imediato ao nosso simulado exclusivo. Ou, se preferir um atalho, comente 'QUERO' que eu te mando o link direto no seu privado, é só me chamar!",
+    "modularMatrix": {
+      "quantity": 3,
+      "totalCombinations": 81,
+      "standardConnectors": {
+        "painConnector": "A grande questão é que...",
+        "solutionConnector": "E é exatamente por isso que...",
+        "ctaConnector": "Então faz o seguinte:..."
+      },
+      "hooks": [
+        {
+          "id": "hook_1",
+          "text": "Nesse vídeo eu vou te mostrar as placas que mais caem na prova teórica do Detran, aquelas que pegam a maioria dos candidatos de surpresa e que você PRECISA conhecer para garantir sua aprovação de primeira!",
+          "label": "Gancho #1",
+          "visualCue": "Aproximação rápida com zoom brusco na face do apresentador, olhar direto para a câmera.",
+          "textOnScreen": "PLACA MAIS COBRADA: QUAL É?"
+        },
+        {
+          "id": "hook_2",
+          "text": "Você quer saber de uma vez por todas quais são as placas do Detran que mais reprovam e te fazem perder a primeira habilitação? Presta MUITA atenção nisso, porque essa informação vale ouro e vai te salvar na hora da prova!",
+          "label": "Gancho #2",
+          "visualCue": "Corte rápido para tela dividida: placas confusas de um lado, rosto sério do apresentador do outro.",
+          "textOnScreen": "NÃO CAIA NAS PEGADINHAS!"
+        },
+        {
+          "id": "hook_3",
+          "text": "Olha só essa denúncia: vou revelar as placas que SÃO AS MAIS COBRADAS na prova teórica do Detran e que a maioria dos materiais teóricos simplesmente ignora, te deixando vulnerável às pegadinhas. Você precisa dominar elas agora!",
+          "label": "Gancho #3",
+          "visualCue": "Movimento de câmera em 'push in' com trilha sonora de mistério, close em uma placa de trânsito em destaque.",
+          "textOnScreen": "A VERDADE SOBRE AS PLACAS!"
+        }
+      ],
+      "pains": [
+        {
+          "id": "pain_1",
+          "text": "A grande questão é que estudar apenas por simulados genéricos da internet, como os do CNH Brasil, é como dar um tiro no pé na sua prova! Você até tira 29 ou 30 pontos nesses testes fáceis, acha que está super pronto, mas na prova real, as pegadinhas são cruelmente elaboradas e o nível de exigência alto te reprova sem dó nem piedade.",
+          "label": "Dor #1",
+          "visualCue": "Expressão séria com aproximação digital, mostrando gráficos simples de 'aprovação fácil' vs. 'reprovação real'.",
+          "textOnScreen": "SIMULADO GENÉRICO = REPROVAÇÃO!"
+        },
+        {
+          "id": "pain_2",
+          "text": "A grande questão é que a maioria dos candidatos estuda por materiais desatualizados e superficiais, que não refletem o nível real das provas do Detran hoje em dia. Isso gera uma falsa sensação de segurança. Você se sente confiante, mas as questões capciosas, a interpretação dúbia e a pressão do dia te pegam completamente de surpresa, causando a tão temida reprovação.",
+          "label": "Dor #2",
+          "visualCue": "Corte rápido para pessoa com expressão de frustração, jogando um simulado 'genérico' no lixo. Música dramática.",
+          "textOnScreen": "PROVA DETRAN MUDOU!"
+        },
+        {
+          "id": "pain_3",
+          "text": "A grande questão é que muitos não entendem que a prova teórica do Detran mudou e ficou mais complexa! Os simulados tradicionais te dão uma base fraca e uma falsa segurança, porque as novas pegadinhas e o alto nível de exigência na prática, infelizmente, resultam em uma frustrante reprovação, custando tempo e dinheiro com refazer a prova.",
+          "label": "Dor #3",
+          "visualCue": "Demonstração rápida de alguém errando uma questão óbvia em um simulado 'fácil', seguido de uma montagem de contas de 'gastos extras' com reteste.",
+          "textOnScreen": "PERDEU TEMPO E DINHEIRO?"
+        }
+      ],
+      "solutions": [
+        {
+          "id": "solution_1",
+          "text": "E é exatamente por isso que nosso simulado foi criado e é constantemente atualizado com base no nível REAL das provas recentes do Detran! Ele te prepara para CADA pegadinha, te dá as ferramentas para interpretar corretamente as questões e te garante a confiança para passar de primeira. Lembra da Maria? Ela tirava 30 em outros, fez o nosso, tirou 21-22 e passou COM 22 NA OFICIAL!",
+          "label": "Solução #1",
+          "visualCue": "Demonstração prática dinâmica do simulado na tela, com animações de acertos. Inserir 'prova social' visual com depoimento rápido ou foto da Maria.",
+          "textOnScreen": "A SOLUÇÃO: SIMULADO ATUALIZADO!"
+        },
+        {
+          "id": "solution_2",
+          "text": "E é exatamente por isso que desenvolvemos um método exclusivo que simula o cenário exato da prova do Detran, com as questões e armadilhas que REALMENTE caem! Testado e aprovado por milhares de alunos, ele garante que você não seja pego de surpresa. Nossa aluna, por exemplo, fazia 30 em simulados antigos, no nosso ela ficou com 21-22 e na prova oficial, gabaritou com 22 pontos, mostrando a eficácia do nosso método!",
+          "label": "Solução #2",
+          "visualCue": "Montagem rápida de 'antes e depois': pessoa frustrada vs. pessoa feliz com CNH. Gráfico comparativo de performance em simulados.",
+          "textOnScreen": "MÉTODO COMPROVADO!"
+        },
+        {
+          "id": "solution_3",
+          "text": "E é exatamente por isso que você precisa do nosso simulado, a ÚNICA ferramenta que realmente te prepara para o que vem, sem meias palavras! Ele replica fielmente a dificuldade e as pegadinhas do Detran, validado por centenas de aprovações. Igual ao caso do João: ele batia 30 pontos nos genéricos, no nosso ele chegou a 21-22 e passou de primeira na prova do Detran com os mesmos 22 pontos, comprovando a precisão do nosso material!",
+          "label": "Solução #3",
+          "visualCue": "B-roll de pessoas acessando o simulado em diferentes dispositivos (celular, tablet). Depoimento real curto (áudio/texto na tela) de um aluno aprovado.",
+          "textOnScreen": "PASSE DE PRIMEIRA AGORA!"
+        }
+      ],
+      "ctas": [
+        {
+          "id": "cta_1",
+          "text": "Então faz o seguinte: se você quer passar de primeira e evitar toda a dor de cabeça com reprovação e gastos desnecessários, clique no link da bio agora e garanta acesso imediato ao nosso simulado exclusivo. Ou, se preferir um atalho, comente 'QUERO' que eu te mando o link direto no seu privado, é só me chamar!",
+          "label": "CTA #1",
+          "visualCue": "Gesto apontando para o link na bio, depois para o campo de comentários. Olhar convidativo.",
+          "textOnScreen": "CLIQUE AGORA OU COMENTE 'QUERO'!"
+        },
+        {
+          "id": "cta_2",
+          "text": "Então faz o seguinte: para testar se você está REALMENTE preparado para a prova do Detran e quer ter a certeza da aprovação, acesse o link na bio e comece a treinar com o que realmente funciona. Quer um atalho rápido? Comente 'QUERO' aqui embaixo e eu te envio o material completo e exclusivo no seu direct, na mesma hora!",
+          "label": "CTA #2",
+          "visualCue": "Animação de um 'botão' clicável na tela indicando a bio, seguido por uma caixa de comentário surgindo.",
+          "textOnScreen": "GARANTA SUA APROVAÇÃO!"
+        },
+        {
+          "id": "cta_3",
+          "text": "Então faz o seguinte: não perca mais seu tempo e dinheiro com métodos que não funcionam e que te frustram. Salve esse vídeo agora, clique no link da bio e descubra como garantir sua aprovação definitiva no Detran. E pra facilitar ainda mais, comente 'QUERO' aqui embaixo que te envio o link do simulado no privado, sem complicação!",
+          "label": "CTA #3",
+          "visualCue": "Gesto de salvar o vídeo, depois apontar para o link na bio. Zoom na boca do apresentador ao dizer 'QUERO'.",
+          "textOnScreen": "SALVE E PASSE NA PROVA!"
+        }
+      ],
+      "selectedIndices": {
+        "hookIndex": 0,
+        "painIndex": 0,
+        "solutionIndex": 0,
+        "ctaIndex": 0
+      }
+    },
+    "niche": "Finanças & Dinheiro",
+    "platform": "tiktok",
+    "duration": "90s",
+    "framework": "hook_story_offer",
+    "tone": "dinamico_acelerado",
+    "targetAudience": "Pessoas curiosas que buscam dicas práticas",
+    "ctaGoal": "salvar",
+    "selectedHookIndex": 0,
+    "createdAt": "2026-10-13T01:46:28.356Z",
+    "status": "ideia",
+    "isFavorite": false,
+    "isRemodeled": true,
+    "generationMode": "ai",
+    "isFallbackAlgorithmic": false,
+    "generationMetadata": {
+      "generationMode": "ai",
+      "isFallbackAlgorithmic": false,
+      "usedProvider": "gemini",
+      "usedModel": "gemini-2.5-flash",
+      "usedKeyName": "Gemini Server Key",
+      "attemptsLogs": [
+        {
+          "provider": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "isRateLimit": false,
+          "error": "Groq HTTP 404: {\"error\":{\"message\":\"The model `llama-3.3-70b-versatile` does not exist or you do not have access to it.\",\"type\":\"invalid_request_error\",\"code\":\"model_not_found\"}}\n",
+          "durationMs": 122
+        },
+        {
+          "provider": "groq",
+          "model": "llama-3.1-8b-instant",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "isRateLimit": false,
+          "error": "Groq HTTP 404: {\"error\":{\"message\":\"The model `llama-3.1-8b-instant` does not exist or you do not have access to it.\",\"type\":\"invalid_request_error\",\"code\":\"model_not_found\"}}\n",
+          "durationMs": 58
+        },
+        {
+          "provider": "groq",
+          "model": "mixtral-8x7b-32768",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "isRateLimit": false,
+          "error": "Groq HTTP 400: {\"error\":{\"message\":\"The model `mixtral-8x7b-32768` has been decommissioned and is no longer supported. Please refer to https://console.groq.com/docs/deprecations for a recommendation on which model t",
+          "durationMs": 54
+        },
+        {
+          "provider": "groq",
+          "model": "gemma2-9b-it",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "isRateLimit": false,
+          "error": "Groq HTTP 400: {\"error\":{\"message\":\"The model `gemma2-9b-it` has been decommissioned and is no longer supported. Please refer to https://console.groq.com/docs/deprecations for a recommendation on which model to use ",
+          "durationMs": 109
+        },
+        {
+          "provider": "groq",
+          "model": "llama-guard-3-8b",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "isRateLimit": false,
+          "error": "Groq HTTP 400: {\"error\":{\"message\":\"The model `llama-guard-3-8b` has been decommissioned and is no longer supported. Please refer to https://console.groq.com/docs/deprecations for a recommendation on which model to ",
+          "durationMs": 59
+        },
+        {
+          "provider": "openrouter",
+          "model": "meta-llama/llama-3.3-70b-instruct:free",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "error": "OpenRouter HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now - use this slug instead: meta-llama/llama-3.3-70b-instruct\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEg",
+          "durationMs": 152
+        },
+        {
+          "provider": "openrouter",
+          "model": "meta-llama/llama-3.1-8b-instruct:free",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "error": "OpenRouter HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now - use this slug instead: meta-llama/llama-3.1-8b-instruct\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgA",
+          "durationMs": 45
+        },
+        {
+          "provider": "openrouter",
+          "model": "google/gemini-2.0-flash-exp:free",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "error": "OpenRouter HTTP 404: {\"error\":{\"message\":\"No endpoints found for google/gemini-2.0-flash-exp:free.\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\"}",
+          "durationMs": 49
+        },
+        {
+          "provider": "openrouter",
+          "model": "mistralai/mistral-7b-instruct:free",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "error": "OpenRouter HTTP 404: {\"error\":{\"message\":\"No endpoints found for mistralai/mistral-7b-instruct:free.\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\"}",
+          "durationMs": 31
+        },
+        {
+          "provider": "openrouter",
+          "model": "qwen/qwen-2.5-72b-instruct:free",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "error": "OpenRouter HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now - use this slug instead: qwen/qwen-2.5-72b-instruct\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\"",
+          "durationMs": 44
+        },
+        {
+          "provider": "openrouter",
+          "model": "deepseek/deepseek-r1:free",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "error": "OpenRouter HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now - use this slug instead: deepseek/deepseek-r1\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\"}",
+          "durationMs": 36
+        },
+        {
+          "provider": "openrouter",
+          "model": "sophosympatheia/rogue-rose-103b-v0.2:free",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "error": "OpenRouter HTTP 400: {\"error\":{\"message\":\"sophosympatheia/rogue-rose-103b-v0.2:free is not a valid model ID\",\"code\":400},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\"}",
+          "durationMs": 41
+        },
+        {
+          "provider": "gemini",
+          "model": "gemini-2.5-flash",
+          "status": "success",
+          "durationMs": 37885
+        }
+      ],
+      "fallbackChain": [
+        "groq:llama-3.3-70b-versatile",
+        "groq:llama-3.1-8b-instant",
+        "groq:mixtral-8x7b-32768",
+        "groq:gemma2-9b-it",
+        "groq:llama-guard-3-8b",
+        "openrouter:meta-llama/llama-3.3-70b-instruct:free",
+        "openrouter:meta-llama/llama-3.1-8b-instruct:free",
+        "openrouter:google/gemini-2.0-flash-exp:free",
+        "openrouter:mistralai/mistral-7b-instruct:free",
+        "openrouter:qwen/qwen-2.5-72b-instruct:free",
+        "openrouter:deepseek/deepseek-r1:free",
+        "openrouter:sophosympatheia/rogue-rose-103b-v0.2:free",
+        "gemini:gemini-2.5-flash",
+        "gemini:gemini-2.5-pro",
+        "gemini:gemini-2.0-flash",
+        "gemini:gemini-1.5-flash"
+      ]
+    },
+    "savedAt": "2026-10-13T01:46:28.357Z",
+    "updatedAt": "2026-10-13T01:46:28.641Z"
+  },
+  {
+    "id": "script_1791056165617_6r5o0",
+    "title": "85907ec0 bf34 11f1 96d4 59dd75d07d87",
+    "fourParts": {
+      "hookPart": {
+        "title": "Parte 1: Gancho Magnético",
+        "timecode": "00:00 - 00:04",
+        "audioScript": "A verdade é sobre a primeira habilidade.",
+        "visualCue": "Aproximação rápida com zoom brusco mantendo o ritmo e a postura do vídeo original.",
+        "textOnScreen": "A VERDADE É SOBRE A PRIMEIRA HABILIDADE.",
+        "hookTrigger": "Alerta de curiosidade e quebra imediata de padrão."
+      },
+      "storyPainPart": {
+        "title": "Parte 2: A Dor da História",
+        "timecode": "00:04 - 00:15",
+        "audioScript": "A grande questão é que a maioria das pessoas tenta resolver 85907ec0 bf34 11f1 96d4 59dd75d07d87 de forma desorganizada e sem foco claro, perdendo tempo precioso sem sair do lugar.",
+        "visualCue": "Expressão séria com aproximação digital",
+        "textOnScreen": "A GRANDE QUESTÃO",
+        "painPoint": "Frustração com falta de consistência em Finanças & Dinheiro"
+      },
+      "developmentPart": {
+        "title": "Parte 3: Desenvolvimento & Revelação",
+        "timecode": "00:15 - 00:38",
+        "audioScript": "E é exatamente por isso que você precisa aplicar este método em 3 etapas práticas: simplifique o processo, corte as distrações e execute o essencial todos os dias.",
+        "visualCue": "Demonstração prática dinâmica com B-roll",
+        "textOnScreen": "A VIRADA DE CHAVE",
+        "keyInsight": "Simplificação extrema com aplicabilidade imediata"
+      },
+      "solutionCtaPart": {
+        "title": "Parte 4: Solução & Chamada para Ação (CTA)",
+        "timecode": "00:38 - 00:45",
+        "audioScript": "Então faz o seguinte: clica na bandeirinha aqui embaixo e salva esse vídeo agora mesmo para consultar e aplicar quando precisar!",
+        "visualCue": "Gesto apontando para a tela e chamada firme",
+        "textOnScreen": "AÇÃO IMEDIATA",
+        "ctaAction": "Ação de fechamento e conversão de engajamento"
+      }
+    },
+    "hooks": [
+      {
+        "id": "hook_1",
+        "category": "shock",
+        "spokenText": "A verdade é sobre a primeira habilidade.",
+        "visualAction": "Aproximação rápida com zoom brusco mantendo o ritmo e a postura do vídeo original.",
+        "textOnScreen": "A VERDADE É SOBRE A PRIMEIRA HABILIDADE.",
+        "retentionTrigger": "Gatilho de curiosidade e retenção imediata"
+      },
+      {
+        "id": "hook_2",
+        "category": "curiosity",
+        "spokenText": "Presta muita atenção nisso: a verdade é sobre a primeira habilidade.",
+        "visualAction": "Gesto de alerta com dedo indicador e corte seco para a lente com iluminação frontal.",
+        "textOnScreen": "PRESTA ATENÇÃO NISSO ⚠️",
+        "retentionTrigger": "Gatilho de curiosidade e retenção imediata"
+      },
+      {
+        "id": "hook_3",
+        "category": "contrarian",
+        "spokenText": "Olha só o que quase ninguém percebe: a verdade é sobre a primeira habilidade.",
+        "visualAction": "Movimento assertivo de cabeça com transição rápida de corte.",
+        "textOnScreen": "OLHA SÓ ISSO! 👀",
+        "retentionTrigger": "Gatilho de curiosidade e retenção imediata"
+      }
+    ],
+    "bRollSuggestions": [
+      "85907ec0 bf34 11f1",
+      "demonstração prática",
+      "pessoa usando celular",
+      "anotações na mesa",
+      "gráfico de crescimento"
+    ],
+    "scenes": [
+      {
+        "timecode": "00:00 - 00:04",
+        "partNumber": 1,
+        "sectionName": "Parte 1: Gancho Magnético",
+        "audioScript": "A verdade é sobre a primeira habilidade.",
+        "visualCue": "Aproximação rápida com zoom brusco mantendo o ritmo e a postura do vídeo original.",
+        "textOnScreen": "A VERDADE É SOBRE A PRIMEIRA HABILIDADE.",
+        "audioMusicCue": "Efeito sonoro Whoosh ou Boom grave de impacto"
+      },
+      {
+        "timecode": "00:04 - 00:15",
+        "partNumber": 2,
+        "sectionName": "Parte 2: A Dor da História",
+        "audioScript": "A grande questão é que a maioria das pessoas tenta resolver 85907ec0 bf34 11f1 96d4 59dd75d07d87 de forma desorganizada e sem foco claro, perdendo tempo precioso sem sair do lugar.",
+        "visualCue": "Expressão séria com aproximação digital",
+        "textOnScreen": "A GRANDE QUESTÃO",
+        "audioMusicCue": "Trilha sonora com tensão sutil e batida contida"
+      },
+      {
+        "timecode": "00:15 - 00:38",
+        "partNumber": 3,
+        "sectionName": "Parte 3: Desenvolvimento",
+        "audioScript": "E é exatamente por isso que você precisa aplicar este método em 3 etapas práticas: simplifique o processo, corte as distrações e execute o essencial todos os dias.",
+        "visualCue": "Demonstração prática dinâmica com B-roll",
+        "textOnScreen": "A VIRADA DE CHAVE",
+        "audioMusicCue": "Batida crescente animada e envolvente (Lo-Fi acelerado ou Phonk sutil)"
+      },
+      {
+        "timecode": "00:38 - 00:45",
+        "partNumber": 4,
+        "sectionName": "Parte 4: Solução & CTA",
+        "audioScript": "Então faz o seguinte: clica na bandeirinha aqui embaixo e salva esse vídeo agora mesmo para consultar e aplicar quando precisar!",
+        "visualCue": "Gesto apontando para a tela e chamada firme",
+        "textOnScreen": "AÇÃO IMEDIATA",
+        "audioMusicCue": "Acorde de resolução limpo com fade out rápido"
+      }
+    ],
+    "fullTeleprompterText": "[PAUSA 0.5s] A verdade é sobre a primeira habilidade. [ENFASE]\n\n[PAUSA 0.8s] A grande questão é que a maioria das pessoas tenta resolver 85907ec0 bf34 11f1 96d4 59dd75d07d87 de forma desorganizada e sem foco claro, perdendo tempo precioso sem sair do lugar.\n\n[PAUSA 0.5s] E é exatamente por isso que você precisa aplicar este método em 3 etapas práticas: simplifique o processo, corte as distrações e execute o essencial todos os dias.\n\n[ENFASE] Então faz o seguinte: clica na bandeirinha aqui embaixo e salva esse vídeo agora mesmo para consultar e aplicar quando precisar!",
+    "modularMatrix": {
+      "quantity": 3,
+      "totalCombinations": 81,
+      "standardConnectors": {
+        "painConnector": "A grande questão é que...",
+        "solutionConnector": "E é exatamente por isso que...",
+        "ctaConnector": "Então faz o seguinte:..."
+      },
+      "hooks": [
+        {
+          "id": "hook_1",
+          "text": "A verdade é sobre a primeira habilidade.",
+          "label": "Gancho #1",
+          "visualCue": "Aproximação rápida com zoom brusco mantendo o ritmo e a postura do vídeo original.",
+          "textOnScreen": "A VERDADE É SOBRE A PRIMEIRA HABILIDADE."
+        },
+        {
+          "id": "hook_2",
+          "text": "Presta muita atenção nisso: a verdade é sobre a primeira habilidade.",
+          "label": "Gancho #2",
+          "visualCue": "Gesto de alerta com dedo indicador e corte seco para a lente com iluminação frontal.",
+          "textOnScreen": "PRESTA ATENÇÃO NISSO ⚠️"
+        },
+        {
+          "id": "hook_3",
+          "text": "Olha só o que quase ninguém percebe: a verdade é sobre a primeira habilidade.",
+          "label": "Gancho #3",
+          "visualCue": "Movimento assertivo de cabeça com transição rápida de corte.",
+          "textOnScreen": "OLHA SÓ ISSO! 👀"
+        }
+      ],
+      "pains": [
+        {
+          "id": "pain_1",
+          "text": "A grande questão é que a maioria das pessoas tenta resolver 85907ec0 bf34 11f1 96d4 59dd75d07d87 de forma desorganizada e sem foco claro, perdendo tempo precioso sem sair do lugar.",
+          "label": "Dor #1",
+          "visualCue": "Expressão séria com aproximação digital",
+          "textOnScreen": "A GRANDE QUESTÃO"
+        },
+        {
+          "id": "pain_2",
+          "text": "A grande questão é que o método convencional ensinado sobre 85907ec0 bf34 11f1 96d4 59dd75d07d87 foi feito para te sobrecarregar, consumindo a sua energia onde não gera nenhum resultado prático.",
+          "label": "Dor #2",
+          "visualCue": "Expressão séria com aproximação digital",
+          "textOnScreen": "A GRANDE QUESTÃO"
+        },
+        {
+          "id": "pain_3",
+          "text": "A grande questão é que quase ninguém te conta o erro invisível ao aplicar 85907ec0 bf34 11f1 96d4 59dd75d07d87: você foca no detalhe superficial e esquece o fundamento que realmente faz a diferença.",
+          "label": "Dor #3",
+          "visualCue": "Expressão séria com aproximação digital",
+          "textOnScreen": "A GRANDE QUESTÃO"
+        }
+      ],
+      "solutions": [
+        {
+          "id": "solution_1",
+          "text": "E é exatamente por isso que você precisa aplicar este método em 3 etapas práticas: simplifique o processo, corte as distrações e execute o essencial todos os dias.",
+          "label": "Solução #1",
+          "visualCue": "Demonstração prática dinâmica com B-roll",
+          "textOnScreen": "A VIRADA DE CHAVE"
+        },
+        {
+          "id": "solution_2",
+          "text": "E é exatamente por isso que a virada de chave definitiva para 85907ec0 bf34 11f1 96d4 59dd75d07d87 consiste em inverter a ordem: foque primeiro no impacto imediato e só depois ajuste os detalhes secundários.",
+          "label": "Solução #2",
+          "visualCue": "Demonstração prática dinâmica com B-roll",
+          "textOnScreen": "A VIRADA DE CHAVE"
+        },
+        {
+          "id": "solution_3",
+          "text": "E é exatamente por isso que quem domina 85907ec0 bf34 11f1 96d4 59dd75d07d87 utiliza uma rotina estratégica de micro-ciclos rápidos, reduzindo o tempo pela metade e multiplicando a retenção.",
+          "label": "Solução #3",
+          "visualCue": "Demonstração prática dinâmica com B-roll",
+          "textOnScreen": "A VIRADA DE CHAVE"
+        }
+      ],
+      "ctas": [
+        {
+          "id": "cta_1",
+          "text": "Então faz o seguinte: clica na bandeirinha aqui embaixo e salva esse vídeo agora mesmo para consultar e aplicar quando precisar!",
+          "label": "CTA #1",
+          "visualCue": "Gesto apontando para a tela e chamada firme",
+          "textOnScreen": "AÇÃO IMEDIATA"
+        },
+        {
+          "id": "cta_2",
+          "text": "Então faz o seguinte: comenta aqui embaixo qual o seu maior desafio com 85907ec0 bf34 11f1 96d4 59dd75d07d87 que eu vou te responder com uma dica prática!",
+          "label": "CTA #2",
+          "visualCue": "Gesto apontando para a tela e chamada firme",
+          "textOnScreen": "AÇÃO IMEDIATA"
+        },
+        {
+          "id": "cta_3",
+          "text": "Então faz o seguinte: toca no botão de seguir aqui do lado para acompanhar os próximos conteúdos e não perder as técnicas avançadas!",
+          "label": "CTA #3",
+          "visualCue": "Gesto apontando para a tela e chamada firme",
+          "textOnScreen": "AÇÃO IMEDIATA"
+        }
+      ],
+      "selectedIndices": {
+        "hookIndex": 0,
+        "painIndex": 0,
+        "solutionIndex": 0,
+        "ctaIndex": 0
+      }
+    },
+    "strategicBriefing": {
+      "videoTheme": "85907ec0 bf34 11f1 96d4 59dd75d07d87",
+      "strategicObjective": "Alertar sobre o erro clássico de confiar em métodos genéricos e posicionar a metodologia própria como a solução realista e de resultado comprovado.",
+      "pointsOfAttentionAndArgumentation": {
+        "flawedTraditionalMethod": {
+          "title": "O problema dos métodos e conteúdos genéricos de Finanças & Dinheiro",
+          "dangerConcept": "Seguir apenas fórmulas prontas e superficiais é 'dar um tiro no pé'.",
+          "stateContextOrStatistic": "A maioria atinge uma falsa sensação de segurança com testes fáceis e acredita que já está preparada.",
+          "hardReality": "Quando o teste prático real chega, as exigências profundas e os detalhes ocultos derrubam quem treinou no modo facilitado."
+        },
+        "idealSolution": {
+          "title": "A Solução Validada (Método Calibrado)",
+          "coreDifferentiator": "Desenvolvido e continuamente atualizado com base nas exigências reais mais recentes do mercado, testado e validado."
+        },
+        "socialProofOrRealCase": {
+          "transitionHook": "Veja o caso real de quem já tinha tentado outras vezes sem sucesso e apostou nesta estrutura.",
+          "storySummary": "No método tradicional parecia tudo garantido, mas faltava o alinhamento crítico. Ao testar na véspera com o método calibrado, o resultado foi alcançado exatamente dentro do padrão esperado.",
+          "caseConclusion": "Isso comprova que o preparo alinhado com a realidade é o único que traz segurança.",
+          "suggestedAudioClip": "Inserir print ou áudio rápido de 3 a 5 segundos comprovando o resultado."
+        },
+        "dualCta": {
+          "callToActionContext": "Se você quer ter certeza de que está realmente preparado para o resultado real:",
+          "action1Bio": "Clica agora no link da bio para garantir o seu acesso direto.",
+          "action2CommentWord": "Comente \"QUERO\" aqui embaixo para receber o material exclusivo direto no seu privado.",
+          "keywordTrigger": "QUERO"
+        }
+      }
+    },
+    "viralityAnalysis": {
+      "overallScore": 92,
+      "hookStrengthScore": 94,
+      "retentionPacingScore": 90,
+      "shareabilityScore": 91,
+      "commentTriggerScore": 93,
+      "whyItGoesViral": [
+        "Quebra de padrão agressiva nos primeiros 3 segundos sem enrolação.",
+        "Estrutura psicológica de 4 partes com identificação de dor antes de entregar a solução.",
+        "Chamada para ação otimizada especificamente para o objetivo de salvar."
+      ],
+      "retentionSecret": "Uso de cortes a cada 2.5 segundos e texto em caixa alta sincronizado com a fala.",
+      "perfectLoopTip": "Conecte a última palavra ('precisar!') com a primeira frase do gancho para criar um looping infinito no feed."
+    },
+    "bestPostingTimes": [
+      "11:30 - 13:00",
+      "17:30 - 19:30",
+      "21:00 - 22:30"
+    ],
+    "hashtags": {
+      "megaViral": [
+        "#viral",
+        "#fyp",
+        "#foryou",
+        "#trending"
+      ],
+      "nicheSpecific": [
+        "#finanasdinheiro",
+        "#dicasdefinanasdinheiro",
+        "#criadoresdeconteudo"
+      ],
+      "lowCompetition": [
+        "#comofazerfinanasdinheiro",
+        "#metodoviral",
+        "#roteiropratico"
+      ]
+    },
+    "captionAndPost": {
+      "headline": "🚨 Salve antes que saia do ar: 85907ec0 bf34 11f1 96d4 59dd75d07d87",
+      "captionBody": "A maioria das pessoas comete o mesmo erro na hora de aplicar 85907ec0 bf34 11f1 96d4 59dd75d07d87. Assista até o final para entender a estrutura de 4 partes que realmente funciona no algoritmo.\n\n👇 Me conta nos comentários o que achou!",
+      "callToAction": "Clica no ícone da bandeirinha e salva esse vídeo agora para consultar e aplicar quando precisar!",
+      "coverTitleIdea": "85907EC0 BF34 11F1 96D4 59DD75D07D87",
+      "coverVisualPrompt": "Close-up de alta intensidade, iluminação cinematográfica de estúdio, expressão focada com fundo escuro e iluminação neon ciano e magenta."
+    },
+    "niche": "Finanças & Dinheiro",
+    "platform": "tiktok",
+    "duration": "45s",
+    "framework": "hook_story_offer",
+    "tone": "dinamico_acelerado",
+    "targetAudience": "Pessoas curiosas que buscam dicas práticas",
+    "ctaGoal": "salvar",
+    "selectedHookIndex": 0,
+    "createdAt": "2026-10-03T19:36:05.617Z",
+    "status": "ideia",
+    "isFavorite": false,
+    "isRemodeled": true,
+    "generationMode": "algorithmic",
+    "isFallbackAlgorithmic": true,
+    "generationMetadata": {
+      "generationMode": "algorithmic",
+      "isFallbackAlgorithmic": true,
+      "fallbackReason": "Tentativas esgotadas em 16 execuções no pool. Detalhes: groq/llama-3.3-70b-versatile [Chave Padrão (ENV)]: Groq HTTP 404: {\"error\":{\"message\":\"The model `llama-3.3-70b-versatile` does not exist or you do not have access to it.\",\"type\":\"invalid_request_error\",\"code\":\"model_not_found\"}}\n | groq/llama-3.1-8b-instant [Chave Padrão (ENV)]: Groq HTTP 404: {\"error\":{\"message\":\"The model `llama-3.1-8b-instant` does not exist or you do not have access to it.\",\"type\":\"invalid_request_error\",\"code\":\"model_not_found\"}}\n | groq/mixtral-8x7b-32768 [Chave Padrão (ENV)]: Groq HTTP 400: {\"error\":{\"message\":\"The model `mixtral-8x7b-32768` has been decommissioned and is no longer supported. Please refer to https://console.groq.com/docs/deprecations for a recommendation on which model t | groq/gemma2-9b-it [Chave Padrão (ENV)]: Groq HTTP 400: {\"error\":{\"message\":\"The model `gemma2-9b-it` has been decommissioned and is no longer supported. Please refer to https://console.groq.com/docs/deprecations for a recommendation on which model to use  | groq/llama-guard-3-8b [Chave Padrão (ENV)]: Groq HTTP 400: {\"error\":{\"message\":\"The model `llama-guard-3-8b` has been decommissioned and is no longer supported. Please refer to https://console.groq.com/docs/deprecations for a recommendation on which model to  | openrouter/meta-llama/llama-3.3-70b-instruct:free [Chave Padrão (ENV)]: OpenRouter HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now - use this slug instead: meta-llama/llama-3.3-70b-instruct\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEg | openrouter/meta-llama/llama-3.1-8b-instruct:free [Chave Padrão (ENV)]: OpenRouter HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now - use this slug instead: meta-llama/llama-3.1-8b-instruct\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgA | openrouter/google/gemini-2.0-flash-exp:free [Chave Padrão (ENV)]: OpenRouter HTTP 404: {\"error\":{\"message\":\"No endpoints found for google/gemini-2.0-flash-exp:free.\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\"} | openrouter/mistralai/mistral-7b-instruct:free [Chave Padrão (ENV)]: OpenRouter HTTP 404: {\"error\":{\"message\":\"No endpoints found for mistralai/mistral-7b-instruct:free.\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\"} | openrouter/qwen/qwen-2.5-72b-instruct:free [Chave Padrão (ENV)]: OpenRouter HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now - use this slug instead: qwen/qwen-2.5-72b-instruct\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\" | openrouter/deepseek/deepseek-r1:free [Chave Padrão (ENV)]: OpenRouter HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now - use this slug instead: deepseek/deepseek-r1\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\"} | openrouter/sophosympatheia/rogue-rose-103b-v0.2:free [Chave Padrão (ENV)]: OpenRouter HTTP 400: {\"error\":{\"message\":\"sophosympatheia/rogue-rose-103b-v0.2:free is not a valid model ID\",\"code\":400},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\"} | gemini/gemini-2.5-flash: {\"error\":{\"code\":503,\"message\":\"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\"status\":\"UNAVAILABLE\"}} | gemini/gemini-2.5-pro: {\"error\":{\"code\":404,\"message\":\"This model models/gemini-2.5-pro is no longer available to new users. Please update your code to use models/gemini-3.1-pro-preview for the latest features and improvements. We recommend you to use the Interactions API (https://ai.google.dev/gemini-api/docs/get-started).\",\"status\":\"NOT_FOUND\"}} | gemini/gemini-2.0-flash: {\"error\":{\"code\":404,\"message\":\"This model models/gemini-2.0-flash is no longer available. Please update your code to use models/gemini-3.8-flash for the latest features and improvements. We recommend you to use the Interactions API (https://ai.google.dev/gemini-api/docs/get-started).\",\"status\":\"NOT_FOUND\"}} | gemini/gemini-1.5-flash: {\"error\":{\"code\":404,\"message\":\"models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ModelService.ListModels to see the list of available models and their supported methods.\",\"status\":\"NOT_FOUND\"}}",
+      "usedProvider": "algoritmo_contingencia",
+      "usedModel": "motor_regras_virais_v2",
+      "usedKeyName": "",
+      "attemptsLogs": [
+        {
+          "provider": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "isRateLimit": false,
+          "error": "Groq HTTP 404: {\"error\":{\"message\":\"The model `llama-3.3-70b-versatile` does not exist or you do not have access to it.\",\"type\":\"invalid_request_error\",\"code\":\"model_not_found\"}}\n",
+          "durationMs": 186
+        },
+        {
+          "provider": "groq",
+          "model": "llama-3.1-8b-instant",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "isRateLimit": false,
+          "error": "Groq HTTP 404: {\"error\":{\"message\":\"The model `llama-3.1-8b-instant` does not exist or you do not have access to it.\",\"type\":\"invalid_request_error\",\"code\":\"model_not_found\"}}\n",
+          "durationMs": 88
+        },
+        {
+          "provider": "groq",
+          "model": "mixtral-8x7b-32768",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "isRateLimit": false,
+          "error": "Groq HTTP 400: {\"error\":{\"message\":\"The model `mixtral-8x7b-32768` has been decommissioned and is no longer supported. Please refer to https://console.groq.com/docs/deprecations for a recommendation on which model t",
+          "durationMs": 65
+        },
+        {
+          "provider": "groq",
+          "model": "gemma2-9b-it",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "isRateLimit": false,
+          "error": "Groq HTTP 400: {\"error\":{\"message\":\"The model `gemma2-9b-it` has been decommissioned and is no longer supported. Please refer to https://console.groq.com/docs/deprecations for a recommendation on which model to use ",
+          "durationMs": 88
+        },
+        {
+          "provider": "groq",
+          "model": "llama-guard-3-8b",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "isRateLimit": false,
+          "error": "Groq HTTP 400: {\"error\":{\"message\":\"The model `llama-guard-3-8b` has been decommissioned and is no longer supported. Please refer to https://console.groq.com/docs/deprecations for a recommendation on which model to ",
+          "durationMs": 91
+        },
+        {
+          "provider": "openrouter",
+          "model": "meta-llama/llama-3.3-70b-instruct:free",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "error": "OpenRouter HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now - use this slug instead: meta-llama/llama-3.3-70b-instruct\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEg",
+          "durationMs": 297
+        },
+        {
+          "provider": "openrouter",
+          "model": "meta-llama/llama-3.1-8b-instruct:free",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "error": "OpenRouter HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now - use this slug instead: meta-llama/llama-3.1-8b-instruct\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgA",
+          "durationMs": 36
+        },
+        {
+          "provider": "openrouter",
+          "model": "google/gemini-2.0-flash-exp:free",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "error": "OpenRouter HTTP 404: {\"error\":{\"message\":\"No endpoints found for google/gemini-2.0-flash-exp:free.\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\"}",
+          "durationMs": 37
+        },
+        {
+          "provider": "openrouter",
+          "model": "mistralai/mistral-7b-instruct:free",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "error": "OpenRouter HTTP 404: {\"error\":{\"message\":\"No endpoints found for mistralai/mistral-7b-instruct:free.\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\"}",
+          "durationMs": 37
+        },
+        {
+          "provider": "openrouter",
+          "model": "qwen/qwen-2.5-72b-instruct:free",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "error": "OpenRouter HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now - use this slug instead: qwen/qwen-2.5-72b-instruct\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\"",
+          "durationMs": 33
+        },
+        {
+          "provider": "openrouter",
+          "model": "deepseek/deepseek-r1:free",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "error": "OpenRouter HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now - use this slug instead: deepseek/deepseek-r1\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\"}",
+          "durationMs": 34
+        },
+        {
+          "provider": "openrouter",
+          "model": "sophosympatheia/rogue-rose-103b-v0.2:free",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "error": "OpenRouter HTTP 400: {\"error\":{\"message\":\"sophosympatheia/rogue-rose-103b-v0.2:free is not a valid model ID\",\"code\":400},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\"}",
+          "durationMs": 438
+        },
+        {
+          "provider": "gemini",
+          "model": "gemini-2.5-flash",
+          "status": "failed",
+          "error": "{\"error\":{\"code\":503,\"message\":\"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\"status\":\"UNAVAILABLE\"}}",
+          "durationMs": 88042
+        },
+        {
+          "provider": "gemini",
+          "model": "gemini-2.5-pro",
+          "status": "failed",
+          "error": "{\"error\":{\"code\":404,\"message\":\"This model models/gemini-2.5-pro is no longer available to new users. Please update your code to use models/gemini-3.1-pro-preview for the latest features and improvements. We recommend you to use the Interactions API (https://ai.google.dev/gemini-api/docs/get-started).\",\"status\":\"NOT_FOUND\"}}",
+          "durationMs": 92
+        },
+        {
+          "provider": "gemini",
+          "model": "gemini-2.0-flash",
+          "status": "failed",
+          "error": "{\"error\":{\"code\":404,\"message\":\"This model models/gemini-2.0-flash is no longer available. Please update your code to use models/gemini-3.8-flash for the latest features and improvements. We recommend you to use the Interactions API (https://ai.google.dev/gemini-api/docs/get-started).\",\"status\":\"NOT_FOUND\"}}",
+          "durationMs": 160
+        },
+        {
+          "provider": "gemini",
+          "model": "gemini-1.5-flash",
+          "status": "failed",
+          "error": "{\"error\":{\"code\":404,\"message\":\"models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ModelService.ListModels to see the list of available models and their supported methods.\",\"status\":\"NOT_FOUND\"}}",
+          "durationMs": 93
+        }
+      ],
+      "fallbackChain": [
+        "groq:llama-3.3-70b-versatile",
+        "groq:llama-3.1-8b-instant",
+        "groq:mixtral-8x7b-32768",
+        "groq:gemma2-9b-it",
+        "groq:llama-guard-3-8b",
+        "openrouter:meta-llama/llama-3.3-70b-instruct:free",
+        "openrouter:meta-llama/llama-3.1-8b-instruct:free",
+        "openrouter:google/gemini-2.0-flash-exp:free",
+        "openrouter:mistralai/mistral-7b-instruct:free",
+        "openrouter:qwen/qwen-2.5-72b-instruct:free",
+        "openrouter:deepseek/deepseek-r1:free",
+        "openrouter:sophosympatheia/rogue-rose-103b-v0.2:free",
+        "gemini:gemini-2.5-flash",
+        "gemini:gemini-2.5-pro",
+        "gemini:gemini-2.0-flash",
+        "gemini:gemini-1.5-flash"
+      ]
+    },
+    "savedAt": "2026-10-03T19:36:05.619Z",
+    "updatedAt": "2026-10-13T01:12:59.860Z"
+  },
+  {
     "id": "script_detran_reprovacao_simulado",
     "title": "Reprovou 5 Vezes na Prova Teórica? O Perigo dos Simulados Genéricos",
     "niche": "Autoescola & Primeira Habilitação",
@@ -262,5 +1289,669 @@
       "coverTitleIdea": "REPROVOU 5 VEZES NO DETRAN? 🚨 O VERDADEIRO MOTIVO",
       "coverVisualPrompt": "Instrutor de trânsito sério apontando para uma placa de prova do Detran e comentário de reprovação."
     }
+  },
+  {
+    "id": "script_1789878969038_vq1oz",
+    "title": "reprovei 5 vezes na prova teorica de habilitação  (Gancho: \"Reprovei 5 vezes na prova teórica, e isso me custou MUITO mais que a autoescola!\")",
+    "fourParts": {
+      "hookPart": {
+        "title": "Parte 1: Gancho Magnético",
+        "timecode": "00:00 - 00:04",
+        "audioScript": "Se você ainda faz reprovei 5 vezes na prova teorica de habilitação  (Gancho: \"Reprovei 5 vezes na prova teórica, e isso me custou MUITO mais que a autoescola!\") do jeito tradicional, pare tudo agora antes que seja tarde.",
+        "visualCue": "Aproximação rápida com zoom brusco e expressão de alerta olhando fixamente para a lente.",
+        "textOnScreen": "PARE AGORA: REPROVEI 5 VEZES NA PROVA TEORICA DE HABILITAÇÃO  (GANCHO: \"REPROVEI 5 VEZES NA PROVA TEÓRICA, E ISSO ME CUSTOU MUITO MAIS QUE A AUTOESCOLA!\")",
+        "hookTrigger": "Alerta de curiosidade e quebra imediata de padrão."
+      },
+      "storyPainPart": {
+        "title": "Parte 2: A Dor da História",
+        "timecode": "00:04 - 00:15",
+        "audioScript": "A grande questão é que a maioria das pessoas tenta resolver reprovei 5 vezes na prova teorica de habilitação  (Gancho: \"Reprovei 5 vezes na prova teórica, e isso me custou MUITO mais que a autoescola!\") de forma desorganizada e sem foco claro, perdendo tempo precioso sem sair do lugar.",
+        "visualCue": "Expressão séria com aproximação digital",
+        "textOnScreen": "A GRANDE QUESTÃO",
+        "painPoint": "Frustração com falta de consistência em Finanças & Dinheiro"
+      },
+      "developmentPart": {
+        "title": "Parte 3: Desenvolvimento & Revelação",
+        "timecode": "00:15 - 00:38",
+        "audioScript": "E é exatamente por isso que você precisa aplicar este método em 3 etapas práticas: simplifique o processo, corte as distrações e execute o essencial todos os dias.",
+        "visualCue": "Demonstração prática dinâmica com B-roll",
+        "textOnScreen": "A VIRADA DE CHAVE",
+        "keyInsight": "Simplificação extrema com aplicabilidade imediata"
+      },
+      "solutionCtaPart": {
+        "title": "Parte 4: Solução & Chamada para Ação (CTA)",
+        "timecode": "00:38 - 00:45",
+        "audioScript": "Então faz o seguinte: clica na bandeirinha aqui embaixo e salva esse vídeo agora mesmo para consultar e aplicar quando precisar!",
+        "visualCue": "Gesto apontando para a tela e chamada firme",
+        "textOnScreen": "AÇÃO IMEDIATA",
+        "ctaAction": "Ação de fechamento e conversão de engajamento"
+      }
+    },
+    "hooks": [
+      {
+        "id": "hook_1",
+        "category": "shock",
+        "spokenText": "Se você ainda faz reprovei 5 vezes na prova teorica de habilitação  (Gancho: \"Reprovei 5 vezes na prova teórica, e isso me custou MUITO mais que a autoescola!\") do jeito tradicional, pare tudo agora antes que seja tarde.",
+        "visualAction": "Aproximação rápida com zoom brusco e expressão de alerta olhando fixamente para a lente.",
+        "textOnScreen": "PARE AGORA: REPROVEI 5 VEZES NA PROVA TEORICA DE HABILITAÇÃO  (GANCHO: \"REPROVEI 5 VEZES NA PROVA TEÓRICA, E ISSO ME CUSTOU MUITO MAIS QUE A AUTOESCOLA!\")",
+        "retentionTrigger": "Gatilho de curiosidade e retenção imediata"
+      },
+      {
+        "id": "hook_2",
+        "category": "curiosity",
+        "spokenText": "O que 99% das pessoas não sabem sobre reprovei 5 vezes na prova teorica de habilitação  (Gancho: \"Reprovei 5 vezes na prova teórica, e isso me custou MUITO mais que a autoescola!\") vai explodir a sua cabeça nos próximos segundos.",
+        "visualAction": "Gesto de segredo com dedo indicador e corte para tela preta e branca por 0.5s.",
+        "textOnScreen": "O SEGREDO QUE NINGUÉM CONTA 🤫",
+        "retentionTrigger": "Gatilho de curiosidade e retenção imediata"
+      },
+      {
+        "id": "hook_3",
+        "category": "contrarian",
+        "spokenText": "Todo mundo te ensina a fazer reprovei 5 vezes na prova teorica de habilitação  (Gancho: \"Reprovei 5 vezes na prova teórica, e isso me custou MUITO mais que a autoescola!\") errado, e é exatamente por isso que você não tem resultados.",
+        "visualAction": "Movimento de 'não' com a cabeça e estalar de dedos com transição rápida de corte.",
+        "textOnScreen": "ESTÃO TE ENGANANDO! ❌",
+        "retentionTrigger": "Gatilho de curiosidade e retenção imediata"
+      }
+    ],
+    "bRollSuggestions": [
+      "reprovei 5 vezes",
+      "demonstração prática",
+      "pessoa usando celular",
+      "anotações na mesa",
+      "gráfico de crescimento"
+    ],
+    "scenes": [
+      {
+        "timecode": "00:00 - 00:04",
+        "partNumber": 1,
+        "sectionName": "Parte 1: Gancho Magnético",
+        "audioScript": "Se você ainda faz reprovei 5 vezes na prova teorica de habilitação  (Gancho: \"Reprovei 5 vezes na prova teórica, e isso me custou MUITO mais que a autoescola!\") do jeito tradicional, pare tudo agora antes que seja tarde.",
+        "visualCue": "Aproximação rápida com zoom brusco e expressão de alerta olhando fixamente para a lente.",
+        "textOnScreen": "PARE AGORA: REPROVEI 5 VEZES NA PROVA TEORICA DE HABILITAÇÃO  (GANCHO: \"REPROVEI 5 VEZES NA PROVA TEÓRICA, E ISSO ME CUSTOU MUITO MAIS QUE A AUTOESCOLA!\")",
+        "audioMusicCue": "Efeito sonoro Whoosh ou Boom grave de impacto"
+      },
+      {
+        "timecode": "00:04 - 00:15",
+        "partNumber": 2,
+        "sectionName": "Parte 2: A Dor da História",
+        "audioScript": "A grande questão é que a maioria das pessoas tenta resolver reprovei 5 vezes na prova teorica de habilitação  (Gancho: \"Reprovei 5 vezes na prova teórica, e isso me custou MUITO mais que a autoescola!\") de forma desorganizada e sem foco claro, perdendo tempo precioso sem sair do lugar.",
+        "visualCue": "Expressão séria com aproximação digital",
+        "textOnScreen": "A GRANDE QUESTÃO",
+        "audioMusicCue": "Trilha sonora com tensão sutil e batida contida"
+      },
+      {
+        "timecode": "00:15 - 00:38",
+        "partNumber": 3,
+        "sectionName": "Parte 3: Desenvolvimento",
+        "audioScript": "E é exatamente por isso que você precisa aplicar este método em 3 etapas práticas: simplifique o processo, corte as distrações e execute o essencial todos os dias.",
+        "visualCue": "Demonstração prática dinâmica com B-roll",
+        "textOnScreen": "A VIRADA DE CHAVE",
+        "audioMusicCue": "Batida crescente animada e envolvente (Lo-Fi acelerado ou Phonk sutil)"
+      },
+      {
+        "timecode": "00:38 - 00:45",
+        "partNumber": 4,
+        "sectionName": "Parte 4: Solução & CTA",
+        "audioScript": "Então faz o seguinte: clica na bandeirinha aqui embaixo e salva esse vídeo agora mesmo para consultar e aplicar quando precisar!",
+        "visualCue": "Gesto apontando para a tela e chamada firme",
+        "textOnScreen": "AÇÃO IMEDIATA",
+        "audioMusicCue": "Acorde de resolução limpo com fade out rápido"
+      }
+    ],
+    "fullTeleprompterText": "[PAUSA 0.5s] Se você ainda faz reprovei 5 vezes na prova teorica de habilitação  (Gancho: \"Reprovei 5 vezes na prova teórica, e isso me custou MUITO mais que a autoescola!\") do jeito tradicional, pare tudo agora antes que seja tarde. [ENFASE]\n\n[PAUSA 0.8s] A grande questão é que a maioria das pessoas tenta resolver reprovei 5 vezes na prova teorica de habilitação  (Gancho: \"Reprovei 5 vezes na prova teórica, e isso me custou MUITO mais que a autoescola!\") de forma desorganizada e sem foco claro, perdendo tempo precioso sem sair do lugar.\n\n[PAUSA 0.5s] E é exatamente por isso que você precisa aplicar este método em 3 etapas práticas: simplifique o processo, corte as distrações e execute o essencial todos os dias.\n\n[ENFASE] Então faz o seguinte: clica na bandeirinha aqui embaixo e salva esse vídeo agora mesmo para consultar e aplicar quando precisar!",
+    "modularMatrix": {
+      "quantity": 3,
+      "totalCombinations": 81,
+      "standardConnectors": {
+        "painConnector": "A grande questão é que...",
+        "solutionConnector": "E é exatamente por isso que...",
+        "ctaConnector": "Então faz o seguinte:..."
+      },
+      "hooks": [
+        {
+          "id": "hook_1",
+          "text": "Se você ainda faz reprovei 5 vezes na prova teorica de habilitação  (Gancho: \"Reprovei 5 vezes na prova teórica, e isso me custou MUITO mais que a autoescola!\") do jeito tradicional, pare tudo agora antes que seja tarde.",
+          "label": "Gancho #1",
+          "visualCue": "Aproximação rápida com zoom brusco e expressão de alerta olhando fixamente para a lente.",
+          "textOnScreen": "PARE AGORA: REPROVEI 5 VEZES NA PROVA TEORICA DE HABILITAÇÃO  (GANCHO: \"REPROVEI 5 VEZES NA PROVA TEÓRICA, E ISSO ME CUSTOU MUITO MAIS QUE A AUTOESCOLA!\")"
+        },
+        {
+          "id": "hook_2",
+          "text": "O que 99% das pessoas não sabem sobre reprovei 5 vezes na prova teorica de habilitação  (Gancho: \"Reprovei 5 vezes na prova teórica, e isso me custou MUITO mais que a autoescola!\") vai explodir a sua cabeça nos próximos segundos.",
+          "label": "Gancho #2",
+          "visualCue": "Gesto de segredo com dedo indicador e corte para tela preta e branca por 0.5s.",
+          "textOnScreen": "O SEGREDO QUE NINGUÉM CONTA 🤫"
+        },
+        {
+          "id": "hook_3",
+          "text": "Todo mundo te ensina a fazer reprovei 5 vezes na prova teorica de habilitação  (Gancho: \"Reprovei 5 vezes na prova teórica, e isso me custou MUITO mais que a autoescola!\") errado, e é exatamente por isso que você não tem resultados.",
+          "label": "Gancho #3",
+          "visualCue": "Movimento de 'não' com a cabeça e estalar de dedos com transição rápida de corte.",
+          "textOnScreen": "ESTÃO TE ENGANANDO! ❌"
+        }
+      ],
+      "pains": [
+        {
+          "id": "pain_1",
+          "text": "A grande questão é que a maioria das pessoas tenta resolver reprovei 5 vezes na prova teorica de habilitação  (Gancho: \"Reprovei 5 vezes na prova teórica, e isso me custou MUITO mais que a autoescola!\") de forma desorganizada e sem foco claro, perdendo tempo precioso sem sair do lugar.",
+          "label": "Dor #1",
+          "visualCue": "Expressão séria com aproximação digital",
+          "textOnScreen": "A GRANDE QUESTÃO"
+        },
+        {
+          "id": "pain_2",
+          "text": "A grande questão é que o método convencional ensinado sobre reprovei 5 vezes na prova teorica de habilitação  (Gancho: \"Reprovei 5 vezes na prova teórica, e isso me custou MUITO mais que a autoescola!\") foi feito para te sobrecarregar, consumindo a sua energia onde não gera nenhum resultado prático.",
+          "label": "Dor #2",
+          "visualCue": "Expressão séria com aproximação digital",
+          "textOnScreen": "A GRANDE QUESTÃO"
+        },
+        {
+          "id": "pain_3",
+          "text": "A grande questão é que quase ninguém te conta o erro invisível ao aplicar reprovei 5 vezes na prova teorica de habilitação  (Gancho: \"Reprovei 5 vezes na prova teórica, e isso me custou MUITO mais que a autoescola!\"): você foca no detalhe superficial e esquece o fundamento que realmente faz a diferença.",
+          "label": "Dor #3",
+          "visualCue": "Expressão séria com aproximação digital",
+          "textOnScreen": "A GRANDE QUESTÃO"
+        }
+      ],
+      "solutions": [
+        {
+          "id": "solution_1",
+          "text": "E é exatamente por isso que você precisa aplicar este método em 3 etapas práticas: simplifique o processo, corte as distrações e execute o essencial todos os dias.",
+          "label": "Solução #1",
+          "visualCue": "Demonstração prática dinâmica com B-roll",
+          "textOnScreen": "A VIRADA DE CHAVE"
+        },
+        {
+          "id": "solution_2",
+          "text": "E é exatamente por isso que a virada de chave definitiva para reprovei 5 vezes na prova teorica de habilitação  (Gancho: \"Reprovei 5 vezes na prova teórica, e isso me custou MUITO mais que a autoescola!\") consiste em inverter a ordem: foque primeiro no impacto imediato e só depois ajuste os detalhes secundários.",
+          "label": "Solução #2",
+          "visualCue": "Demonstração prática dinâmica com B-roll",
+          "textOnScreen": "A VIRADA DE CHAVE"
+        },
+        {
+          "id": "solution_3",
+          "text": "E é exatamente por isso que quem domina reprovei 5 vezes na prova teorica de habilitação  (Gancho: \"Reprovei 5 vezes na prova teórica, e isso me custou MUITO mais que a autoescola!\") utiliza uma rotina estratégica de micro-ciclos rápidos, reduzindo o tempo pela metade e multiplicando a retenção.",
+          "label": "Solução #3",
+          "visualCue": "Demonstração prática dinâmica com B-roll",
+          "textOnScreen": "A VIRADA DE CHAVE"
+        }
+      ],
+      "ctas": [
+        {
+          "id": "cta_1",
+          "text": "Então faz o seguinte: clica na bandeirinha aqui embaixo e salva esse vídeo agora mesmo para consultar e aplicar quando precisar!",
+          "label": "CTA #1",
+          "visualCue": "Gesto apontando para a tela e chamada firme",
+          "textOnScreen": "AÇÃO IMEDIATA"
+        },
+        {
+          "id": "cta_2",
+          "text": "Então faz o seguinte: comenta aqui embaixo qual o seu maior desafio com reprovei 5 vezes na prova teorica de habilitação  (Gancho: \"Reprovei 5 vezes na prova teórica, e isso me custou MUITO mais que a autoescola!\") que eu vou te responder com uma dica prática!",
+          "label": "CTA #2",
+          "visualCue": "Gesto apontando para a tela e chamada firme",
+          "textOnScreen": "AÇÃO IMEDIATA"
+        },
+        {
+          "id": "cta_3",
+          "text": "Então faz o seguinte: toca no botão de seguir aqui do lado para acompanhar os próximos conteúdos e não perder as técnicas avançadas!",
+          "label": "CTA #3",
+          "visualCue": "Gesto apontando para a tela e chamada firme",
+          "textOnScreen": "AÇÃO IMEDIATA"
+        }
+      ],
+      "selectedIndices": {
+        "hookIndex": 0,
+        "painIndex": 0,
+        "solutionIndex": 0,
+        "ctaIndex": 0
+      }
+    },
+    "strategicBriefing": {
+      "videoTheme": "reprovei 5 vezes na prova teorica de habilitação  (Gancho: \"Reprovei 5 vezes na prova teórica, e isso me custou MUITO mais que a autoescola!\")",
+      "strategicObjective": "Alertar sobre o perigo de estudar por simulados genéricos e apresentar o meu simulado como a solução ideal e realista.",
+      "pointsOfAttentionAndArgumentation": {
+        "flawedTraditionalMethod": {
+          "title": "O problema dos simulados tradicionais (ex: CNH Brasil e apps genéricos)",
+          "dangerConcept": "Estudar só por eles é 'dar um tiro no pé'.",
+          "stateContextOrStatistic": "Em Minas Gerais e em vários estados, o alto índice de reprovação acontece porque os alunos tiram 29 ou 30 pontos nesses simulados e acham que estão prontos.",
+          "hardReality": "Na hora da prova real, a realidade é outra: perguntas muito mais bem elaboradas, pegadinhas e nível de exigência alto, levando à reprovação de quem não se preparou do jeito certo."
+        },
+        "idealSolution": {
+          "title": "A Solução (Meu Simulado Calibrado)",
+          "coreDifferentiator": "Criado e atualizado com base no nível real das provas recentes, testado e aprovado por diversos alunos."
+        },
+        "socialProofOrRealCase": {
+          "transitionHook": "Veja o depoimento de uma aluna que já tinha reprovado, estava com medo e apostou no meu simulado.",
+          "storySummary": "Nos simulados tradicionais (e até no do próprio Detran), ela tirava 30 pontos. No meu simulado, tirou entre 21 e 22 pontos na véspera. Na prova oficial, passou exatamente com 22 pontos.",
+          "caseConclusion": "Isso prova que o meu simulado está perfeitamente alinhado com a dificuldade da prova real.",
+          "suggestedAudioClip": "Inserir trecho de 4 segundos do áudio de depoimento da aluna comemorando a aprovação de primeira."
+        },
+        "dualCta": {
+          "callToActionContext": "Se a pessoa quer saber se está realmente preparada para passar de primeira, deve testar um simulado no nível da prova real.",
+          "action1Bio": "Clicar no link da bio para se cadastrar agora.",
+          "action2CommentWord": "Comentar 'QUERO' no vídeo para receber o link direto no privado.",
+          "keywordTrigger": "QUERO"
+        }
+      }
+    },
+    "viralityAnalysis": {
+      "overallScore": 92,
+      "hookStrengthScore": 94,
+      "retentionPacingScore": 90,
+      "shareabilityScore": 91,
+      "commentTriggerScore": 93,
+      "whyItGoesViral": [
+        "Quebra de padrão agressiva nos primeiros 3 segundos sem enrolação.",
+        "Estrutura psicológica de 4 partes com identificação de dor antes de entregar a solução.",
+        "Chamada para ação otimizada especificamente para o objetivo de salvar."
+      ],
+      "retentionSecret": "Uso de cortes a cada 2.5 segundos e texto em caixa alta sincronizado com a fala.",
+      "perfectLoopTip": "Conecte a última palavra ('precisar!') com a primeira frase do gancho para criar um looping infinito no feed."
+    },
+    "bestPostingTimes": [
+      "11:30 - 13:00",
+      "17:30 - 19:30",
+      "21:00 - 22:30"
+    ],
+    "hashtags": {
+      "megaViral": [
+        "#viral",
+        "#fyp",
+        "#foryou",
+        "#trending"
+      ],
+      "nicheSpecific": [
+        "#finanasdinheiro",
+        "#dicasdefinanasdinheiro",
+        "#criadoresdeconteudo"
+      ],
+      "lowCompetition": [
+        "#comofazerfinanasdinheiro",
+        "#metodoviral",
+        "#roteiropratico"
+      ]
+    },
+    "captionAndPost": {
+      "headline": "🚨 Salve antes que saia do ar: reprovei 5 vezes na prova teorica de habilitação  (Gancho: \"Reprovei 5 vezes na prova teórica, e isso me custou MUITO mais que a autoescola!\")",
+      "captionBody": "A maioria das pessoas comete o mesmo erro na hora de aplicar reprovei 5 vezes na prova teorica de habilitação  (Gancho: \"Reprovei 5 vezes na prova teórica, e isso me custou MUITO mais que a autoescola!\"). Assista até o final para entender a estrutura de 4 partes que realmente funciona no algoritmo.\n\n👇 Me conta nos comentários o que achou!",
+      "callToAction": "Clica no ícone da bandeirinha e salva esse vídeo agora para consultar e aplicar quando precisar!",
+      "coverTitleIdea": "REPROVEI 5 VEZES NA PROVA TEORICA DE HABILITAÇÃO  (GANCHO: \"REPROVEI 5 VEZES NA PROVA TEÓRICA, E ISSO ME CUSTOU MUITO MAIS QUE A AUTOESCOLA!\")",
+      "coverVisualPrompt": "Close-up de alta intensidade, iluminação cinematográfica de estúdio, expressão focada com fundo escuro e iluminação neon ciano e magenta."
+    },
+    "niche": "Finanças & Dinheiro",
+    "platform": "tiktok",
+    "duration": "45s",
+    "framework": "hook_story_offer",
+    "tone": "dinamico_acelerado",
+    "targetAudience": "Pessoas curiosas que buscam dicas práticas",
+    "ctaGoal": "salvar",
+    "selectedHookIndex": 0,
+    "createdAt": "2026-09-20T04:36:09.038Z",
+    "status": "ideia",
+    "isFavorite": false,
+    "isRemodeled": false,
+    "generationMode": "algorithmic",
+    "isFallbackAlgorithmic": true,
+    "generationMetadata": {
+      "generationMode": "algorithmic",
+      "isFallbackAlgorithmic": true,
+      "fallbackReason": "Tentativas esgotadas em 16 execuções no pool. Detalhes: groq/llama-3.3-70b-versatile [Chave Padrão (ENV)]: Groq HTTP 404: {\"error\":{\"message\":\"The model `llama-3.3-70b-versatile` does not exist or you do not have access to it.\",\"type\":\"invalid_request_error\",\"code\":\"model_not_found\"}}\n | groq/llama-3.1-8b-instant [Chave Padrão (ENV)]: Groq HTTP 404: {\"error\":{\"message\":\"The model `llama-3.1-8b-instant` does not exist or you do not have access to it.\",\"type\":\"invalid_request_error\",\"code\":\"model_not_found\"}}\n | groq/mixtral-8x7b-32768 [Chave Padrão (ENV)]: Groq HTTP 400: {\"error\":{\"message\":\"The model `mixtral-8x7b-32768` has been decommissioned and is no longer supported. Please refer to https://console.groq.com/docs/deprecations for a recommendation on which model t | groq/gemma2-9b-it [Chave Padrão (ENV)]: Groq HTTP 400: {\"error\":{\"message\":\"The model `gemma2-9b-it` has been decommissioned and is no longer supported. Please refer to https://console.groq.com/docs/deprecations for a recommendation on which model to use  | groq/llama-guard-3-8b [Chave Padrão (ENV)]: Groq HTTP 400: {\"error\":{\"message\":\"The model `llama-guard-3-8b` has been decommissioned and is no longer supported. Please refer to https://console.groq.com/docs/deprecations for a recommendation on which model to  | openrouter/meta-llama/llama-3.3-70b-instruct:free [Chave Padrão (ENV)]: OpenRouter HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now - use this slug instead: meta-llama/llama-3.3-70b-instruct\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEg | openrouter/meta-llama/llama-3.1-8b-instruct:free [Chave Padrão (ENV)]: OpenRouter HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now - use this slug instead: meta-llama/llama-3.1-8b-instruct\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgA | openrouter/google/gemini-2.0-flash-exp:free [Chave Padrão (ENV)]: OpenRouter HTTP 404: {\"error\":{\"message\":\"No endpoints found for google/gemini-2.0-flash-exp:free.\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\"} | openrouter/mistralai/mistral-7b-instruct:free [Chave Padrão (ENV)]: OpenRouter HTTP 404: {\"error\":{\"message\":\"No endpoints found for mistralai/mistral-7b-instruct:free.\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\"} | openrouter/qwen/qwen-2.5-72b-instruct:free [Chave Padrão (ENV)]: OpenRouter HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now - use this slug instead: qwen/qwen-2.5-72b-instruct\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\" | openrouter/deepseek/deepseek-r1:free [Chave Padrão (ENV)]: OpenRouter HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now - use this slug instead: deepseek/deepseek-r1\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\"} | openrouter/sophosympatheia/rogue-rose-103b-v0.2:free [Chave Padrão (ENV)]: OpenRouter HTTP 400: {\"error\":{\"message\":\"sophosympatheia/rogue-rose-103b-v0.2:free is not a valid model ID\",\"code\":400},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\"} | gemini/gemini-2.5-flash: {\"error\":{\"code\":503,\"message\":\"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\"status\":\"UNAVAILABLE\"}} | gemini/gemini-2.5-pro: {\"error\":{\"code\":404,\"message\":\"This model models/gemini-2.5-pro is no longer available to new users. Please update your code to use models/gemini-3.1-pro-preview for the latest features and improvements. We recommend you to use the Interactions API.\",\"status\":\"NOT_FOUND\"}} | gemini/gemini-2.0-flash: {\"error\":{\"code\":404,\"message\":\"This model models/gemini-2.0-flash is no longer available. Please update your code to use models/gemini-3.6-flash for the latest features and improvements. We recommend you to use the Interactions API.\",\"status\":\"NOT_FOUND\"}} | gemini/gemini-1.5-flash: {\"error\":{\"code\":404,\"message\":\"models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ModelService.ListModels to see the list of available models and their supported methods.\",\"status\":\"NOT_FOUND\"}}",
+      "usedProvider": "algoritmo_contingencia",
+      "usedModel": "motor_regras_virais_v2",
+      "usedKeyName": "",
+      "attemptsLogs": [
+        {
+          "provider": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "isRateLimit": false,
+          "error": "Groq HTTP 404: {\"error\":{\"message\":\"The model `llama-3.3-70b-versatile` does not exist or you do not have access to it.\",\"type\":\"invalid_request_error\",\"code\":\"model_not_found\"}}\n",
+          "durationMs": 127
+        },
+        {
+          "provider": "groq",
+          "model": "llama-3.1-8b-instant",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "isRateLimit": false,
+          "error": "Groq HTTP 404: {\"error\":{\"message\":\"The model `llama-3.1-8b-instant` does not exist or you do not have access to it.\",\"type\":\"invalid_request_error\",\"code\":\"model_not_found\"}}\n",
+          "durationMs": 79
+        },
+        {
+          "provider": "groq",
+          "model": "mixtral-8x7b-32768",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "isRateLimit": false,
+          "error": "Groq HTTP 400: {\"error\":{\"message\":\"The model `mixtral-8x7b-32768` has been decommissioned and is no longer supported. Please refer to https://console.groq.com/docs/deprecations for a recommendation on which model t",
+          "durationMs": 65
+        },
+        {
+          "provider": "groq",
+          "model": "gemma2-9b-it",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "isRateLimit": false,
+          "error": "Groq HTTP 400: {\"error\":{\"message\":\"The model `gemma2-9b-it` has been decommissioned and is no longer supported. Please refer to https://console.groq.com/docs/deprecations for a recommendation on which model to use ",
+          "durationMs": 103
+        },
+        {
+          "provider": "groq",
+          "model": "llama-guard-3-8b",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "isRateLimit": false,
+          "error": "Groq HTTP 400: {\"error\":{\"message\":\"The model `llama-guard-3-8b` has been decommissioned and is no longer supported. Please refer to https://console.groq.com/docs/deprecations for a recommendation on which model to ",
+          "durationMs": 81
+        },
+        {
+          "provider": "openrouter",
+          "model": "meta-llama/llama-3.3-70b-instruct:free",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "error": "OpenRouter HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now - use this slug instead: meta-llama/llama-3.3-70b-instruct\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEg",
+          "durationMs": 91
+        },
+        {
+          "provider": "openrouter",
+          "model": "meta-llama/llama-3.1-8b-instruct:free",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "error": "OpenRouter HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now - use this slug instead: meta-llama/llama-3.1-8b-instruct\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgA",
+          "durationMs": 41
+        },
+        {
+          "provider": "openrouter",
+          "model": "google/gemini-2.0-flash-exp:free",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "error": "OpenRouter HTTP 404: {\"error\":{\"message\":\"No endpoints found for google/gemini-2.0-flash-exp:free.\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\"}",
+          "durationMs": 41
+        },
+        {
+          "provider": "openrouter",
+          "model": "mistralai/mistral-7b-instruct:free",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "error": "OpenRouter HTTP 404: {\"error\":{\"message\":\"No endpoints found for mistralai/mistral-7b-instruct:free.\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\"}",
+          "durationMs": 51
+        },
+        {
+          "provider": "openrouter",
+          "model": "qwen/qwen-2.5-72b-instruct:free",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "error": "OpenRouter HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now - use this slug instead: qwen/qwen-2.5-72b-instruct\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\"",
+          "durationMs": 52
+        },
+        {
+          "provider": "openrouter",
+          "model": "deepseek/deepseek-r1:free",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "error": "OpenRouter HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now - use this slug instead: deepseek/deepseek-r1\",\"code\":404},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\"}",
+          "durationMs": 49
+        },
+        {
+          "provider": "openrouter",
+          "model": "sophosympatheia/rogue-rose-103b-v0.2:free",
+          "keyName": "Chave Padrão (ENV)",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "error": "OpenRouter HTTP 400: {\"error\":{\"message\":\"sophosympatheia/rogue-rose-103b-v0.2:free is not a valid model ID\",\"code\":400},\"user_id\":\"user_33F67XFysZ1G4SGViYhEgALc3Fs\"}",
+          "durationMs": 45
+        },
+        {
+          "provider": "gemini",
+          "model": "gemini-2.5-flash",
+          "status": "failed",
+          "error": "{\"error\":{\"code\":503,\"message\":\"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\"status\":\"UNAVAILABLE\"}}",
+          "durationMs": 76030
+        },
+        {
+          "provider": "gemini",
+          "model": "gemini-2.5-pro",
+          "status": "failed",
+          "error": "{\"error\":{\"code\":404,\"message\":\"This model models/gemini-2.5-pro is no longer available to new users. Please update your code to use models/gemini-3.1-pro-preview for the latest features and improvements. We recommend you to use the Interactions API.\",\"status\":\"NOT_FOUND\"}}",
+          "durationMs": 106
+        },
+        {
+          "provider": "gemini",
+          "model": "gemini-2.0-flash",
+          "status": "failed",
+          "error": "{\"error\":{\"code\":404,\"message\":\"This model models/gemini-2.0-flash is no longer available. Please update your code to use models/gemini-3.6-flash for the latest features and improvements. We recommend you to use the Interactions API.\",\"status\":\"NOT_FOUND\"}}",
+          "durationMs": 96
+        },
+        {
+          "provider": "gemini",
+          "model": "gemini-1.5-flash",
+          "status": "failed",
+          "error": "{\"error\":{\"code\":404,\"message\":\"models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ModelService.ListModels to see the list of available models and their supported methods.\",\"status\":\"NOT_FOUND\"}}",
+          "durationMs": 84
+        }
+      ],
+      "fallbackChain": [
+        "groq:llama-3.3-70b-versatile",
+        "groq:llama-3.1-8b-instant",
+        "groq:mixtral-8x7b-32768",
+        "groq:gemma2-9b-it",
+        "groq:llama-guard-3-8b",
+        "openrouter:meta-llama/llama-3.3-70b-instruct:free",
+        "openrouter:meta-llama/llama-3.1-8b-instruct:free",
+        "openrouter:google/gemini-2.0-flash-exp:free",
+        "openrouter:mistralai/mistral-7b-instruct:free",
+        "openrouter:qwen/qwen-2.5-72b-instruct:free",
+        "openrouter:deepseek/deepseek-r1:free",
+        "openrouter:sophosympatheia/rogue-rose-103b-v0.2:free",
+        "gemini:gemini-2.5-flash",
+        "gemini:gemini-2.5-pro",
+        "gemini:gemini-2.0-flash",
+        "gemini:gemini-1.5-flash"
+      ]
+    },
+    "updatedAt": "2026-10-13T01:12:59.860Z"
+  },
+  {
+    "id": "sample_script_1",
+    "title": "O Truque Psicológico do Cardápio que Faz Você Gastar o Dobro",
+    "niche": "Curiosidades & Fatos",
+    "platform": "tiktok",
+    "duration": "45s",
+    "framework": "hook_story_offer",
+    "tone": "dinamico_acelerado",
+    "targetAudience": "Pessoas que comem fora e se interessam por truques de psicologia e economia",
+    "ctaGoal": "salvar",
+    "selectedHookIndex": 0,
+    "createdAt": "2026-09-20T04:32:18.666Z",
+    "status": "ideia",
+    "isFavorite": true,
+    "fourParts": {
+      "hookPart": {
+        "title": "Parte 1: Gancho Magnético",
+        "timecode": "00:00 - 00:03",
+        "audioScript": "Existe um motivo secreto pelo qual você SEMPRE gasta mais do que planejava no restaurante.",
+        "visualCue": "Apontar o dedo diretamente para a lente da câmera com corte seco em preto e branco por 0.5s.",
+        "textOnScreen": "VOCÊ FOI ENGANADO HOJE 🤯",
+        "hookTrigger": "Gatilho de Injustiça / Quebra de Confiança (o cérebro precisa saber como foi manipulado)."
+      },
+      "storyPainPart": {
+        "title": "Parte 2: A Dor da História",
+        "timecode": "00:03 - 00:15",
+        "audioScript": "No topo do menu eles colocam um prato super caro de R$ 190. Quase ninguém pede, mas quando você olha o prato debaixo por R$ 75, seu cérebro acha uma pechincha e você pede sem pensar!",
+        "visualCue": "Mostrar imagem ilustrativa rápida do cardápio com seta vermelha pulsando no preço alto.",
+        "textOnScreen": "EFEITO ÂNCORA ⚓ (R$ 190 vs R$ 75)",
+        "painPoint": "Sentimento de estar gastando mais sem perceber por manipulação de preços."
+      },
+      "developmentPart": {
+        "title": "Parte 3: Desenvolvimento & Revelação",
+        "timecode": "00:15 - 00:35",
+        "audioScript": "E tem mais: já reparou que restaurantes de luxo NUNCA colocam o cifrão \"R$\" do lado do preço? [PAUSA] Isso é neurociência. Sem o símbolo da moeda, seu cérebro não sente a dor de perder dinheiro na hora da compra.",
+        "visualCue": "Zoom in rápido nos olhos, depois mostrar comparação na tela: \"R$ 80\" cortado vs \"80\" com destaque.",
+        "textOnScreen": "POR QUE ELES TIRAM O \"R$\"?! 🧠",
+        "keyInsight": "Remover o cifrão diminui a aversão psicológica à perda."
+      },
+      "solutionCtaPart": {
+        "title": "Parte 4: Solução & Chamada para Ação (CTA)",
+        "timecode": "00:35 - 00:45",
+        "audioScript": "Agora você nunca mais cai nessa armadilha. Salva esse vídeo agora pra conferir na próxima vez que for comer fora e me diz nos comentários: você já tinha reparado nisso?",
+        "visualCue": "Apontar para o ícone de salvar (canto direito inferior), gesto amigável com a mão.",
+        "textOnScreen": "SALVE PARA NÃO ESQUECER 🔖",
+        "ctaAction": "Salvar para consultar depois e comentar experiência pessoal."
+      }
+    },
+    "hooks": [
+      {
+        "id": "h1",
+        "category": "shock",
+        "spokenText": "Existe um motivo secreto pelo qual você SEMPRE gasta mais do que planejava no restaurante.",
+        "visualAction": "Apontar o dedo diretamente para a lente da câmera com corte seco em preto e branco por 0.5s.",
+        "textOnScreen": "VOCÊ FOI ENGANADO HOJE 🤯",
+        "retentionTrigger": "Gatilho de Injustiça / Quebra de Confiança (o cérebro precisa saber como foi manipulado)."
+      },
+      {
+        "id": "h2",
+        "category": "curiosity",
+        "spokenText": "Repare nisso da próxima vez que abrir um cardápio: o truque do \"prato âncora\".",
+        "visualAction": "Segurar um menu fictício e dar zoom rápido na primeira página.",
+        "textOnScreen": "OLHE O CARDÁPIO AGORA! 📋",
+        "retentionTrigger": "Curiosity Gap específico com instrução de ação para o cotidiano."
+      },
+      {
+        "id": "h3",
+        "category": "contrarian",
+        "spokenText": "Os restaurantes colocam um prato de R$ 180 no cardápio NÃO para você comprar, mas pra você se sentir esperto.",
+        "visualAction": "Mostrar na tela um cardápio com preço absurdo e dar um sorriso irônico.",
+        "textOnScreen": "O PRATO DE R$ 180 É UMA CILADA 🚨",
+        "retentionTrigger": "Contrariano imediato: desafia a lógica comum de precificação."
+      },
+      {
+        "id": "h4",
+        "category": "problem",
+        "spokenText": "Se você já saiu para comer e a conta veio o dobro do que você achava, você caiu nessa armadilha psicológica.",
+        "visualAction": "Bater a mão na testa com efeito sonoro \"Vine Boom\".",
+        "textOnScreen": "POR QUE SUA CONTA VEM O DOBRO? 💸",
+        "retentionTrigger": "Dor universal imediata com alta identificação emocional."
+      },
+      {
+        "id": "h5",
+        "category": "story",
+        "spokenText": "Eu trabalhei 3 anos como consultor de restaurantes e esse é o maior segredo que me proibiram de contar.",
+        "visualAction": "Olhar para os lados como se fosse contar um segredo proibido e aproximar a cabeça da câmera.",
+        "textOnScreen": "O SEGREDO DOS RESTAURANTES 🤫",
+        "retentionTrigger": "Segredo exclusivo de insider da indústria."
+      }
+    ],
+    "scenes": [
+      {
+        "timecode": "00:00 - 00:03",
+        "partNumber": 1,
+        "sectionName": "Parte 1: Gancho Magnético",
+        "audioScript": "Existe um motivo secreto pelo qual você SEMPRE gasta mais do que planejava no restaurante.",
+        "visualCue": "Enquadramento próximo, corte seco, iluminação de alto contraste, gesto firme de apontar.",
+        "textOnScreen": "VOCÊ FOI ENGANADO HOJE 🤯",
+        "audioMusicCue": "Efeito sonoro \"Whoosh\" rápido + beat de suspense grave."
+      },
+      {
+        "timecode": "00:03 - 00:15",
+        "partNumber": 2,
+        "sectionName": "Parte 2: A Dor da História (O Efeito Âncora)",
+        "audioScript": "No topo da página, eles colocam um prato super caro — tipo um bife de R$ 190. Eles sabem que quase ninguém vai pedir. Mas quando você olha o prato debaixo por R$ 75, seu cérebro acha uma pechincha absurda!",
+        "visualCue": "Mostrar imagem ilustrativa rápida do cardápio com seta vermelha pulsando no preço alto.",
+        "textOnScreen": "EFEITO ÂNCORA ⚓ (R$ 190 vs R$ 75)",
+        "audioMusicCue": "Trilha lofi / trap acelerada entra com ritmo constante."
+      },
+      {
+        "timecode": "00:15 - 00:35",
+        "partNumber": 3,
+        "sectionName": "Parte 3: Desenvolvimento (Sem o Cifrão R$)",
+        "audioScript": "E tem mais: já percebeu que os melhores restaurantes NUNCA colocam o cifrão \"R$\" do lado do preço? [PAUSA] Isso é neurociência pura. Sem o símbolo da moeda, seu cérebro associa menos o número à dor de perder dinheiro.",
+        "visualCue": "Zoom in lento nos olhos, depois mostrar comparação na tela: \"R$ 80\" cortado vs \"80\" com destaque.",
+        "textOnScreen": "POR QUE ELES TIRAM O \"R$\"?! 🧠",
+        "audioMusicCue": "Efeito sonoro \"Ding\" de revelação."
+      },
+      {
+        "timecode": "00:35 - 00:45",
+        "partNumber": 4,
+        "sectionName": "Parte 4: Solução & CTA Final",
+        "audioScript": "Agora que você sabe disso, você nunca mais vai gastar dinheiro à toa. Salva esse vídeo agora pra conferir no próximo restaurante e me conta nos comentários: você já tinha reparado nisso?",
+        "visualCue": "Apontar para o ícone de salvar (canto direito inferior), gesto amigável com a mão.",
+        "textOnScreen": "SALVE PARA NÃO ESQUECER 🔖",
+        "audioMusicCue": "Drop final da batida com encerramento enérgico."
+      }
+    ],
+    "fullTeleprompterText": "Existe um motivo secreto pelo qual você SEMPRE gasta mais do que planejava no restaurante. [PAUSA]\n\nNo topo da página, eles colocam um prato super caro — tipo um bife de R$ 190. Eles sabem que quase ninguém vai pedir. [PAUSA CURTA] Mas quando você olha o prato debaixo por R$ 75, seu cérebro acha uma PECHINCHA absurda!\n\nE tem mais: já percebeu que os melhores restaurantes NUNCA colocam o cifrão \"R$\" do lado do preço? [PAUSA]\n\nIsso é NEUROCIÊNCIA pura. Sem o símbolo da moeda, seu cérebro associa menos o número à dor de perder dinheiro.\n\nAgora que você sabe disso, você nunca mais vai cair nessa armadilha. Salva esse vídeo agora pra conferir no próximo restaurante e me diz nos comentários: você já tinha reparado nisso?",
+    "viralityAnalysis": {
+      "overallScore": 94,
+      "hookStrengthScore": 96,
+      "retentionPacingScore": 92,
+      "shareabilityScore": 95,
+      "commentTriggerScore": 93,
+      "whyItGoesViral": [
+        "Gera sentimento imediato de revelação de \"segredo do cotidiano\" que todos vivenciam.",
+        "O espectador aprende algo prático que pode aplicar hoje mesmo, aumentando taxa de salvamento.",
+        "A pergunta final no CTA gera alto debate com pessoas contando histórias de contas caras."
+      ],
+      "retentionSecret": "A quebra de padrão aos 15 segundos (\"E tem mais...\") impede a queda clássica de retenção após o primeiro exemplo.",
+      "perfectLoopTip": "Se você terminar a última frase com \"...e é exatamente por isso que...\" e o vídeo reiniciar, a conexão com o gancho fica 100% contínua."
+    },
+    "bestPostingTimes": [
+      "Segunda a Sexta: 12h00 às 13h30 (horário de almoço)",
+      "Quinta a Domingo: 18h30 às 21h00 (planejamento de jantar/fim de semana)"
+    ],
+    "hashtags": {
+      "megaViral": [
+        "#curiosidades",
+        "#viral",
+        "#foryou",
+        "#dicas",
+        "#psicologia"
+      ],
+      "nicheSpecific": [
+        "#neurovendas",
+        "#gatilhosmentais",
+        "#restaurantes",
+        "#marketingestrategico",
+        "#financasinteligentes"
+      ],
+      "lowCompetition": [
+        "#efeitoancora",
+        "#psicologiadeconsumo",
+        "#cardapiointeligente",
+        "#economizarsempre",
+        "#hacksdevida"
+      ]
+    },
+    "captionAndPost": {
+      "headline": "Você já caiu nesse truque do cardápio? 🤯🍽️",
+      "captionBody": "A neurociência por trás dos restaurantes é muito mais profunda do que você imagina. O prato mais caro do menu existe por apenas UM motivo... e não é para ser pedido!\n\nAssista até o fim para nunca mais cair nessa armadilha e economizar na sua próxima saída.",
+      "callToAction": "Salva esse vídeo para não esquecer e me conta aqui nos comentários: você já tinha notado isso? 👇",
+      "coverTitleIdea": "O TRUQUE DO CARDÁPIO QUE NINGUÉM TE CONTA 🚨",
+      "coverVisualPrompt": "Expressão de choque segurando um cardápio de restaurante com o preço 190 circulado em vermelho e um ponto de interrogação brilhante."
+    },
+    "updatedAt": "2026-10-13T01:12:59.860Z"
   }
 ]

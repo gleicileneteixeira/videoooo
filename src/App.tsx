@@ -38,6 +38,7 @@ import {
 import { SAMPLE_VIRAL_SCRIPT, DETRAN_SIMULADO_SCRIPT } from './data/presets';
 import { Sparkles, AlertCircle, ArrowLeft, Cpu } from 'lucide-react';
 import { getStoredApiKeys, saveStoredApiKeys, attachApiKeysPayload } from './utils/apiHelper';
+import { sanitizeTranscript } from './utils/transcriptSanitizer';
 
 const STORAGE_SCRIPTS = 'viralscript_saved_list_v3';
 const LEGACY_STORAGE_KEYS = [
@@ -470,8 +471,9 @@ export default function App() {
     } else if (typeof input === 'string') {
       actualText = input;
     }
-    const fullContent = actualText || actualTitle;
-    setSourceTranscript(actualText);
+    const cleanText = sanitizeTranscript(actualText);
+    const fullContent = cleanText || actualTitle;
+    setSourceTranscript(cleanText);
     setSourceVideoTitle(actualTitle);
     setPrefilledTopic(fullContent);
     setCurrentScript(null);
