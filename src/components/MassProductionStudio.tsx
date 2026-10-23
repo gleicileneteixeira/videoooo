@@ -209,7 +209,7 @@ export const MassProductionStudio: React.FC = () => {
   });
 
   // Configurações de Renderização & Formato
-  const [engine, setEngine] = useState<'server' | 'ffmpeg_wasm'>('server');
+  const [engine, setEngine] = useState<'auto' | 'server' | 'ffmpeg_wasm'>('auto');
   const [renderMode, setRenderMode] = useState<'fast' | 'compatible'>('fast');
   const [aspectRatio, setAspectRatio] = useState<'9:16' | '16:9' | '1:1' | '4:5'>('9:16');
   const [transition, setTransition] = useState<'none' | 'fade' | 'wipe'>('none');
@@ -436,7 +436,9 @@ export const MassProductionStudio: React.FC = () => {
       confetti({ particleCount: 50, spread: 70, origin: { y: 0.6 } });
     } catch (err: any) {
       console.error('Erro na geração do lote:', err);
-      setErrorMsg(err.message || 'Falha ao renderizar variações. Verifique o console ou tente o Modo Compatível.');
+      const rawMsg = err.message || 'Falha ao renderizar variações. Verifique o console ou tente o Modo Compatível.';
+      const cleanMsg = rawMsg.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
+      setErrorMsg(cleanMsg);
     } finally {
       setIsGenerating(false);
       setCurrentProgress(null);
@@ -739,28 +741,42 @@ export const MassProductionStudio: React.FC = () => {
                     MOTOR DE PROCESSAMENTO
                   </label>
                   <span className="text-[10px] text-emerald-400 font-bold">
-                    {engine === 'server' ? '⚡ 22x Mais Rápido (~0.5s/vídeo)' : '💻 WebAssembly Local'}
+                    {engine === 'auto' ? '⚡ Automático Inteligente' : engine === 'server' ? '⚡ Servidor Dedicado' : '💻 WebAssembly Local'}
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEngine('auto')}
+                    className={`flex flex-col gap-1 rounded-xl p-2.5 text-xs font-bold transition text-left border ${
+                      engine === 'auto'
+                        ? 'bg-rose-500/20 border-rose-500 text-white shadow-md shadow-rose-600/20'
+                        : 'border-slate-800 bg-slate-950 text-slate-400 hover:text-white hover:border-slate-700'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5 font-black text-rose-300">
+                      <Sparkles className="h-3.5 w-3.5 text-amber-400" /> Automático
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-normal">Recomendado</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => setEngine('server')}
-                    className={`flex flex-col gap-1 rounded-xl p-3 text-xs font-bold transition text-left border ${
+                    className={`flex flex-col gap-1 rounded-xl p-2.5 text-xs font-bold transition text-left border ${
                       engine === 'server'
                         ? 'bg-emerald-500/20 border-emerald-500 text-white shadow-md shadow-emerald-600/20'
                         : 'border-slate-800 bg-slate-950 text-slate-400 hover:text-white hover:border-slate-700'
                     }`}
                   >
                     <span className="flex items-center gap-1.5 font-black text-emerald-300">
-                      <Zap className="h-3.5 w-3.5 text-emerald-400" /> Servidor Dedicado (Recomendado)
+                      <Zap className="h-3.5 w-3.5 text-emerald-400" /> Servidor
                     </span>
-                    <span className="text-[10px] text-slate-400 font-normal">C++ Multithread nativo (~0.5s por vídeo)</span>
+                    <span className="text-[10px] text-slate-400 font-normal">Instantâneo</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setEngine('ffmpeg_wasm')}
-                    className={`flex flex-col gap-1 rounded-xl p-3 text-xs font-bold transition text-left border ${
+                    className={`flex flex-col gap-1 rounded-xl p-2.5 text-xs font-bold transition text-left border ${
                       engine === 'ffmpeg_wasm'
                         ? 'bg-indigo-500/20 border-indigo-500 text-white shadow-md shadow-indigo-600/20'
                         : 'border-slate-800 bg-slate-950 text-slate-400 hover:text-white hover:border-slate-700'
@@ -769,7 +785,7 @@ export const MassProductionStudio: React.FC = () => {
                     <span className="flex items-center gap-1.5 font-black text-indigo-300">
                       <Cpu className="h-3.5 w-3.5 text-indigo-400" /> WebAssembly
                     </span>
-                    <span className="text-[10px] text-slate-400 font-normal">Executa 100% no navegador (mais lento)</span>
+                    <span className="text-[10px] text-slate-400 font-normal">Sem limite de upload</span>
                   </button>
                 </div>
               </div>

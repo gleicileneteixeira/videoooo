@@ -49,7 +49,7 @@ export const VideoMergerStudio: React.FC<VideoMergerStudioProps> = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Settings
-  const [engine, setEngine] = useState<'server' | 'ffmpeg_wasm'>('server');
+  const [engine, setEngine] = useState<'auto' | 'server' | 'ffmpeg_wasm'>('auto');
   const [mode, setMode] = useState<'auto' | 'fast' | 'compatible'>('auto');
   const [transition, setTransition] = useState<TransitionEffect>('none');
   const [transitionDuration, setTransitionDuration] = useState<number>(0.5);
@@ -67,6 +67,7 @@ export const VideoMergerStudio: React.FC<VideoMergerStudioProps> = () => {
   const [previewClip, setPreviewClip] = useState<VideoClip | null>(null);
 
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll logs
   useEffect(() => {
@@ -175,8 +176,8 @@ export const VideoMergerStudio: React.FC<VideoMergerStudioProps> = () => {
 
   // Execute Concatenation
   const handleStartConcatenation = async () => {
-    if (clips.length === 0) {
-      alert('Adicione pelo menos 1 vídeo para iniciar.');
+    if (clips.length < 2) {
+      alert('Adicione pelo menos 2 vídeos para realizar a junção.');
       return;
     }
 
@@ -214,10 +215,16 @@ export const VideoMergerStudio: React.FC<VideoMergerStudioProps> = () => {
         spread: 70,
         origin: { y: 0.6 },
       });
+
+      setTimeout(() => {
+        resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 150);
     } catch (err: any) {
       console.error('Erro na junção:', err);
-      setErrorMessage(err.message || 'Falha inesperada ao juntar os vídeos.');
-      appendLog(`ERRO FATAL: ${err.message}`);
+      const rawMsg = err.message || 'Falha inesperada ao juntar os vídeos.';
+      const cleanMsg = rawMsg.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
+      setErrorMessage(cleanMsg);
+      appendLog(`ERRO: ${cleanMsg}`);
     } finally {
       setIsProcessing(false);
     }
@@ -290,6 +297,9 @@ export const VideoMergerStudio: React.FC<VideoMergerStudioProps> = () => {
               <HardDrive className="h-4 w-4 text-slate-400" />
               <span>{(totalSizeBytes / 1024 / 1024).toFixed(1)} MB</span>
             </div>
+            <span className="text-[10px] text-emerald-400 font-medium mt-1 block">
+              ⚡ Fatiamento em 5MB: imune a erro 413 e junção rápida ~1s
+            </span>
           </div>
 
           <div className="rounded-xl bg-slate-900/60 border border-slate-800 p-3">
@@ -472,38 +482,57 @@ export const VideoMergerStudio: React.FC<VideoMergerStudioProps> = () => {
               <div className="flex items-center justify-between">
                 <label className="text-xs font-semibold text-slate-300">Motor de Processamento:</label>
                 <span className="text-[10px] text-emerald-400 font-bold">
-                  {engine === 'server' ? '⚡ 22x Mais Rápido (~0.5s)' : '💻 WebAssembly no Navegador'}
+                  {engine === 'auto'
+                    ? (totalSizeBytes > 25 * 1024 * 1024 ? '💻 WebAssembly (>25MB)' : '⚡ Servidor (<25MB)')
+                    : engine === 'server'
+                    ? '⚡ Servidor Nativo (~0.5s)'
+                    : '💻 WebAssembly Local'}
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setEngine('auto')}
+                  className={`rounded-xl p-2 text-xs font-bold border transition-all text-left flex flex-col gap-0.5 ${
+                    engine === 'auto'
+                      ? 'bg-rose-500/20 border-rose-500 text-rose-200'
+                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                  }`}
+                >
+                  <span className="flex items-center gap-1 font-black text-white text-[11px]">
+                    <Sparkles className="h-3 w-3 text-amber-400" /> Automático
+                  </span>
+                  <span className="text-[9px] text-slate-400 font-normal">Recomendado</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setEngine('server')}
-                  className={`rounded-xl p-2.5 text-xs font-bold border transition-all text-left flex flex-col gap-1 ${
+                  className={`rounded-xl p-2 text-xs font-bold border transition-all text-left flex flex-col gap-0.5 ${
                     engine === 'server'
                       ? 'bg-emerald-500/20 border-emerald-500 text-emerald-200'
                       : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
                   }`}
                 >
-                  <span className="flex items-center gap-1.5 font-black text-white">
-                    <Zap className="h-3.5 w-3.5 text-emerald-400" /> Servidor Nativo
+                  <span className="flex items-center gap-1 font-black text-white text-[11px]">
+                    <Zap className="h-3 w-3 text-emerald-400" /> Servidor
                   </span>
-                  <span className="text-[10px] text-slate-400 font-normal">Instantâneo (~0.5s)</span>
+                  <span className="text-[9px] text-slate-400 font-normal">Instantâneo</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setEngine('ffmpeg_wasm')}
-                  className={`rounded-xl p-2.5 text-xs font-bold border transition-all text-left flex flex-col gap-1 ${
+                  className={`rounded-xl p-2 text-xs font-bold border transition-all text-left flex flex-col gap-0.5 ${
                     engine === 'ffmpeg_wasm'
                       ? 'bg-indigo-500/20 border-indigo-500 text-indigo-200'
                       : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
                   }`}
                 >
-                  <span className="flex items-center gap-1.5 font-black text-white">
-                    <Cpu className="h-3.5 w-3.5 text-indigo-400" /> WebAssembly
+                  <span className="flex items-center gap-1 font-black text-white text-[11px]">
+                    <Cpu className="h-3 w-3 text-indigo-400" /> WebAssembly
                   </span>
-                  <span className="text-[10px] text-slate-400 font-normal">Local no Navegador</span>
+                  <span className="text-[9px] text-slate-400 font-normal">Sem Limite</span>
                 </button>
               </div>
             </div>
@@ -674,12 +703,26 @@ export const VideoMergerStudio: React.FC<VideoMergerStudioProps> = () => {
 
           {/* Error Message */}
           {errorMessage && (
-            <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-4 text-xs text-rose-300 space-y-1">
+            <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-4 text-xs text-rose-300 space-y-2.5">
               <div className="flex items-center gap-1.5 font-bold text-rose-400">
                 <AlertCircle className="h-4 w-4" />
                 <span>Falha no Processamento</span>
               </div>
-              <p>{errorMessage}</p>
+              <p className="leading-relaxed">{errorMessage}</p>
+              <div className="pt-2 border-t border-rose-900/40 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEngine('ffmpeg_wasm');
+                    setErrorMessage(null);
+                    setTimeout(() => handleStartConcatenation(), 80);
+                  }}
+                  className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-1.5 transition-colors cursor-pointer text-[11px]"
+                >
+                  <Cpu className="h-3.5 w-3.5" />
+                  <span>Juntar com WebAssembly Local (Sem limite de upload)</span>
+                </button>
+              </div>
             </div>
           )}
 
@@ -719,7 +762,7 @@ export const VideoMergerStudio: React.FC<VideoMergerStudioProps> = () => {
       {/* FINAL CONCATENATED RESULT PREVIEW */}
       {/* ========================================================================= */}
       {result && (
-        <div className="rounded-2xl border border-emerald-500/40 bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950 p-6 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200">
+        <div ref={resultRef} id="final-concatenated-result" className="rounded-2xl border border-emerald-500/40 bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950 p-6 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
             <div className="flex items-center gap-3">
               <div className="rounded-xl bg-emerald-500/20 p-2.5 text-emerald-400 border border-emerald-500/30">

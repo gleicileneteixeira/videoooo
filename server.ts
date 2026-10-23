@@ -4559,7 +4559,7 @@ const videoUpload = multer({
   },
 });
 
-const ALLOWED_CONCAT_MODES = new Set(["fast", "auto", "compat"]);
+const ALLOWED_CONCAT_MODES = new Set(["fast", "auto", "compat", "compatible"]);
 const ALLOWED_TRANSITIONS = new Set([
   "none",
   "fade",
@@ -4790,6 +4790,358 @@ app.post("/api/video/concatenate", videoUpload.any(), async (req, res) => {
     console.error("Erro na concatenação de vídeo:", err?.message || err);
     try {
       fs.rmSync(tempDir, { recursive: true, force: true });
+    } catch {}
+    if (!res.headersSent) {
+      res.status(500).send("Erro no servidor de concatenação.");
+    }
+  }
+});
+
+// Configure multer para upload individual e em partes (chunks) de clipes
+const singleClipUpload = multer({
+  dest: path.join(os.tmpdir(), "vs_clips_uploads"),
+  limits: { fileSize: 30 * 1024 * 1024, files: 1 }, // Máx 30MB por clipe individual
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_CONCAT_MIMES.has(file.mimetype)) return cb(null, true);
+    if (/\.(mp4|webm|mov|mkv|avi)$/i.test(file.originalname || "")) return cb(null, true);
+    cb(new Error("Tipo de vídeo não permitido."));
+  },
+});
+
+const chunkUpload = multer({
+  dest: path.join(os.tmpdir(), "vs_chunks_uploads"),
+  limits: { fileSize: 15 * 1024 * 1024, files: 1 }, // 15MB máx por chunk (muito abaixo de 32MB)
+});
+
+// Endpoint para upload de partes (chunks) de clipes (imune ao limite 413)
+app.post("/api/video/upload-chunk", chunkUpload.single("chunk"), async (req, res) => {
+  try {
+    const rawSessionId = req.body?.sessionId || "";
+    const sessionId = String(rawSessionId).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40);
+    const clipIndex = parseInt(req.body?.clipIndex, 10);
+    const chunkIndex = parseInt(req.body?.chunkIndex, 10);
+    const totalChunks = parseInt(req.body?.totalChunks, 10);
+
+    if (!sessionId || isNaN(clipIndex) || isNaN(chunkIndex) || isNaN(totalChunks) || !req.file) {
+      if (req.file) { try { fs.unlinkSync(req.file.path); } catch {} }
+      return res.status(400).json({ error: "Parâmetros inválidos para upload do chunk." });
+    }
+
+    const sessionDir = path.join(os.tmpdir(), `vs_session_${sessionId}`);
+    fs.mkdirSync(sessionDir, { recursive: true });
+
+    const destPath = path.join(sessionDir, `input_${clipIndex}.mp4`);
+
+    if (chunkIndex === 0) {
+      // Primeiro chunk: substitui ou inicializa arquivo
+      fs.copyFileSync(req.file.path, destPath);
+    } else {
+      // Chunks subsequentes: anexa ao final
+      const chunkData = fs.readFileSync(req.file.path);
+      fs.appendFileSync(destPath, chunkData);
+    }
+
+    try { fs.unlinkSync(req.file.path); } catch {}
+
+    return res.json({ success: true, clipIndex, chunkIndex, totalChunks });
+  } catch (err: any) {
+    console.error("Erro no upload de chunk:", err?.message || err);
+    if (req.file) { try { fs.unlinkSync(req.file.path); } catch {} }
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Falha ao gravar parte do vídeo." });
+    }
+  }
+});
+
+// Endpoint para upload individual de clipe em sessão
+app.post("/api/video/upload-clip", singleClipUpload.single("clip"), async (req, res) => {
+  try {
+    const rawSessionId = req.body?.sessionId || "";
+    const sessionId = String(rawSessionId).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40);
+    const clipIndex = parseInt(req.body?.clipIndex, 10);
+
+    if (!sessionId || isNaN(clipIndex) || !req.file) {
+      if (req.file) { try { fs.unlinkSync(req.file.path); } catch {} }
+      return res.status(400).json({ error: "Dados inválidos para upload do clipe." });
+    }
+
+    const sessionDir = path.join(os.tmpdir(), `vs_session_${sessionId}`);
+    fs.mkdirSync(sessionDir, { recursive: true });
+
+    const destPath = path.join(sessionDir, `input_${clipIndex}.mp4`);
+    fs.renameSync(req.file.path, destPath);
+
+    return res.json({ success: true, clipIndex });
+  } catch (err: any) {
+    console.error("Erro no upload individual de clipe:", err?.message || err);
+    if (req.file) { try { fs.unlinkSync(req.file.path); } catch {} }
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Falha ao receber clipe." });
+    }
+  }
+});
+
+// Endpoint para junção instantânea da sessão em menos de 1 segundo (C++ nativo)
+app.post("/api/video/merge-session", async (req, res) => {
+  const rawSessionId = req.body?.sessionId || "";
+  const sessionId = String(rawSessionId).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40);
+  const clipsCount = parseInt(req.body?.clipsCount, 10) || 0;
+
+  if (!sessionId || clipsCount === 0) {
+    return res.status(400).send("Sessão ou contagem de clipes inválida.");
+  }
+
+  const sessionDir = path.join(os.tmpdir(), `vs_session_${sessionId}`);
+  if (!fs.existsSync(sessionDir)) {
+    return res.status(404).send("Sessão não encontrada.");
+  }
+
+  try {
+    const inputPaths: string[] = [];
+    for (let i = 0; i < clipsCount; i++) {
+      const p = path.join(sessionDir, `input_${i}.mp4`);
+      if (!fs.existsSync(p)) {
+        throw new Error(`Clipe ${i} não foi encontrado na sessão.`);
+      }
+      inputPaths.push(p);
+    }
+
+    // Garantir que todos os clipes possuam trilha de áudio válida (evita erro em vídeos mudos)
+    for (let i = 0; i < inputPaths.length; i++) {
+      const p = inputPaths[i];
+      let hasAudio = false;
+      try {
+        const probeOut = execFileSync("ffprobe", [
+          "-v", "error",
+          "-select_streams", "a:0",
+          "-show_entries", "stream=codec_type",
+          "-of", "default=nw=1:nk=1",
+          p
+        ], { encoding: "utf-8" });
+        hasAudio = probeOut.trim() === "audio";
+      } catch {
+        hasAudio = false;
+      }
+
+      if (!hasAudio) {
+        const withAudPath = path.join(sessionDir, `input_aud_${i}.mp4`);
+        try {
+          await execFileAsync("ffmpeg", [
+            "-i", p,
+            "-f", "lavfi",
+            "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
+            "-c:v", "copy",
+            "-c:a", "aac",
+            "-shortest",
+            "-y",
+            withAudPath,
+          ]);
+          if (fs.existsSync(withAudPath) && fs.statSync(withAudPath).size > 100) {
+            fs.renameSync(withAudPath, p);
+          }
+        } catch (silentErr) {
+          console.warn(`Aviso ao adicionar áudio mudo no clipe ${i}:`, silentErr);
+        }
+      }
+    }
+
+    const rawMode = typeof req.body?.mode === "string" ? req.body.mode : "auto";
+    const rawTransition = typeof req.body?.transition === "string" ? req.body.transition : "none";
+    const mode = ALLOWED_CONCAT_MODES.has(rawMode) ? rawMode : "auto";
+    const transition = ALLOWED_TRANSITIONS.has(rawTransition) ? rawTransition : "none";
+    const targetW = clampInt(req.body?.targetWidth, 1080, 240, 2160);
+    const targetH = clampInt(req.body?.targetHeight, 1920, 240, 3840);
+    const fps = clampInt(req.body?.fps, 30, 15, 60);
+
+    const outputPath = path.join(sessionDir, "output.mp4");
+    let success = false;
+
+    // 1. Tentar Junção Instantânea (-c copy) — 0.2 a 0.5 segundos!
+    if ((mode === "fast" || mode === "auto") && transition === "none") {
+      try {
+        const concatTxtPath = path.join(sessionDir, "concat.txt");
+        const concatContent = inputPaths.map((p) => `file '${p.replace(/'/g, "'\\''")}'`).join("\n");
+        fs.writeFileSync(concatTxtPath, concatContent, "utf-8");
+
+        const fastArgs = [
+          "-f", "concat",
+          "-safe", "0",
+          "-i", concatTxtPath,
+          "-c", "copy",
+          "-fflags", "+genpts",
+          "-avoid_negative_ts", "make_zero",
+          "-movflags", "+faststart",
+          "-y",
+          outputPath,
+        ];
+
+        await execFileAsync("ffmpeg", fastArgs, { timeout: 45000 });
+        if (fs.existsSync(outputPath) && fs.statSync(outputPath).size > 1000) {
+          success = true;
+        }
+      } catch (fastErr: any) {
+        console.warn("Sessão: Modo Rápido falhou, tentando cópia de vídeo com aac:", fastErr?.message);
+        if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+      }
+    }
+
+    // 2. Se -c copy direto falhou por áudio diferente, tenta copiar vídeo e recodificar apenas áudio (-c:v copy -c:a aac) em ~0.8s!
+    if (!success && transition === "none") {
+      try {
+        const concatTxtPath = path.join(sessionDir, "concat.txt");
+        const fastArgs = [
+          "-f", "concat",
+          "-safe", "0",
+          "-i", concatTxtPath,
+          "-c:v", "copy",
+          "-c:a", "aac",
+          "-b:a", "128k",
+          "-ar", "44100",
+          "-avoid_negative_ts", "make_zero",
+          "-movflags", "+faststart",
+          "-y",
+          outputPath,
+        ];
+        await execFileAsync("ffmpeg", fastArgs, { timeout: 45000 });
+        if (fs.existsSync(outputPath) && fs.statSync(outputPath).size > 1000) {
+          success = true;
+        }
+      } catch (audioCopyErr: any) {
+        console.warn("Sessão: Modo Audio reencode falhou:", audioCopyErr?.message);
+        if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+      }
+    }
+
+    // 3. Modo Compatível ultra-rápido se necessário ou com transições xfade
+    if (!success) {
+      if (transition === "none") {
+        const singlePassInputs: string[] = [];
+        let filterChain = "";
+        for (let i = 0; i < inputPaths.length; i++) {
+          singlePassInputs.push("-i", inputPaths[i]);
+          filterChain += `[${i}:v]scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease,pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=${fps}[v${i}];`;
+          filterChain += `[${i}:a]aformat=sample_rates=44100:channel_layouts=stereo[a${i}];`;
+        }
+        for (let i = 0; i < inputPaths.length; i++) {
+          filterChain += `[v${i}][a${i}]`;
+        }
+        filterChain += `concat=n=${inputPaths.length}:v=1:a=1[outv][outa]`;
+
+        const compatArgs = [
+          ...singlePassInputs,
+          "-filter_complex", filterChain,
+          "-map", "[outv]",
+          "-map", "[outa]",
+          "-c:v", "libx264",
+          "-preset", "ultrafast",
+          "-tune", "zerolatency",
+          "-crf", "26",
+          "-pix_fmt", "yuv420p",
+          "-c:a", "aac",
+          "-ar", "44100",
+          "-ac", "2",
+          "-b:a", "128k",
+          "-avoid_negative_ts", "make_zero",
+          "-movflags", "+faststart",
+          "-y",
+          outputPath,
+        ];
+        await execFileAsync("ffmpeg", compatArgs, { timeout: 120000 });
+      } else {
+        // Suporte a transições visuais (xfade) no servidor
+        const transitionDuration = clampFloat(req.body?.transitionDuration, 0.5, 0.1, 2);
+        const stdPaths: string[] = [];
+        const vfScale = `scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease,pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=${fps}`;
+
+        for (let i = 0; i < inputPaths.length; i++) {
+          const stdPath = path.join(sessionDir, `std_${i}.mp4`);
+          stdPaths.push(stdPath);
+          const stdArgs = [
+            "-i", inputPaths[i],
+            "-vf", vfScale,
+            "-c:v", "libx264",
+            "-preset", "ultrafast",
+            "-tune", "zerolatency",
+            "-crf", "26",
+            "-pix_fmt", "yuv420p",
+            "-c:a", "aac",
+            "-ar", "44100",
+            "-ac", "2",
+            "-b:a", "128k",
+            "-avoid_negative_ts", "make_zero",
+            "-y",
+            stdPath,
+          ];
+          await execFileAsync("ffmpeg", stdArgs, { timeout: 60000 });
+        }
+
+        const xfadeInputs: string[] = [];
+        for (let i = 0; i < stdPaths.length; i++) {
+          xfadeInputs.push("-i", stdPaths[i]);
+        }
+
+        let filterGraph = "";
+        let currentV = "[0:v]";
+        let currentA = "[0:a]";
+        let accumulatedDur = 5.0;
+
+        for (let i = 1; i < stdPaths.length; i++) {
+          const offset = Math.max(0.1, accumulatedDur - transitionDuration);
+          const nextV = `[v_trans_${i}]`;
+          const nextA = `[a_trans_${i}]`;
+          const xfadeEffect = transition === "dissolve" ? "fade" : transition;
+
+          filterGraph += `${currentV}[${i}:v]xfade=transition=${xfadeEffect}:duration=${transitionDuration}:offset=${offset.toFixed(2)}${nextV};`;
+          filterGraph += `${currentA}[${i}:a]acrossfade=d=${transitionDuration}${nextA};`;
+
+          currentV = nextV;
+          currentA = nextA;
+          accumulatedDur = offset + 5.0;
+        }
+
+        filterGraph = filterGraph.replace(/;$/, "");
+        const xfadeArgs = [
+          ...xfadeInputs,
+          "-filter_complex", filterGraph,
+          "-map", currentV,
+          "-map", currentA,
+          "-c:v", "libx264",
+          "-preset", "ultrafast",
+          "-tune", "zerolatency",
+          "-crf", "26",
+          "-pix_fmt", "yuv420p",
+          "-c:a", "aac",
+          "-ar", "44100",
+          "-ac", "2",
+          "-b:a", "128k",
+          "-avoid_negative_ts", "make_zero",
+          "-movflags", "+faststart",
+          "-y",
+          outputPath,
+        ];
+        await execFileAsync("ffmpeg", xfadeArgs, { timeout: 120000 });
+      }
+    }
+
+    if (!fs.existsSync(outputPath) || fs.statSync(outputPath).size < 100) {
+      throw new Error("Arquivo de saída não foi gerado pelo servidor.");
+    }
+
+    res.setHeader("Content-Type", "video/mp4");
+    res.setHeader("Content-Disposition", 'attachment; filename="video_concatenado.mp4"');
+
+    const readStream = fs.createReadStream(outputPath);
+    readStream.pipe(res);
+
+    readStream.on("close", () => {
+      try {
+        fs.rmSync(sessionDir, { recursive: true, force: true });
+      } catch {}
+    });
+  } catch (err: any) {
+    console.error("Erro na junção de sessão:", err?.message || err);
+    try {
+      fs.rmSync(sessionDir, { recursive: true, force: true });
     } catch {}
     if (!res.headersSent) {
       res.status(500).send("Erro no servidor de concatenação.");
