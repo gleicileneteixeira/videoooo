@@ -219,6 +219,7 @@ export const MassProductionStudio: React.FC = () => {
   const [autoDownload, setAutoDownload] = useState(false);
   const [batchName, setBatchName] = useState('');
   const [quantityToGenerate, setQuantityToGenerate] = useState<number>(1);
+  const [userManuallySetQuantity, setUserManuallySetQuantity] = useState<boolean>(false);
 
   // Estados de Processamento
   const [isGenerating, setIsGenerating] = useState(false);
@@ -272,6 +273,19 @@ export const MassProductionStudio: React.FC = () => {
   }, [activeSlots, slotItems]);
 
   const totalPossibleVariations = cartesianCombinations.length;
+
+  // Cair automaticamente no MÁXIMO de combinações disponíveis.
+  // Se a pessoa quiser diminuir, ela diminui pelo controle deslizante ou botão.
+  useEffect(() => {
+    if (totalPossibleVariations > 0) {
+      if (!userManuallySetQuantity || quantityToGenerate > totalPossibleVariations || quantityToGenerate <= 1) {
+        setQuantityToGenerate(totalPossibleVariations);
+      }
+    } else {
+      setQuantityToGenerate(1);
+      setUserManuallySetQuantity(false);
+    }
+  }, [totalPossibleVariations]);
 
   // Ajustar o número de quantidade a gerar quando o total de combinações mudar
   const effectiveTargetCount = Math.min(
@@ -1053,18 +1067,47 @@ export const MassProductionStudio: React.FC = () => {
                   </div>
                 )}
 
-                <div className="flex items-center justify-between text-xs mb-1 font-semibold text-slate-300">
-                  <span>QUANTIDADE A GERAR:</span>
-                  <span className="font-mono text-pink-400">
-                    {effectiveTargetCount} de {totalPossibleVariations || 1} disponíveis
-                  </span>
+                <div className="flex items-center justify-between text-xs mb-1.5 font-semibold text-slate-300">
+                  <div className="flex items-center gap-2">
+                    <span>QUANTIDADE A GERAR:</span>
+                    {totalPossibleVariations > 0 && effectiveTargetCount === totalPossibleVariations && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-medium">
+                        ✓ Máximo Automático ({totalPossibleVariations})
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {totalPossibleVariations > 0 && effectiveTargetCount < totalPossibleVariations && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuantityToGenerate(totalPossibleVariations);
+                          setUserManuallySetQuantity(false);
+                        }}
+                        className="text-[11px] text-pink-400 hover:text-pink-300 underline font-medium cursor-pointer"
+                      >
+                        Resetar p/ Máximo ({totalPossibleVariations})
+                      </button>
+                    )}
+                    <span className="font-mono text-pink-400 font-bold">
+                      {effectiveTargetCount} de {totalPossibleVariations || 1}
+                    </span>
+                  </div>
                 </div>
                 <input
                   type="range"
                   min={1}
                   max={Math.max(1, totalPossibleVariations)}
                   value={effectiveTargetCount}
-                  onChange={(e) => setQuantityToGenerate(Number(e.target.value))}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setQuantityToGenerate(val);
+                    if (val < totalPossibleVariations) {
+                      setUserManuallySetQuantity(true);
+                    } else {
+                      setUserManuallySetQuantity(false);
+                    }
+                  }}
                   disabled={totalPossibleVariations === 0}
                   className="w-full accent-pink-500 cursor-pointer"
                 />

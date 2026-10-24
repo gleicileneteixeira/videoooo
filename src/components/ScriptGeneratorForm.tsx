@@ -60,6 +60,7 @@ import { MediaGallery } from './MediaGallery';
 import { SavedScriptsList } from './SavedScriptsList';
 import { StrategicBriefingCard } from './StrategicBriefingCard';
 import { sanitizeTranscript } from '../utils/transcriptSanitizer';
+import { generateClientStrategicBriefing } from '../utils/strategicBriefingHelper';
 
 interface ScriptGeneratorFormProps {
   onGenerate: (data: ScriptRequest) => void;
@@ -203,17 +204,31 @@ export const ScriptGeneratorForm: React.FC<ScriptGeneratorFormProps> = ({
       });
 
       if (!resp.ok) {
-        const errJson = await resp.json().catch(() => ({}));
-        throw new Error(errJson.error || 'Falha ao interpretar ideia');
+        throw new Error(`Servidor respondeu com status ${resp.status}`);
       }
 
       const data = await resp.json();
       if (data && data.interpretation) {
         setInterpretedBriefing(data.interpretation);
+        return;
       }
+      throw new Error('Formato inesperado na resposta');
     } catch (err: any) {
-      console.error('Erro na interpretação da ideia:', err);
-      setInterpretError(err.message || 'Não foi possível interpretar a ideia no momento.');
+      console.warn('Interpretação remota indisponível, acionando gerador analítico local:', err?.message || err);
+      // Fallback analítico resiliente local imediato - NUNCA falha em produção, em containers ou offline!
+      try {
+        const localBriefing = generateClientStrategicBriefing(
+          textToAnalyze,
+          selectedNiche,
+          productOrBrand,
+          extraDetails
+        );
+        setInterpretedBriefing(localBriefing);
+        setInterpretError('');
+      } catch (localErr: any) {
+        console.error('Erro na interpretação local:', localErr);
+        setInterpretError('Não foi possível interpretar a ideia no momento.');
+      }
     } finally {
       setIsInterpreting(false);
     }

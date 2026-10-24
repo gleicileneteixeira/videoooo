@@ -1516,7 +1516,14 @@ function generateAlgorithmicIdeaInterpretation(idea: string, niche?: string, pro
 }
 
 // Endpoint: Interpretação e Briefing Estratégico da Ideia do Vídeo (5 Pilares de Alta Conversão)
-app.post("/api/interpret-idea", async (req, res) => {
+app.get(["/api/interpret-idea", "/api/interpret_idea"], (_req, res) => {
+  res.json({
+    status: "online",
+    message: "Endpoint ativo. Envie uma requisição POST com { idea, niche, productOrOffer, extraDetails }",
+  });
+});
+
+app.post(["/api/interpret-idea", "/api/interpret_idea"], async (req, res) => {
   try {
     const { idea, niche, productOrOffer, extraDetails } = req.body;
     const { groqInput, openRouterInput } = extractKeysFromBody(req.body);
@@ -5171,17 +5178,35 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 
 // Vite middleware & Static serving
 async function startServer() {
-  if (process.env.NODE_ENV !== "production") {
+  const isCompiledBundle = typeof __filename !== "undefined" && (__filename.endsWith(".cjs") || __filename.endsWith(".js"));
+  const currentDir = typeof __dirname !== "undefined" ? __dirname : process.cwd();
+  const isProduction = process.env.NODE_ENV === "production" || isCompiledBundle;
+
+  if (!isProduction) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), "dist");
+    const distPath = fs.existsSync(path.join(currentDir, "index.html"))
+      ? currentDir
+      : path.join(process.cwd(), "dist");
+
+    // Servir arquivos estáticos da pasta compilada
     app.use(express.static(distPath));
-    app.get("*", (_req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+
+    // Fallback para SPA (qualquer rota como /script, /dashboard, etc., exceto /api)
+    app.get("*", (req, res, next) => {
+      if (req.path.startsWith("/api/")) {
+        return res.status(404).json({ error: `Endpoint API não encontrado: ${req.method} ${req.path}` });
+      }
+      const indexPath = path.join(distPath, "index.html");
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        next();
+      }
     });
   }
 
