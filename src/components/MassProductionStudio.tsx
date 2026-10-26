@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import {
   Upload,
   Layers,
@@ -189,7 +189,7 @@ const SLOT_DEFINITIONS: Record<SlotMode, SlotConfig[]> = {
   ],
 };
 
-const MAX_VIDEOS_PER_CATEGORY = 5;
+const MAX_VIDEOS_PER_CATEGORY = 50;
 
 export const MassProductionStudio: React.FC = () => {
   // Aba ativa: Upload vs Resultados

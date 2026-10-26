@@ -68,15 +68,27 @@ export function saveStoredApiKeys(config: ApiKeysConfig): void {
 }
 
 /**
- * Prepares payload with key pools for any server endpoint
+ * Prepares payload with key pools and OmniGateway selected model for any server endpoint
  */
 export function attachApiKeysPayload(payload: Record<string, any>, config?: ApiKeysConfig): Record<string, any> {
   const keys = config || getStoredApiKeys();
   const activeGroq = keys.groqKeyPool.filter((k) => k.isActive).map((k) => ({ id: k.id, name: k.name, key: k.key }));
   const activeOpenRouter = keys.openRouterKeyPool.filter((k) => k.isActive).map((k) => ({ id: k.id, name: k.name, key: k.key }));
 
+  let preferredModel = payload.preferredModel || payload.model;
+  try {
+    const rawGateway = localStorage.getItem('viralscript_omni_gateway_config');
+    if (rawGateway) {
+      const parsed = JSON.parse(rawGateway);
+      if (parsed?.selectedModelId && !preferredModel) {
+        preferredModel = parsed.selectedModelId;
+      }
+    }
+  } catch {}
+
   return {
     ...payload,
+    preferredModel,
     groqKeyPool: activeGroq,
     openRouterKeyPool: activeOpenRouter,
     groqApiKey: keys.groqApiKey || activeGroq[0]?.key || '',

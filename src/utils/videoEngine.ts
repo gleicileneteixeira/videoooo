@@ -64,6 +64,7 @@ export interface ConcatResult {
 let ffmpegInstance: FFmpeg | null = null;
 let isLoaded = false;
 let loadPromise: Promise<FFmpeg> | null = null;
+let isServerBackendAvailable: boolean | null = null;
 
 /**
  * 1. Inicialização do FFmpeg.wasm (Singleton)
@@ -292,19 +293,45 @@ export async function concatenateVideosFFmpeg(
     log(logMsg);
   };
 
+  let serverAlreadyAttempted = false;
+
   // 1. SELETOR DE MOTOR DE RENDERIZAÇÃO:
-  // O Servidor Nativo C++ une vídeos em ~1 segundo usando -c copy direto.
-  // Graças ao novo protocolo de upload em partes (chunks de 5MB), não há risco de erro 413 mesmo com vídeos grandes.
-  if (engine === 'server' || engine === 'auto') {
+  // Se o servidor nativo C++ estiver disponível, une vídeos em ~1 segundo usando -c copy direto.
+  // Em hospedagens serverless/estáticas (como Vercel, onde rotas C++ retornam 404 NOT_FOUND),
+  // fazemos fallback automático transparente para o motor WebAssembly local no navegador.
+  if ((engine === 'server' || engine === 'auto') && isServerBackendAvailable !== false) {
     try {
       updateProgress('fast_mode', 15, 'Iniciando Junção Rápida no Motor Nativo do Servidor...');
       const serverResult = await concatenateVideosServerFallback(clips, options);
       return serverResult;
     } catch (serverErr: any) {
-      log(`Aviso: Tentativa no Servidor retornou (${serverErr.message}). Alternando para o motor WebAssembly local...`);
-      updateProgress('initializing', 10, 'Alternando para o motor WebAssembly local...');
+      serverAlreadyAttempted = true;
+      const is404OrNotFound =
+        serverErr?.status === 404 ||
+        serverErr?.isNotFound ||
+        (serverErr?.message &&
+          (serverErr.message.includes('NOT_FOUND') ||
+            serverErr.message.includes('404') ||
+            serverErr.message.includes('The page could not be found') ||
+            serverErr.message.includes('não está disponível') ||
+            serverErr.message.includes('indisponível')));
 
-      if (engine === 'server' && options.useServerFallbackIfFails === false) {
+      if (is404OrNotFound) {
+        isServerBackendAvailable = false;
+      }
+
+      log(`Aviso: Tentativa no Servidor retornou (${serverErr.message}). Alternando para o motor WebAssembly local...`);
+      updateProgress(
+        'initializing',
+        10,
+        is404OrNotFound
+          ? 'Hospedagem serverless detectada (Vercel/Static). Alternando para motor WebAssembly local...'
+          : 'Alternando para o motor WebAssembly local...'
+      );
+
+      // Se o usuário selecionou 'server' manualmente, mas a hospedagem é serverless sem backend nativo (404),
+      // renderizamos no navegador em vez de travar o usuário com erro 404.
+      if (engine === 'server' && options.useServerFallbackIfFails === false && !is404OrNotFound) {
         throw serverErr;
       }
     }
@@ -315,8 +342,9 @@ export async function concatenateVideosFFmpeg(
   try {
     ffmpeg = await initFFmpeg(onLog);
   } catch (initErr: any) {
-    log(`Erro ao carregar FFmpeg.wasm: ${initErr.message}. Tentando Servidor Nativo como recuperação final...`);
-    if (options.useServerFallbackIfFails !== false) {
+    log(`Erro ao carregar FFmpeg.wasm: ${initErr.message}.`);
+    if (!serverAlreadyAttempted && isServerBackendAvailable !== false && options.useServerFallbackIfFails !== false) {
+      log('Tentando Servidor Nativo como recuperação final...');
       return await concatenateVideosServerFallback(clips, options);
     }
     throw initErr;
@@ -633,8 +661,8 @@ export async function concatenateVideosFFmpeg(
       resetFFmpegInstance();
     }
 
-    // Fallback de alta disponibilidade no servidor
-    if (options.useServerFallbackIfFails !== false) {
+    // Fallback de alta disponibilidade no servidor (somente se não tiver sido tentado e se o servidor estiver disponível)
+    if (options.useServerFallbackIfFails !== false && !serverAlreadyAttempted && isServerBackendAvailable !== false) {
       log('Acionando processamento no Servidor FFmpeg nativo...');
       return await concatenateVideosServerFallback(clips, options);
     }
@@ -692,8 +720,9 @@ export async function concatenateBatchVariations(
   };
 
   // 1. SELETOR DE MOTOR PARA LOTE:
-  // O Servidor Nativo C++ processa as variações com alta performance e sem limite de 25MB via chunks
-  if (engine === 'server' || engine === 'auto') {
+  // Se o servidor nativo C++ estiver disponível, processa as variações com alta performance e sem limite de 25MB via chunks.
+  // Em hospedagens serverless (Vercel), onde endpoints retornam 404, fazemos fallback automático transparente para o navegador.
+  if ((engine === 'server' || engine === 'auto') && isServerBackendAvailable !== false) {
     try {
       log(`Iniciando geração de ${variations.length} variações via Servidor Nativo de Alta Performance...`);
       onProgress?.({
@@ -741,8 +770,31 @@ export async function concatenateBatchVariations(
           batchServerErr.message.includes('Request Entity Too Large') ||
           batchServerErr.message.includes('413_PAYLOAD_TOO_LARGE'));
 
+      const is404 =
+        batchServerErr?.status === 404 ||
+        batchServerErr?.isNotFound ||
+        (batchServerErr?.message &&
+          (batchServerErr.message.includes('NOT_FOUND') ||
+            batchServerErr.message.includes('404') ||
+            batchServerErr.message.includes('The page could not be found') ||
+            batchServerErr.message.includes('não está disponível') ||
+            batchServerErr.message.includes('indisponível')));
+
+      if (is404) {
+        isServerBackendAvailable = false;
+      }
+
       log(`Aviso no processamento do lote via Servidor: ${batchServerErr.message}. Alternando para o motor WebAssembly local...`);
-      if (engine === 'server' && !isSizeError && options.useServerFallbackIfFails === false) {
+      onProgress?.({
+        stage: 'initializing',
+        percent: 5,
+        logMessage: is404
+          ? 'Hospedagem serverless detectada (Vercel/Static). Alternando para motor WebAssembly local...'
+          : 'Alternando para o motor WebAssembly local...',
+        totalClips: variations.length,
+      });
+
+      if (engine === 'server' && !isSizeError && !is404 && options.useServerFallbackIfFails === false) {
         throw batchServerErr;
       }
     }
@@ -981,6 +1033,13 @@ async function concatenateVideosServerFallback(
   clips: VideoClip[],
   options: ConcatOptions = {}
 ): Promise<ConcatResult> {
+  if (isServerBackendAvailable === false) {
+    const disabledErr = new Error('Servidor nativo indisponível nesta hospedagem serverless. Utilize a renderização local WebAssembly.');
+    (disabledErr as any).isNotFound = true;
+    (disabledErr as any).status = 404;
+    throw disabledErr;
+  }
+
   const startTime = performance.now();
   const sessionId = `vs_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
   const CHUNK_SIZE = 5 * 1024 * 1024; // 5 MB por fatia (seguro contra teto de 32MB)
@@ -1014,15 +1073,40 @@ async function concatenateVideosServerFallback(
       chunkForm.append('totalChunks', String(totalChunks));
       chunkForm.append('chunk', chunkBlob, clip.name || `clip_${clipIdx}.mp4`);
 
-      const uploadRes = await fetch('/api/video/upload-chunk', {
-        method: 'POST',
-        body: chunkForm,
-      });
+      let uploadRes: Response;
+      try {
+        uploadRes = await fetch('/api/video/upload-chunk', {
+          method: 'POST',
+          body: chunkForm,
+        });
+      } catch (netErr: any) {
+        isServerBackendAvailable = false;
+        const netError = new Error(`Falha de conexão com o servidor de renderização: ${netErr.message || 'Host inacessível'}`);
+        (netError as any).isNotFound = true;
+        (netError as any).status = 404;
+        throw netError;
+      }
 
       if (!uploadRes.ok) {
         const rawErr = await uploadRes.text().catch(() => '');
         const cleanErr = rawErr.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim().slice(0, 150);
-        throw new Error(`Falha no upload do clipe ${clipIdx + 1} (parte ${chunkIdx + 1}/${totalChunks}): ${cleanErr || uploadRes.statusText}`);
+        const is404 =
+          uploadRes.status === 404 ||
+          cleanErr.includes('NOT_FOUND') ||
+          cleanErr.includes('could not be found');
+
+        if (is404) {
+          isServerBackendAvailable = false;
+        }
+
+        const err = new Error(
+          is404
+            ? `Servidor de renderização C++ não está disponível nesta hospedagem (404 NOT_FOUND). Alternando para renderização local WebAssembly no navegador.`
+            : `Falha no upload do clipe ${clipIdx + 1} (parte ${chunkIdx + 1}/${totalChunks}): ${cleanErr || uploadRes.statusText}`
+        );
+        (err as any).status = uploadRes.status;
+        (err as any).isNotFound = is404;
+        throw err;
       }
 
       overallBytesUploaded += chunkBlob.size;
@@ -1045,25 +1129,50 @@ async function concatenateVideosServerFallback(
     totalClips: clips.length,
   });
 
-  const mergeRes = await fetch('/api/video/merge-session', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      sessionId,
-      clipsCount: clips.length,
-      mode: options.mode || 'auto',
-      transition: options.transition || 'none',
-      transitionDuration: options.transitionDuration || 0.5,
-      targetWidth: options.resolution?.width || 1080,
-      targetHeight: options.resolution?.height || 1920,
-      fps: options.fps || 30,
-    }),
-  });
+  let mergeRes: Response;
+  try {
+    mergeRes = await fetch('/api/video/merge-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId,
+        clipsCount: clips.length,
+        mode: options.mode || 'auto',
+        transition: options.transition || 'none',
+        transitionDuration: options.transitionDuration || 0.5,
+        targetWidth: options.resolution?.width || 1080,
+        targetHeight: options.resolution?.height || 1920,
+        fps: options.fps || 30,
+      }),
+    });
+  } catch (netErr: any) {
+    isServerBackendAvailable = false;
+    const netError = new Error(`Falha de conexão no merge do servidor: ${netErr.message || 'Host inacessível'}`);
+    (netError as any).isNotFound = true;
+    (netError as any).status = 404;
+    throw netError;
+  }
 
   if (!mergeRes.ok) {
     const rawErr = await mergeRes.text().catch(() => '');
     const cleanErr = rawErr.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
-    throw new Error(`Falha na junção de vídeos: ${cleanErr || mergeRes.statusText}`);
+    const is404 =
+      mergeRes.status === 404 ||
+      cleanErr.includes('NOT_FOUND') ||
+      cleanErr.includes('could not be found');
+
+    if (is404) {
+      isServerBackendAvailable = false;
+    }
+
+    const err = new Error(
+      is404
+        ? `Servidor de renderização C++ não está disponível nesta hospedagem (404 NOT_FOUND). Alternando para renderização local WebAssembly no navegador.`
+        : `Falha na junção de vídeos: ${cleanErr || mergeRes.statusText}`
+    );
+    (err as any).status = mergeRes.status;
+    (err as any).isNotFound = is404;
+    throw err;
   }
 
   options.onProgress?.({

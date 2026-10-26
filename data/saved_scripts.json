@@ -1,5 +1,417 @@
 [
   {
+    "id": "script_1792986232210_mhy5n",
+    "title": "Como Investir com Pouco Dinheiro em 45 Segundos",
+    "strategicBriefing": {
+      "videoTheme": "Investimentos de baixo valor para iniciantes",
+      "strategicObjective": "Ensinar microinvestimentos, gerar retenção e incentivar o salvamento do vídeo",
+      "pointsOfAttentionAndArgumentation": {
+        "flawedTraditionalMethod": {
+          "title": "O mito do capital alto",
+          "dangerConcept": "Acreditar que é preciso milhares para começar a investir",
+          "stateContextOrStatistic": "Mais de 70% dos brasileiros evitam investir por medo de falta de dinheiro",
+          "hardReality": "O dinheiro fica parado e perde poder de compra"
+        },
+        "idealSolution": {
+          "title": "Microinvestimento inteligente",
+          "coreDifferentiator": "Aportes pequenos, taxa baixa e efeito juros compostos"
+        },
+        "socialProofOrRealCase": {
+          "transitionHook": "Veja o que aconteceu com a Ana",
+          "storySummary": "Ela começou com R$50 por mês e, em 2 anos, já tem R$2.300 investidos",
+          "caseConclusion": "Pequenos aportes geram resultados reais",
+          "suggestedAudioClip": "Som de caixa registradora + música motivacional"
+        },
+        "dualCta": {
+          "callToActionContext": "Quer transformar seu troco em investimento?",
+          "action1Bio": "Clique no link da bio para a planilha de microinvestimento",
+          "action2CommentWord": "Comente a palavra-chave",
+          "keywordTrigger": "QUERO"
+        }
+      }
+    },
+    "hooks": [
+      {
+        "id": "hook_1",
+        "category": "shock",
+        "spokenText": "Quer virar o jogo e começar a investir mesmo com só R$100 no bolso?",
+        "visualAction": "Zoom rápido no rosto com expressão surpresa",
+        "textOnScreen": "INVISTA COM R$100",
+        "retentionTrigger": "Gatilho de curiosidade e retenção imediata"
+      },
+      {
+        "id": "hook_2",
+        "category": "curiosity",
+        "spokenText": "Descubra como transformar o troco do café em renda extra em menos de um minuto!",
+        "visualAction": "Mão mostrando moedas caindo na mão",
+        "textOnScreen": "TROCO = RENDIMENTO",
+        "retentionTrigger": "Gatilho de curiosidade e retenção imediata"
+      },
+      {
+        "id": "hook_3",
+        "category": "contrarian",
+        "spokenText": "Pare de adiar e aprenda a multiplicar seu dinheiro com menos de R$200 hoje!",
+        "visualAction": "Contagem regressiva de 3 segundos na tela",
+        "textOnScreen": "COMECE AGORA",
+        "retentionTrigger": "Gatilho de curiosidade e retenção imediata"
+      }
+    ],
+    "pains": [
+      {
+        "id": "pain_1",
+        "spokenText": "A grande questão é que a maioria acha que precisa de milhares para começar, e acaba nunca dando o primeiro passo.",
+        "visualAction": "Expressão de frustração, olhar para a conta bancária",
+        "textOnScreen": "MITO DO CAPITAL ALTO"
+      },
+      {
+        "id": "pain_2",
+        "spokenText": "A grande questão é que você acredita que investir é complicado, então deixa o dinheiro parado na conta corrente.",
+        "visualAction": "Mão segurando celular mostrando saldo zero",
+        "textOnScreen": "DINHEIRO PARADO"
+      },
+      {
+        "id": "pain_3",
+        "spokenText": "A grande questão é que muitas vezes você gasta o pouco que tem em supérfluos, sem perceber que poderia estar investindo.",
+        "visualAction": "Corte para compra de lanche caro",
+        "textOnScreen": "GASTO DESNECESSÁRIO"
+      }
+    ],
+    "solutions": [
+      {
+        "id": "solution_1",
+        "spokenText": "E é exatamente por isso que eu uso a estratégia dos microinvestimentos: escolha um fundo com taxa baixa, aporte automático de R$20 e veja o efeito dos juros compostos.",
+        "visualAction": "Tela de app de corretora mostrando aporte automático",
+        "textOnScreen": "MICROINVESTIMENTO"
+      },
+      {
+        "id": "solution_2",
+        "spokenText": "E é exatamente por isso que recomendo o método 3 passos: abra uma corretora sem taxa, escolha um ETF de baixo custo e reinvista os dividendos.",
+        "visualAction": "Passo a passo animado em três blocos",
+        "textOnScreen": "3 PASSOS SIMPLES"
+      },
+      {
+        "id": "solution_3",
+        "spokenText": "E é exatamente por isso que a tática do “dinheiro escondido” funciona: reserve 5% da sua renda, aplique em renda fixa diária e aumente gradualmente.",
+        "visualAction": "Gráfico subindo lentamente",
+        "textOnScreen": "DINHEIRO ESCONDIDO"
+      }
+    ],
+    "ctas": [
+      {
+        "id": "cta_1",
+        "spokenText": "Então faz o seguinte: curta, salva este vídeo e volte sempre que precisar de um lembrete para investir seu troco.",
+        "visualAction": "Mão apontando para o ícone de salvar",
+        "textOnScreen": "SALVE AGORA"
+      },
+      {
+        "id": "cta_2",
+        "spokenText": "Então faz o seguinte: compartilha nos stories, salva para não esquecer e comece hoje com R$50 no seu primeiro fundo.",
+        "visualAction": "Swipe up animado",
+        "textOnScreen": "COMPARTILHE & SALVE"
+      },
+      {
+        "id": "cta_3",
+        "spokenText": "Então faz o seguinte: comenta \"QUERO\" abaixo, salva o conteúdo e siga para receber mais dicas de microinvestimento.",
+        "visualAction": "Dedão apontando para a caixa de comentários",
+        "textOnScreen": "COMENTE QUERO"
+      }
+    ],
+    "fourParts": {
+      "hookPart": {
+        "title": "Parte 1: Gancho Magnético",
+        "timecode": "00:00 - 00:04",
+        "audioScript": "Quer virar o jogo e começar a investir mesmo com só R$100 no bolso?",
+        "visualCue": "Zoom rápido no rosto com expressão surpresa",
+        "textOnScreen": "INVISTA COM R$100",
+        "hookTrigger": "Alerta de curiosidade e quebra imediata de padrão."
+      },
+      "storyPainPart": {
+        "title": "Parte 2: A Dor da História",
+        "timecode": "00:04 - 00:15",
+        "audioScript": "A grande questão é que a maioria acha que precisa de milhares para começar, e acaba nunca dando o primeiro passo.",
+        "visualCue": "Expressão de frustração, olhar para a conta bancária",
+        "textOnScreen": "MITO DO CAPITAL ALTO",
+        "painPoint": "Frustração com falta de consistência em Finanças"
+      },
+      "developmentPart": {
+        "title": "Parte 3: Desenvolvimento & Revelação",
+        "timecode": "00:15 - 00:38",
+        "audioScript": "E é exatamente por isso que eu uso a estratégia dos microinvestimentos: escolha um fundo com taxa baixa, aporte automático de R$20 e veja o efeito dos juros compostos.",
+        "visualCue": "Tela de app de corretora mostrando aporte automático",
+        "textOnScreen": "MICROINVESTIMENTO",
+        "keyInsight": "Simplificação extrema com aplicabilidade imediata"
+      },
+      "solutionCtaPart": {
+        "title": "Parte 4: Solução & Chamada para Ação (CTA)",
+        "timecode": "00:38 - 00:45",
+        "audioScript": "Então faz o seguinte: curta, salva este vídeo e volte sempre que precisar de um lembrete para investir seu troco.",
+        "visualCue": "Mão apontando para o ícone de salvar",
+        "textOnScreen": "SALVE AGORA",
+        "ctaAction": "Ação de fechamento e conversão de engajamento"
+      }
+    },
+    "scenes": [
+      {
+        "timecode": "00:00 - 00:04",
+        "partNumber": 1,
+        "sectionName": "Parte 1: Gancho Magnético",
+        "audioScript": "Quer virar o jogo e começar a investir mesmo com só R$100 no bolso?",
+        "visualCue": "Zoom rápido no rosto com expressão surpresa",
+        "textOnScreen": "INVISTA COM R$100",
+        "audioMusicCue": "Efeito sonoro Whoosh ou Boom grave de impacto"
+      },
+      {
+        "timecode": "00:04 - 00:15",
+        "partNumber": 2,
+        "sectionName": "Parte 2: A Dor da História",
+        "audioScript": "A grande questão é que a maioria acha que precisa de milhares para começar, e acaba nunca dando o primeiro passo.",
+        "visualCue": "Expressão de frustração, olhar para a conta bancária",
+        "textOnScreen": "MITO DO CAPITAL ALTO",
+        "audioMusicCue": "Trilha sonora com tensão sutil e batida contida"
+      },
+      {
+        "timecode": "00:15 - 00:38",
+        "partNumber": 3,
+        "sectionName": "Parte 3: Desenvolvimento",
+        "audioScript": "E é exatamente por isso que eu uso a estratégia dos microinvestimentos: escolha um fundo com taxa baixa, aporte automático de R$20 e veja o efeito dos juros compostos.",
+        "visualCue": "Tela de app de corretora mostrando aporte automático",
+        "textOnScreen": "MICROINVESTIMENTO",
+        "audioMusicCue": "Batida crescente animada e envolvente (Lo-Fi acelerado ou Phonk sutil)"
+      },
+      {
+        "timecode": "00:38 - 00:45",
+        "partNumber": 4,
+        "sectionName": "Parte 4: Solução & CTA",
+        "audioScript": "Então faz o seguinte: curta, salva este vídeo e volte sempre que precisar de um lembrete para investir seu troco.",
+        "visualCue": "Mão apontando para o ícone de salvar",
+        "textOnScreen": "SALVE AGORA",
+        "audioMusicCue": "Acorde de resolução limpo com fade out rápido"
+      }
+    ],
+    "bRollSuggestions": [
+      "como investir com",
+      "demonstração prática",
+      "pessoa usando celular",
+      "anotações na mesa",
+      "gráfico de crescimento"
+    ],
+    "fullTeleprompterText": "[PAUSA 0.5s] Quer virar o jogo e começar a investir mesmo com só R$100 no bolso? [ENFASE]\n\n[PAUSA 0.8s] A grande questão é que a maioria acha que precisa de milhares para começar, e acaba nunca dando o primeiro passo.\n\n[PAUSA 0.5s] E é exatamente por isso que eu uso a estratégia dos microinvestimentos: escolha um fundo com taxa baixa, aporte automático de R$20 e veja o efeito dos juros compostos.\n\n[ENFASE] Então faz o seguinte: curta, salva este vídeo e volte sempre que precisar de um lembrete para investir seu troco.",
+    "modularMatrix": {
+      "quantity": 3,
+      "totalCombinations": 81,
+      "standardConnectors": {
+        "painConnector": "A grande questão é que...",
+        "solutionConnector": "E é exatamente por isso que...",
+        "ctaConnector": "Então faz o seguinte:..."
+      },
+      "hooks": [
+        {
+          "id": "hook_1",
+          "text": "Quer virar o jogo e começar a investir mesmo com só R$100 no bolso?",
+          "label": "Gancho #1",
+          "visualCue": "Zoom rápido no rosto com expressão surpresa",
+          "textOnScreen": "INVISTA COM R$100"
+        },
+        {
+          "id": "hook_2",
+          "text": "Descubra como transformar o troco do café em renda extra em menos de um minuto!",
+          "label": "Gancho #2",
+          "visualCue": "Mão mostrando moedas caindo na mão",
+          "textOnScreen": "TROCO = RENDIMENTO"
+        },
+        {
+          "id": "hook_3",
+          "text": "Pare de adiar e aprenda a multiplicar seu dinheiro com menos de R$200 hoje!",
+          "label": "Gancho #3",
+          "visualCue": "Contagem regressiva de 3 segundos na tela",
+          "textOnScreen": "COMECE AGORA"
+        }
+      ],
+      "pains": [
+        {
+          "id": "pain_1",
+          "text": "A grande questão é que a maioria acha que precisa de milhares para começar, e acaba nunca dando o primeiro passo.",
+          "label": "Dor #1",
+          "visualCue": "Expressão de frustração, olhar para a conta bancária",
+          "textOnScreen": "MITO DO CAPITAL ALTO"
+        },
+        {
+          "id": "pain_2",
+          "text": "A grande questão é que você acredita que investir é complicado, então deixa o dinheiro parado na conta corrente.",
+          "label": "Dor #2",
+          "visualCue": "Mão segurando celular mostrando saldo zero",
+          "textOnScreen": "DINHEIRO PARADO"
+        },
+        {
+          "id": "pain_3",
+          "text": "A grande questão é que muitas vezes você gasta o pouco que tem em supérfluos, sem perceber que poderia estar investindo.",
+          "label": "Dor #3",
+          "visualCue": "Corte para compra de lanche caro",
+          "textOnScreen": "GASTO DESNECESSÁRIO"
+        }
+      ],
+      "solutions": [
+        {
+          "id": "solution_1",
+          "text": "E é exatamente por isso que eu uso a estratégia dos microinvestimentos: escolha um fundo com taxa baixa, aporte automático de R$20 e veja o efeito dos juros compostos.",
+          "label": "Solução #1",
+          "visualCue": "Tela de app de corretora mostrando aporte automático",
+          "textOnScreen": "MICROINVESTIMENTO"
+        },
+        {
+          "id": "solution_2",
+          "text": "E é exatamente por isso que recomendo o método 3 passos: abra uma corretora sem taxa, escolha um ETF de baixo custo e reinvista os dividendos.",
+          "label": "Solução #2",
+          "visualCue": "Passo a passo animado em três blocos",
+          "textOnScreen": "3 PASSOS SIMPLES"
+        },
+        {
+          "id": "solution_3",
+          "text": "E é exatamente por isso que a tática do “dinheiro escondido” funciona: reserve 5% da sua renda, aplique em renda fixa diária e aumente gradualmente.",
+          "label": "Solução #3",
+          "visualCue": "Gráfico subindo lentamente",
+          "textOnScreen": "DINHEIRO ESCONDIDO"
+        }
+      ],
+      "ctas": [
+        {
+          "id": "cta_1",
+          "text": "Então faz o seguinte: curta, salva este vídeo e volte sempre que precisar de um lembrete para investir seu troco.",
+          "label": "CTA #1",
+          "visualCue": "Mão apontando para o ícone de salvar",
+          "textOnScreen": "SALVE AGORA"
+        },
+        {
+          "id": "cta_2",
+          "text": "Então faz o seguinte: compartilha nos stories, salva para não esquecer e comece hoje com R$50 no seu primeiro fundo.",
+          "label": "CTA #2",
+          "visualCue": "Swipe up animado",
+          "textOnScreen": "COMPARTILHE & SALVE"
+        },
+        {
+          "id": "cta_3",
+          "text": "Então faz o seguinte: comenta \"QUERO\" abaixo, salva o conteúdo e siga para receber mais dicas de microinvestimento.",
+          "label": "CTA #3",
+          "visualCue": "Dedão apontando para a caixa de comentários",
+          "textOnScreen": "COMENTE QUERO"
+        }
+      ],
+      "selectedIndices": {
+        "hookIndex": 0,
+        "painIndex": 0,
+        "solutionIndex": 0,
+        "ctaIndex": 0
+      }
+    },
+    "viralityAnalysis": {
+      "overallScore": 92,
+      "hookStrengthScore": 94,
+      "retentionPacingScore": 90,
+      "shareabilityScore": 91,
+      "commentTriggerScore": 93,
+      "whyItGoesViral": [
+        "Quebra de padrão agressiva nos primeiros 3 segundos sem enrolação.",
+        "Estrutura psicológica de 4 partes com identificação de dor antes de entregar a solução.",
+        "Chamada para ação otimizada especificamente para o objetivo de salvar."
+      ],
+      "retentionSecret": "Uso de cortes a cada 2.5 segundos e texto em caixa alta sincronizado com a fala.",
+      "perfectLoopTip": "Conecte a última palavra ('precisar!') com a primeira frase do gancho para criar um looping infinito no feed."
+    },
+    "bestPostingTimes": [
+      "11:30 - 13:00",
+      "17:30 - 19:30",
+      "21:00 - 22:30"
+    ],
+    "hashtags": {
+      "megaViral": [
+        "#viral",
+        "#fyp",
+        "#foryou",
+        "#trending"
+      ],
+      "nicheSpecific": [
+        "#finanas",
+        "#dicasdefinanas",
+        "#criadoresdeconteudo"
+      ],
+      "lowCompetition": [
+        "#comofazerfinanas",
+        "#metodoviral",
+        "#roteiropratico"
+      ]
+    },
+    "captionAndPost": {
+      "headline": "🚨 Salve antes que saia do ar: Como investir com pouco dinheiro",
+      "captionBody": "A maioria das pessoas comete o mesmo erro na hora de aplicar Como investir com pouco dinheiro. Assista até o final para entender a estrutura de 4 partes que realmente funciona no algoritmo.\n\n👇 Me conta nos comentários o que achou!",
+      "callToAction": "Clica no ícone da bandeirinha e salva esse vídeo agora para consultar e aplicar quando precisar!",
+      "coverTitleIdea": "COMO INVESTIR COM POUCO DINHEIRO",
+      "coverVisualPrompt": "Close-up de alta intensidade, iluminação cinematográfica de estúdio, expressão focada com fundo escuro e iluminação neon ciano e magenta."
+    },
+    "niche": "Finanças",
+    "platform": "tiktok",
+    "duration": "45s",
+    "framework": "hook_story_offer",
+    "tone": "dinamico_acelerado",
+    "targetAudience": "Geral",
+    "ctaGoal": "salvar",
+    "selectedHookIndex": 0,
+    "createdAt": "2026-10-26T03:43:52.210Z",
+    "status": "ideia",
+    "isFavorite": false,
+    "isRemodeled": false,
+    "generationMode": "ai",
+    "isFallbackAlgorithmic": false,
+    "generationMetadata": {
+      "generationMode": "ai",
+      "isFallbackAlgorithmic": false,
+      "usedProvider": "groq",
+      "usedModel": "openai/gpt-oss-120b",
+      "usedKeyName": "Chave #1 (gsk_ic0...Zzqq)",
+      "attemptsLogs": [
+        {
+          "provider": "groq",
+          "model": "openai/gpt-oss-20b",
+          "keyName": "Chave #1",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "failed",
+          "isRateLimit": false,
+          "error": "Groq HTTP 400: {\"error\":{\"message\":\"Failed to validate JSON. Please adjust your prompt. See 'failed_generation' for more details.\",\"type\":\"invalid_request_error\",\"code\":\"json_validate_failed\",\"failed_generation\":\"\"}",
+          "durationMs": 2908
+        },
+        {
+          "provider": "groq",
+          "model": "openai/gpt-oss-120b",
+          "keyName": "Chave #1",
+          "keyIndex": 1,
+          "totalKeysInPool": 1,
+          "status": "success",
+          "durationMs": 4805
+        }
+      ],
+      "fallbackChain": [
+        "groq:openai/gpt-oss-20b",
+        "groq:openai/gpt-oss-120b",
+        "groq:qwen/qwen3.8-27b",
+        "groq:allam-2-7b",
+        "groq:llama-3.3-70b-versatile",
+        "groq:llama-3.1-8b-instant",
+        "groq:mixtral-8x7b-32768",
+        "groq:gemma2-9b-it",
+        "openrouter:meta-llama/llama-3.3-70b-instruct:free",
+        "openrouter:meta-llama/llama-3.1-8b-instruct:free",
+        "openrouter:google/gemini-2.0-flash-exp:free",
+        "openrouter:mistralai/mistral-7b-instruct:free",
+        "openrouter:qwen/qwen-2.5-72b-instruct:free",
+        "openrouter:deepseek/deepseek-r1:free",
+        "openrouter:sophosympatheia/rogue-rose-103b-v0.2:free",
+        "gemini:gemini-2.5-flash",
+        "gemini:gemini-2.5-pro"
+      ]
+    },
+    "savedAt": "2026-10-26T03:43:52.211Z"
+  },
+  {
     "id": "script_1791855988356_5c7ek",
     "title": "DESVENDE AS PEGADINHAS DO DETRAN E PASSE DE PRIMEIRA!",
     "strategicBriefing": {

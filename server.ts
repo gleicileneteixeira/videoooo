@@ -5,7 +5,7 @@ import rateLimit from "express-rate-limit";
 import path from "path";
 import fs from "fs";
 import os from "os";
-import { execFile } from "child_process";
+import { execFile, execFileSync } from "child_process";
 import { promisify } from "util";
 import multer from "multer";
 import dotenv from "dotenv";
@@ -225,14 +225,17 @@ export interface CandidateModel {
   isFree: boolean;
 }
 
-// Ordered list of candidate models (Groq first with ultra-fast Llama-3/Gemma models, then OpenRouter free tier models, and Gemini)
+// Ordered list of candidate models (Groq first with ultra-fast models, then OpenRouter free tier models, and Gemini)
 const DEFAULT_MODEL_CHAIN: CandidateModel[] = [
-  // 1. GROQ (Free Tier, ultra-fast 800+ tokens/s)
+  // 1. GROQ (Modelos ativos de alta velocidade no Groq LPU)
+  { provider: "groq", model: "openai/gpt-oss-20b", name: "Groq GPT OSS 20B (Sub-100ms)", isFree: true },
+  { provider: "groq", model: "openai/gpt-oss-120b", name: "Groq GPT OSS 120B (Raciocínio)", isFree: true },
+  { provider: "groq", model: "qwen/qwen3.8-27b", name: "Groq Qwen 3.8 27B", isFree: true },
+  { provider: "groq", model: "allam-2-7b", name: "Groq ALLaM 2 7B", isFree: true },
   { provider: "groq", model: "llama-3.3-70b-versatile", name: "Groq Llama 3.3 70B", isFree: true },
   { provider: "groq", model: "llama-3.1-8b-instant", name: "Groq Llama 3.1 8B Instant", isFree: true },
   { provider: "groq", model: "mixtral-8x7b-32768", name: "Groq Mixtral 8x7B", isFree: true },
   { provider: "groq", model: "gemma2-9b-it", name: "Groq Gemma 2 9B", isFree: true },
-  { provider: "groq", model: "llama-guard-3-8b", name: "Groq Llama Guard 3", isFree: true },
 
   // 2. OPENROUTER (Free models with :free tag)
   { provider: "openrouter", model: "meta-llama/llama-3.3-70b-instruct:free", name: "OpenRouter Llama 3.3 70B (Free)", isFree: true },
@@ -277,6 +280,8 @@ async function callGroqAPI(apiKey: string, model: string, prompt: string, system
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout
 
+  const maxTokens = model.includes("27b") || model.includes("70b") ? 1200 : 2200;
+
   try {
     const res = await fetch(url, {
       method: "POST",
@@ -290,7 +295,7 @@ async function callGroqAPI(apiKey: string, model: string, prompt: string, system
         messages,
         response_format: { type: "json_object" },
         temperature: 0.7,
-        max_tokens: 4000,
+        max_tokens: maxTokens,
       }),
     });
 
@@ -433,7 +438,29 @@ async function executeWithDynamicFallback(
   const geminiKey = process.env.GEMINI_API_KEY?.trim() || "";
 
   const attemptsLogs: any[] = [];
-  const candidateList = [...DEFAULT_MODEL_CHAIN];
+  let candidateList = [...DEFAULT_MODEL_CHAIN];
+
+  // Se o usuário selecionou um modelo preferencial no OmniGateway ou na requisição, coloque-o na frente
+  const preferred = (typeof geminiSchema === "object" && geminiSchema?.preferredModel)
+    ? geminiSchema.preferredModel
+    : undefined;
+
+  if (preferred && typeof preferred === "string" && preferred.trim()) {
+    const prefClean = preferred.trim();
+    const existingIdx = candidateList.findIndex((c) => c.model === prefClean);
+    if (existingIdx !== -1) {
+      const [item] = candidateList.splice(existingIdx, 1);
+      candidateList.unshift(item);
+    } else {
+      const isOR = prefClean.includes("/") || prefClean.startsWith("meta-") || prefClean.startsWith("deepseek");
+      candidateList.unshift({
+        provider: isOR ? "openrouter" : "groq",
+        model: prefClean,
+        name: `Modelo Selecionado (${prefClean})`,
+        isFree: true,
+      });
+    }
+  }
 
   // Try each model candidate sequentially
   for (const candidate of candidateList) {
@@ -608,8 +635,58 @@ app.post("/api/test-key-pool", async (req, res) => {
       const startTime = Date.now();
       try {
         if (provider === "groq") {
-          await callGroqAPI(keyStr, "llama-3.1-8b-instant", "Responda apenas com: {\"status\":\"ok\"}", "Responda em JSON.");
+          // 1. Testa autenticação real da chave diretamente contra a API do Groq
+          const checkRes = await fetch("https://api.groq.com/openai/v1/models", {
+            headers: {
+              Authorization: `Bearer ${keyStr}`,
+            },
+            signal: AbortSignal.timeout(10000),
+          });
+
+          if (!checkRes.ok) {
+            const errText = await checkRes.text().catch(() => "");
+            if (checkRes.status === 401) {
+              throw new Error("Chave de API do Groq inválida ou não autorizada (401). Verifique se o token foi copiado integralmente.");
+            }
+            throw new Error(`Groq HTTP ${checkRes.status}: ${errText.slice(0, 150)}`);
+          }
+
+          // A chave é 100% autêntica e válida! Identifica os modelos disponíveis nesta conta
+          const modelsData: any = await checkRes.json();
+          const rawList = Array.isArray(modelsData.data) ? modelsData.data : [];
+          const textModels = rawList
+            .map((m: any) => m.id)
+            .filter((id: string) => !id.includes("whisper") && !id.includes("guard"));
+
+          const preferredModel = textModels.find((id: string) => id === "openai/gpt-oss-20b")
+            || textModels.find((id: string) => id.includes("gpt-oss"))
+            || textModels.find((id: string) => id.includes("qwen"))
+            || textModels.find((id: string) => id.includes("llama"))
+            || textModels[0];
+
+          if (preferredModel) {
+            try {
+              await callGroqAPI(keyStr, preferredModel, "Responda apenas com: {\"status\":\"ok\"}", "Responda em JSON.");
+            } catch (testChatErr: any) {
+              const chatErr = testChatErr?.message || "";
+              if (chatErr.includes("429") || chatErr.toLowerCase().includes("rate limit") || chatErr.toLowerCase().includes("quota")) {
+                throw testChatErr;
+              }
+              console.warn(`[Groq Key Test] Chave válida com acesso confirmado aos modelos. Aviso no teste de chat: ${chatErr}`);
+            }
+          }
         } else if (provider === "openrouter") {
+          const checkRes = await fetch("https://openrouter.ai/api/v1/auth/key", {
+            headers: {
+              Authorization: `Bearer ${keyStr}`,
+            },
+            signal: AbortSignal.timeout(10000),
+          });
+
+          if (!checkRes.ok && checkRes.status === 401) {
+            throw new Error("Chave de API do OpenRouter inválida (401).");
+          }
+
           await callOpenRouterAPI(keyStr, "meta-llama/llama-3.1-8b-instruct:free", "Responda apenas com: {\"status\":\"ok\"}", "Responda em JSON.");
         } else {
           throw new Error("Provedor não suportado.");
@@ -689,6 +766,10 @@ app.post("/api/gateway/fetch-models", async (req, res) => {
 
         // Known Groq high-speed free tier / production models with friendly names
         const groqPresets: Record<string, { name: string; ctx: number; desc: string }> = {
+          "openai/gpt-oss-20b": { name: "GPT OSS 20B (Groq LPU)", ctx: 131072, desc: "Modelo ultra-rápido de 20B com 131k de contexto e latência sub-100ms no motor Groq LPU." },
+          "openai/gpt-oss-120b": { name: "GPT OSS 120B (Groq LPU)", ctx: 131072, desc: "Modelo de alta capacidade e raciocínio profundo de 120B com 131k de contexto." },
+          "qwen/qwen3.8-27b": { name: "Qwen 3.8 27B (Groq LPU)", ctx: 131072, desc: "Modelo de ponta de 27B para redação persuasiva e alta criatividade." },
+          "allam-2-7b": { name: "ALLaM 2 7B", ctx: 4096, desc: "Modelo compacto de alta velocidade para tarefas rápidas." },
           "llama-3.3-70b-versatile": { name: "Llama 3.3 70B Versatile", ctx: 128000, desc: "Modelo topo de linha Groq, 128k contexto, altíssima velocidade e coerência narrativa." },
           "llama-3.1-8b-instant": { name: "Llama 3.1 8B Instant", ctx: 128000, desc: "Ultra-rápido (~800 tokens/s), ideal para ganchos dinâmicos e variações rápidas." },
           "mixtral-8x7b-32768": { name: "Mixtral 8x7B (32k)", ctx: 32768, desc: "Mistral MoE 8x7B com 32k tokens de janela de contexto." },
@@ -1916,7 +1997,8 @@ FORMATO DE RETORNO JSON:
         groqInput,
         openRouterInput,
         prompt,
-        systemPrompt
+        systemPrompt,
+        { preferredModel: req.body.preferredModel || req.body.model }
       );
       parsed = aiResponse.data;
       usedProvider = aiResponse.usedProvider;
@@ -4359,6 +4441,7 @@ app.get("/api/export-project-zip", async (_req, res) => {
       ".env.example",
       "metadata.json",
       ".gitignore",
+      "vercel.json",
     ];
 
     for (const f of rootFiles) {
