@@ -3425,7 +3425,7 @@ app.post("/api/transcribe-media", audioUpload.single("file"), async (req, res) =
     }
 
     const { groqInput, openRouterInput } = extractKeysFromBody(req.body || {});
-    let sourceText = textContent || "";
+    let sourceText = sanitizeTranscript(textContent || "");
 
     // If text was pasted directly, analyze it
     if (sourceText) {
@@ -3559,33 +3559,45 @@ Retorne no formato JSON:
             console.log(`[Audio Transcribe] Tentando Groq Whisper com chave: ${keyItem.name}`);
             const audioBuffer = Buffer.from(mediaBase64, "base64");
             const blob = new Blob([audioBuffer], { type: mimeType || "audio/wav" });
-            const formData = new FormData();
-            formData.append("file", blob, fileName || "audio.wav");
-            formData.append("model", "whisper-large-v3-turbo");
-            formData.append("language", "pt");
-            formData.append("response_format", "json");
-            formData.append("temperature", "0");
-            formData.append("prompt", "Transcrição fiel em português do Brasil sem repetições de frases.");
 
-            const whisperRes = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${keyItem.key.trim()}`,
-              },
-              body: formData,
-            });
+            // Tenta primeiro com whisper-large-v3 (modelo carro-chefe com menor índice de alucinações e repetições)
+            const modelsToTry = ["whisper-large-v3", "whisper-large-v3-turbo"];
+            let transcriptionSuccess = false;
 
-            if (whisperRes.ok) {
-              const whisperData: any = await whisperRes.json();
-              if (whisperData.text && whisperData.text.trim()) {
-                const rawText = whisperData.text.trim();
-                transcribedText = sanitizeTranscript(rawText);
-                usedMethod = `Groq Whisper Turbo (${keyItem.name})`;
-                break;
+            for (const whisperModel of modelsToTry) {
+              const formData = new FormData();
+              formData.append("file", blob, fileName || "audio.wav");
+              formData.append("model", whisperModel);
+              formData.append("language", "pt");
+              formData.append("response_format", "json");
+              formData.append("temperature", "0.2");
+              formData.append("prompt", "Transcrição de aula, vídeo, apresentação ou fala em português do Brasil.");
+
+              const whisperRes = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${keyItem.key.trim()}`,
+                },
+                body: formData,
+              });
+
+              if (whisperRes.ok) {
+                const whisperData: any = await whisperRes.json();
+                if (whisperData.text && whisperData.text.trim()) {
+                  const rawText = whisperData.text.trim();
+                  transcribedText = sanitizeTranscript(rawText);
+                  usedMethod = `Groq Whisper (${whisperModel} - ${keyItem.name})`;
+                  transcriptionSuccess = true;
+                  break;
+                }
+              } else {
+                const errText = await whisperRes.text().catch(() => "");
+                console.warn(`[Audio Transcribe] Groq Whisper (${whisperModel}) erro ${whisperRes.status}: ${errText.slice(0, 150)}`);
               }
-            } else {
-              const errText = await whisperRes.text().catch(() => "");
-              console.warn(`[Audio Transcribe] Groq Whisper erro ${whisperRes.status}: ${errText.slice(0, 150)}`);
+            }
+
+            if (transcriptionSuccess) {
+              break;
             }
           } catch (whisperErr: any) {
             console.warn(`[Audio Transcribe] Groq Whisper falhou:`, whisperErr?.message || whisperErr);

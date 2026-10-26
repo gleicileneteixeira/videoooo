@@ -36,6 +36,7 @@ import {
   concatenateVideosFFmpeg,
   extractVideoMeta,
   resetFFmpegInstance,
+  isVercelOrStaticHosting,
 } from '../utils/videoEngine';
 
 interface VideoMergerStudioProps {
@@ -49,7 +50,10 @@ export const VideoMergerStudio: React.FC<VideoMergerStudioProps> = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Settings
-  const [engine, setEngine] = useState<'auto' | 'server' | 'ffmpeg_wasm'>('auto');
+  const isVercel = React.useMemo(() => isVercelOrStaticHosting(), []);
+  const [engine, setEngine] = useState<'auto' | 'server' | 'ffmpeg_wasm'>(() =>
+    isVercelOrStaticHosting() ? 'ffmpeg_wasm' : 'auto'
+  );
   const [mode, setMode] = useState<'auto' | 'fast' | 'compatible'>('auto');
   const [transition, setTransition] = useState<TransitionEffect>('none');
   const [transitionDuration, setTransitionDuration] = useState<number>(0.5);
@@ -482,13 +486,21 @@ export const VideoMergerStudio: React.FC<VideoMergerStudioProps> = () => {
               <div className="flex items-center justify-between">
                 <label className="text-xs font-semibold text-slate-300">Motor de Processamento:</label>
                 <span className="text-[10px] text-emerald-400 font-bold">
-                  {engine === 'auto'
+                  {isVercel
+                    ? '🌐 Modo Vercel (WebAssembly)'
+                    : engine === 'auto'
                     ? (totalSizeBytes > 25 * 1024 * 1024 ? '💻 WebAssembly (>25MB)' : '⚡ Servidor (<25MB)')
                     : engine === 'server'
                     ? '⚡ Servidor Nativo (~0.5s)'
                     : '💻 WebAssembly Local'}
                 </span>
               </div>
+              {isVercel && (
+                <div className="px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-300 flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                  <span>Hospedagem Vercel detectada: renderização direta e segura no navegador via WebAssembly ativa.</span>
+                </div>
+              )}
               <div className="grid grid-cols-3 gap-1.5">
                 <button
                   type="button"

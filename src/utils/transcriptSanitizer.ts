@@ -1,7 +1,10 @@
 /**
  * Utilitário especializado em higienização e remoção de loops de repetição / alucinações de transcrições de áudio.
- * Resolve problemas clássicos do Whisper como frases repetidas dezenas de vezes em loop ('mas eu vou fazer uma segunda vez...'),
- * repetições de n-gramas ('eu não sei se eu não sei se...'), sequências de zeros ('0.0.0.0.0.0') e ruídos de silêncio.
+ * Resolve problemas clássicos do Whisper como:
+ * 1. Frases repetidas dezenas de vezes em loop ('Então, para isso, você não precisa fazer uma prova de a única aplicação...')
+ * 2. Repetições de n-gramas e gagueira artificial ('para isso, para isso, para isso...')
+ * 3. Alucinações de fim de áudio / silêncio do Whisper ('paraamente, rapidamente, apenas sempre jamais, cardá-astegarante, ou a próxima...')
+ * 4. Sequências de zeros ('0.0.0.0.0.0') e ruídos de pontuação repetida.
  */
 
 /**
@@ -24,68 +27,114 @@ export function removeDigitAndSymbolLoops(text: string): string {
 }
 
 /**
+ * Remove artefatos de alucinação típicos do Whisper causados por silêncio ou chiado de fundo
+ */
+export function removeWhisperHallucinationArtifacts(text: string): string {
+  if (!text) return '';
+  let cleaned = text;
+
+  // Palavras inexistentes geradas pelo colapso de BPE do Whisper em pausas
+  cleaned = cleaned.replace(/\b(?:paraamente|cardá-astegarante|carda-astegarante)\b/gi, '');
+
+  // Pilhas de advérbios/termos desconexos repetidos consecutivamente pelo Whisper no silêncio
+  cleaned = cleaned.replace(/(?:[,\s]+(?:rapidamente|apenas|sempre|jamais)){2,}/gi, '');
+
+  // Clichês comuns de legendas do YouTube alucinados pelo Whisper em silêncios
+  cleaned = cleaned.replace(/(?:legendado por|subtitles by|obrigado por assistir|inscreva-se no canal|deixe seu like|transcrição por).*$/i, '');
+
+  return cleaned.trim();
+}
+
+/**
  * Detecta e remove sequências contíguas de palavras (n-gramas de 1 a 20 palavras) que se repetem 2 ou mais vezes consecutivas.
- * Exemplo:
- * 'mas eu vou fazer uma segunda vez, mas eu vou fazer uma segunda vez, mas eu vou fazer uma segunda vez'
- * -> vira apenas 'mas eu vou fazer uma segunda vez'
+ * Suporta frases longas com pontuação intermediária (vírgulas, pontos e conjunções).
  */
 export function removeConsecutiveWordLoops(rawText: string): string {
   if (!rawText || rawText.trim().length === 0) return '';
 
   let text = rawText;
 
-  // Primeiro remove pontuações repetidas
+  // Passo 1: Limpeza preliminar de pontuações repetidas e artefatos conhecidos
   text = removeDigitAndSymbolLoops(text);
+  text = removeWhisperHallucinationArtifacts(text);
 
-  // Normaliza quebras de linha para processamento
-  const paragraphs = text.split(/\n+/);
+  // Passo 2: Eliminação de loops imediatos de 1 a 15 palavras via regex multi-pass
+  // Trata repetições como: "para isso, para isso, para isso..." -> "para isso"
+  let prevText = '';
+  let iteration = 0;
+  while (prevText !== text && iteration < 15) {
+    prevText = text;
+    iteration++;
 
-  const cleanedParagraphs = paragraphs.map((paragraph) => {
-    let p = paragraph.trim();
-    if (!p) return '';
+    // Pega de 1 a 15 palavras que se repetem com pontuação/espaço entre elas
+    text = text.replace(
+      /\b([a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ0-9]+(?:\s+[a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ0-9]+){0,15})(?:[,\s\.\-]+)+\1\b/gi,
+      '$1'
+    );
+  }
 
-    // Passada 1: Regex para repetição exata de frases separadas por vírgula, ponto ou espaço
-    // Ex: "mas eu vou fazer uma segunda vez, mas eu vou fazer uma segunda vez"
-    let prevP = '';
-    let iterations = 0;
-    while (prevP !== p && iterations < 8) {
-      prevP = p;
-      iterations++;
+  // Passo 3: Deduplicação de frases inteiras e orações
+  // Resolve o caso onde o Whisper repete orações inteiras como:
+  // "Então, para isso, você não precisa fazer uma prova de a única aplicação. Então, para isso, você não precisa fazer..."
+  const rawParts = text.split(/(?<=[.!?\n;])\s+|(?=,\s*Então)/i);
+  const keptSentences: string[] = [];
+  let lastNormSentence = '';
 
-      // Regex que pega frases de 2 a 15 palavras repetidas com ou sem pontuação intermediária
-      p = p.replace(
-        /\b([a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ0-9\s]{4,80}?)(?:[,\s\.\-]+)\1(?:\b|[,\s\.\-]+)/gi,
-        (match, capture) => {
-          // Se a repetição tem mais de 6 caracteres e faz sentido
-          if (capture.trim().length >= 4) {
-            return capture.trim() + ' ';
-          }
-          return match;
-        }
-      );
+  for (const part of rawParts) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+
+    const norm = trimmed
+      .toLowerCase()
+      .replace(/[^a-záàâãéèêíïóôõöúçñ0-9]/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!norm) continue;
+
+    // Se a oração/frase for idêntica à anterior
+    if (norm === lastNormSentence) continue;
+
+    // Se for uma repetição com variação mínima (>80% similaridade de palavras)
+    if (lastNormSentence.length > 15 && norm.length > 15) {
+      const wordsA = norm.split(' ');
+      const wordsB = lastNormSentence.split(' ');
+      const setA = new Set(wordsA);
+      const setB = new Set(wordsB);
+
+      let commonCount = 0;
+      for (const w of setA) {
+        if (setB.has(w)) commonCount++;
+      }
+
+      const similarity = (2 * commonCount) / (setA.size + setB.size);
+      if (similarity > 0.8) {
+        continue; // Ignora oração duplicada em loop
+      }
     }
 
-    // Passada 2: Algoritmo baseado em tokens de palavras (n-gram deduplication)
-    // Funciona para repetições de 1 até 25 palavras
-    const tokens = p.split(/\s+/).filter(Boolean);
-    if (tokens.length <= 4) return p;
+    keptSentences.push(trimmed);
+    lastNormSentence = norm;
+  }
 
+  let cleaned = keptSentences.join(' ');
+
+  // Passo 4: Segunda passada de n-grams em tokens para varrer qualquer repetição residual
+  const tokens = cleaned.split(/\s+/).filter(Boolean);
+  if (tokens.length > 6) {
     const resultTokens: string[] = [];
     let i = 0;
 
     while (i < tokens.length) {
-      let matchedLoop = false;
+      let matched = false;
+      // Testa blocos de 1 a 12 tokens
+      const maxN = Math.min(12, Math.floor((tokens.length - i) / 2));
 
-      // Testa n-gramas do maior (20 palavras) para o menor (1 palavra)
-      const maxN = Math.min(25, Math.floor((tokens.length - i) / 2));
-
-      for (let n = maxN; n >= 1; n--) {
+      for (let n = 1; n <= maxN; n++) {
         const slice1 = tokens.slice(i, i + n);
         const norm1 = slice1.map((w) => w.toLowerCase().replace(/[^a-záàâãéèêíïóôõöúçñ0-9]/gi, '')).join(' ');
+        if (!norm1 || norm1.length < 2) continue;
 
-        if (!norm1 || norm1.length < 3) continue;
-
-        // Verifica quantas vezes consecutivas esse bloco de n palavras se repete
         let repeatCount = 1;
         let nextIndex = i + n;
 
@@ -101,55 +150,44 @@ export function removeConsecutiveWordLoops(rawText: string): string {
           }
         }
 
-        // Se encontrou repetição de 2 ou mais vezes, mantém apenas UMA ocorrência!
         if (repeatCount >= 2) {
-          // Adiciona apenas uma ocorrência do bloco
           for (let k = 0; k < n; k++) {
             resultTokens.push(tokens[i + k]);
           }
-          // Pula todas as repetições
           i = nextIndex;
-          matchedLoop = true;
+          matched = true;
           break;
         }
       }
 
-      if (!matchedLoop) {
+      if (!matched) {
         resultTokens.push(tokens[i]);
         i++;
       }
     }
 
-    return resultTokens.join(' ');
-  });
+    cleaned = resultTokens.join(' ');
+  }
 
-  let finalText = cleanedParagraphs.filter(Boolean).join('\n\n');
-
-  // Limpeza de pontuações flutuantes resultantes da remoção
-  finalText = finalText
+  // Passo 5: Normalização e polimento final de pontuação
+  cleaned = cleaned
     .replace(/\s+([,.:;?!])/g, '$1')
     .replace(/,\s*,/g, ',')
     .replace(/\.{2,}/g, '.')
     .replace(/,\s*\./g, '.')
     .replace(/\s{2,}/g, ' ')
-    .replace(/\b(que é uma coisa que)\b/gi, 'que')
-    .trim();
-
-  // Limpeza de fragmentos residuais repetitivos no fim do áudio (ex: "eu não sei se eu", "mas eu vou fazer uma")
-  finalText = finalText
-    .replace(/(?:[,\s\.\-]+)(?:eu\s+não\s+sei\s+se\s+eu|mas\s+eu\s+vou\s+fazer\s+uma|e\s+foi\s+por\s+isso\s+que|e\s+eu\s+não\s+sei)+$/i, '.')
     .replace(/[,;\-]\s*$/, '.')
-    .replace(/\.{2,}/g, '.')
     .trim();
 
-  return finalText;
+  return cleaned;
 }
 
 /**
  * Função mestra para higienizar qualquer transcrição de áudio:
  * 1. Remove loops de palavras e frases inteiras
- * 2. Remove ruídos de zeros e pontuação
- * 3. Normaliza espaçamentos e pontuação
+ * 2. Remove artefatos de alucinação do Whisper
+ * 3. Remove ruídos de zeros e pontuação
+ * 4. Normaliza espaçamentos e pontuação
  */
 export function sanitizeTranscript(rawText: string): string {
   if (!rawText) return '';
@@ -160,15 +198,20 @@ export function sanitizeTranscript(rawText: string): string {
 /**
  * Verifica se a transcrição contém repetições anômalas (hallucination loops do Whisper).
  */
-export function detectRepetitionAnomaly(text: string): { hasAnomaly: boolean; loopPhrases: string[]; originalLength: number; cleanedLength: number } {
+export function detectRepetitionAnomaly(text: string): {
+  hasAnomaly: boolean;
+  loopPhrases: string[];
+  originalLength: number;
+  cleanedLength: number;
+} {
   if (!text) {
     return { hasAnomaly: false, loopPhrases: [], originalLength: 0, cleanedLength: 0 };
   }
 
   const cleaned = sanitizeTranscript(text);
   const diffChars = text.length - cleaned.length;
-  // Se removeu mais de 30 caracteres ou mais de 15% do texto original
-  const hasAnomaly = diffChars > 35 || (text.length > 80 && diffChars / text.length > 0.15);
+  // Se removeu mais de 30 caracteres ou mais de 10% do texto original
+  const hasAnomaly = diffChars > 30 || (text.length > 60 && diffChars / text.length > 0.1);
 
   return {
     hasAnomaly,

@@ -32,6 +32,7 @@ import {
   extractVideoMeta,
   VideoClip,
   ConcatProgress,
+  isVercelOrStaticHosting,
 } from '../utils/videoEngine';
 
 // Tipos para os slots
@@ -322,7 +323,10 @@ export const MassProductionStudio: React.FC = () => {
   });
 
   // Configurações de Renderização & Formato
-  const [engine, setEngine] = useState<'auto' | 'server' | 'ffmpeg_wasm'>('auto');
+  const isVercel = useMemo(() => isVercelOrStaticHosting(), []);
+  const [engine, setEngine] = useState<'auto' | 'server' | 'ffmpeg_wasm'>(() =>
+    isVercelOrStaticHosting() ? 'ffmpeg_wasm' : 'auto'
+  );
   const [renderMode, setRenderMode] = useState<'fast' | 'compatible'>('fast');
   const [aspectRatio, setAspectRatio] = useState<'9:16' | '16:9' | '1:1' | '4:5'>('9:16');
   const [transition, setTransition] = useState<'none' | 'fade' | 'wipe'>('none');
@@ -888,9 +892,21 @@ export const MassProductionStudio: React.FC = () => {
                     MOTOR DE PROCESSAMENTO
                   </label>
                   <span className="text-[10px] text-emerald-400 font-bold">
-                    {engine === 'auto' ? '⚡ Automático Inteligente' : engine === 'server' ? '⚡ Servidor Dedicado' : '💻 WebAssembly Local'}
+                    {isVercel
+                      ? '🌐 Modo Vercel (WebAssembly)'
+                      : engine === 'auto'
+                      ? '⚡ Automático Inteligente'
+                      : engine === 'server'
+                      ? '⚡ Servidor Dedicado'
+                      : '💻 WebAssembly Local'}
                   </span>
                 </div>
+                {isVercel && (
+                  <div className="mb-2 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-300 flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                    <span>Hospedagem Vercel detectada: renderização direta e segura no navegador via WebAssembly ativa.</span>
+                  </div>
+                )}
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"

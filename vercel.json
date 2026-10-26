@@ -15,8 +15,33 @@
       ]
     },
     {
-      "source": "/ffmpeg/(.*)",
+      "source": "/ffmpeg/ffmpeg-core.js",
       "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/javascript"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin"
+        },
+        {
+          "key": "Cross-Origin-Embedder-Policy",
+          "value": "credentialless"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/ffmpeg/ffmpeg-core.wasm",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/wasm"
+        },
         {
           "key": "Cross-Origin-Opener-Policy",
           "value": "same-origin"
@@ -34,7 +59,7 @@
   ],
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!ffmpeg|assets|favicon.ico).*)",
       "destination": "/index.html"
     }
   ]

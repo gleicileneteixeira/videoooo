@@ -60,15 +60,30 @@ export interface ConcatResult {
   renderTimeMs: number;
 }
 
+/**
+ * Detecta se a aplicação está rodando na Vercel ou em hospedagem estática/serverless
+ */
+export function isVercelOrStaticHosting(): boolean {
+  if (typeof window === 'undefined') return false;
+  const host = window.location.hostname || '';
+  return (
+    host.endsWith('.vercel.app') ||
+    host.includes('vercel') ||
+    host.endsWith('.netlify.app') ||
+    host.endsWith('.github.io') ||
+    host.endsWith('.pages.dev')
+  );
+}
+
 // Singleton da instância FFmpeg.wasm
 let ffmpegInstance: FFmpeg | null = null;
 let isLoaded = false;
 let loadPromise: Promise<FFmpeg> | null = null;
-let isServerBackendAvailable: boolean | null = null;
+let isServerBackendAvailable: boolean | null = isVercelOrStaticHosting() ? false : null;
 
 /**
  * 1. Inicialização do FFmpeg.wasm (Singleton)
- * Carrega o core do FFmpeg de /public/ffmpeg/ (local, sem bloqueio de CORS)
+ * Carrega o core do FFmpeg de /public/ffmpeg/ com fallback para CDN unpkg/jsdelivr
  */
 export async function initFFmpeg(onLog?: (msg: string) => void): Promise<FFmpeg> {
   if (ffmpegInstance && isLoaded) {
@@ -88,25 +103,43 @@ export async function initFFmpeg(onLog?: (msg: string) => void): Promise<FFmpeg>
         console.debug('[FFmpeg]', message);
       });
 
-      // Tenta carregar primeiro da pasta local /ffmpeg/
       const baseURL = window.location.origin + '/ffmpeg';
-      let coreURL: string;
-      let wasmURL: string;
+      let coreURL: string = '';
+      let wasmURL: string = '';
 
+      // Tenta primeiro carregar da pasta local /ffmpeg/ se não for página de erro HTML
       try {
-        coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
-        wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
-      } catch (localErr) {
-        console.warn('Falha ao carregar FFmpeg local, tentando CDN fallback...', localErr);
+        const testRes = await fetch(`${baseURL}/ffmpeg-core.js`, { method: 'HEAD' }).catch(() => null);
+        const ct = testRes?.headers.get('content-type') || '';
+        if (testRes && testRes.ok && !ct.includes('text/html')) {
+          coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
+          wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
+        } else {
+          throw new Error('Arquivo local retornou HTML ou 404');
+        }
+      } catch {
+        // Fallback CDN Oficial Unpkg (compatível com Vercel)
+        console.warn('Carregando core FFmpeg via CDN para compatibilidade Vercel...');
         const cdnURL = 'https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm';
         coreURL = await toBlobURL(`${cdnURL}/ffmpeg-core.js`, 'text/javascript');
         wasmURL = await toBlobURL(`${cdnURL}/ffmpeg-core.wasm`, 'application/wasm');
       }
 
-      await ffmpeg.load({
-        coreURL,
-        wasmURL,
-      });
+      try {
+        await ffmpeg.load({
+          coreURL,
+          wasmURL,
+        });
+      } catch (loadErr) {
+        console.warn('Tentando CDN alternativo jsdelivr...');
+        const jsdelivrURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm';
+        coreURL = await toBlobURL(`${jsdelivrURL}/ffmpeg-core.js`, 'text/javascript');
+        wasmURL = await toBlobURL(`${jsdelivrURL}/ffmpeg-core.wasm`, 'application/wasm');
+        await ffmpeg.load({
+          coreURL,
+          wasmURL,
+        });
+      }
 
       ffmpegInstance = ffmpeg;
       isLoaded = true;
@@ -299,7 +332,7 @@ export async function concatenateVideosFFmpeg(
   // Se o servidor nativo C++ estiver disponível, une vídeos em ~1 segundo usando -c copy direto.
   // Em hospedagens serverless/estáticas (como Vercel, onde rotas C++ retornam 404 NOT_FOUND),
   // fazemos fallback automático transparente para o motor WebAssembly local no navegador.
-  if ((engine === 'server' || engine === 'auto') && isServerBackendAvailable !== false) {
+  if ((engine === 'server' || engine === 'auto') && isServerBackendAvailable !== false && !isVercelOrStaticHosting()) {
     try {
       updateProgress('fast_mode', 15, 'Iniciando Junção Rápida no Motor Nativo do Servidor...');
       const serverResult = await concatenateVideosServerFallback(clips, options);
@@ -343,7 +376,7 @@ export async function concatenateVideosFFmpeg(
     ffmpeg = await initFFmpeg(onLog);
   } catch (initErr: any) {
     log(`Erro ao carregar FFmpeg.wasm: ${initErr.message}.`);
-    if (!serverAlreadyAttempted && isServerBackendAvailable !== false && options.useServerFallbackIfFails !== false) {
+    if (!serverAlreadyAttempted && isServerBackendAvailable !== false && !isVercelOrStaticHosting() && options.useServerFallbackIfFails !== false) {
       log('Tentando Servidor Nativo como recuperação final...');
       return await concatenateVideosServerFallback(clips, options);
     }
@@ -740,7 +773,7 @@ export async function concatenateBatchVariations(
   // 1. SELETOR DE MOTOR PARA LOTE:
   // Se o servidor nativo C++ estiver disponível, processa as variações com alta performance e sem limite de 25MB via chunks.
   // Em hospedagens serverless (Vercel), onde endpoints retornam 404, fazemos fallback automático transparente para o navegador.
-  if ((engine === 'server' || engine === 'auto') && isServerBackendAvailable !== false) {
+  if ((engine === 'server' || engine === 'auto') && isServerBackendAvailable !== false && !isVercelOrStaticHosting()) {
     try {
       log(`Iniciando geração de ${variations.length} variações via Servidor Nativo (Pool Otimizado)...`);
       const poolSessionId = `pool_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -1163,8 +1196,8 @@ async function concatenateVideosServerFallback(
   clips: VideoClip[],
   options: ConcatOptions = {}
 ): Promise<ConcatResult> {
-  if (isServerBackendAvailable === false) {
-    const disabledErr = new Error('Servidor nativo indisponível nesta hospedagem serverless. Utilize a renderização local WebAssembly.');
+  if (isServerBackendAvailable === false || isVercelOrStaticHosting()) {
+    const disabledErr = new Error('Hospedagem Vercel detectada: servidor C++ indisponível. Renderização deve ocorrer localmente via WebAssembly.');
     (disabledErr as any).isNotFound = true;
     (disabledErr as any).status = 404;
     throw disabledErr;
