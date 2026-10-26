@@ -3,48 +3,113 @@ import { ApiKeysConfig, ApiKeyItem } from '../types';
 export const STORAGE_API_KEYS = 'viralscript_api_keys_v2';
 
 export function getStoredApiKeys(): ApiKeysConfig {
+  let groqApiKey = '';
+  let openRouterApiKey = '';
+  let groqKeyPool: ApiKeyItem[] = [];
+  let openRouterKeyPool: ApiKeyItem[] = [];
+  let autoRotateOnRateLimit = true;
+  let prioritizeGroq = true;
+
   try {
     const raw = localStorage.getItem(STORAGE_API_KEYS) || localStorage.getItem('viralscript_api_keys_v1');
     if (raw) {
       const parsed = JSON.parse(raw);
-      
-      // Migrate old format if needed
-      const groqKeyPool: ApiKeyItem[] = parsed.groqKeyPool || [];
-      const openRouterKeyPool: ApiKeyItem[] = parsed.openRouterKeyPool || [];
-
-      if (groqKeyPool.length === 0 && parsed.groqApiKey) {
-        groqKeyPool.push({
-          id: 'migrated_groq_1',
-          name: 'Conta Groq Principal',
-          key: parsed.groqApiKey,
-          provider: 'groq',
-          isActive: true,
-          addedAt: new Date().toISOString(),
-          status: 'unknown',
-        });
-      }
-
-      if (openRouterKeyPool.length === 0 && parsed.openRouterApiKey) {
-        openRouterKeyPool.push({
-          id: 'migrated_or_1',
-          name: 'Conta OpenRouter Principal',
-          key: parsed.openRouterApiKey,
-          provider: 'openrouter',
-          isActive: true,
-          addedAt: new Date().toISOString(),
-          status: 'unknown',
-        });
-      }
-
-      return {
-        groqApiKey: parsed.groqApiKey || (groqKeyPool[0]?.key || ''),
-        openRouterApiKey: parsed.openRouterApiKey || (openRouterKeyPool[0]?.key || ''),
-        groqKeyPool,
-        openRouterKeyPool,
-        autoRotateOnRateLimit: parsed.autoRotateOnRateLimit ?? true,
-        prioritizeGroq: parsed.prioritizeGroq ?? true,
-      };
+      if (Array.isArray(parsed.groqKeyPool)) groqKeyPool = parsed.groqKeyPool;
+      if (Array.isArray(parsed.openRouterKeyPool)) openRouterKeyPool = parsed.openRouterKeyPool;
+      if (parsed.groqApiKey) groqApiKey = parsed.groqApiKey;
+      if (parsed.openRouterApiKey) openRouterApiKey = parsed.openRouterApiKey;
+      if (typeof parsed.autoRotateOnRateLimit === 'boolean') autoRotateOnRateLimit = parsed.autoRotateOnRateLimit;
+      if (typeof parsed.prioritizeGroq === 'boolean') prioritizeGroq = parsed.prioritizeGroq;
     }
+
+    // Direct localStorage fallbacks
+    const directGroq =
+      localStorage.getItem('groqApiKey') ||
+      localStorage.getItem('groq_api_key') ||
+      localStorage.getItem('GROQ_API_KEY');
+    if (directGroq && !groqApiKey) {
+      groqApiKey = directGroq.trim();
+    }
+
+    const directOR =
+      localStorage.getItem('openRouterApiKey') ||
+      localStorage.getItem('openrouter_api_key');
+    if (directOR && !openRouterApiKey) {
+      openRouterApiKey = directOR.trim();
+    }
+
+    // Check OmniGateway config for stored keys
+    try {
+      const rawGateway = localStorage.getItem('viralscript_omni_gateway_config');
+      if (rawGateway) {
+        const parsedGw = JSON.parse(rawGateway);
+        if (Array.isArray(parsedGw?.connections)) {
+          for (const conn of parsedGw.connections) {
+            if (conn.provider === 'groq' && conn.apiKey?.trim()) {
+              const k = conn.apiKey.trim();
+              if (!groqApiKey) groqApiKey = k;
+              if (!groqKeyPool.some((p) => p.key === k)) {
+                groqKeyPool.push({
+                  id: conn.id || 'omni_groq_' + Date.now(),
+                  name: conn.name || 'Groq OmniGateway',
+                  key: k,
+                  provider: 'groq',
+                  isActive: true,
+                  addedAt: new Date().toISOString(),
+                  status: 'active',
+                });
+              }
+            } else if (conn.provider === 'openrouter' && conn.apiKey?.trim()) {
+              const k = conn.apiKey.trim();
+              if (!openRouterApiKey) openRouterApiKey = k;
+              if (!openRouterKeyPool.some((p) => p.key === k)) {
+                openRouterKeyPool.push({
+                  id: conn.id || 'omni_or_' + Date.now(),
+                  name: conn.name || 'OpenRouter OmniGateway',
+                  key: k,
+                  provider: 'openrouter',
+                  isActive: true,
+                  addedAt: new Date().toISOString(),
+                  status: 'active',
+                });
+              }
+            }
+          }
+        }
+      }
+    } catch {}
+
+    // Auto-populate primary keys from pools if not set
+    if (!groqApiKey && groqKeyPool.length > 0) {
+      const active = groqKeyPool.find((k) => k.isActive) || groqKeyPool[0];
+      if (active?.key) groqApiKey = active.key;
+    }
+    if (!openRouterApiKey && openRouterKeyPool.length > 0) {
+      const active = openRouterKeyPool.find((k) => k.isActive) || openRouterKeyPool[0];
+      if (active?.key) openRouterApiKey = active.key;
+    }
+
+    // Auto-populate pool from primary key if pool is empty
+    if (groqApiKey && groqKeyPool.length === 0) {
+      groqKeyPool.push({
+        id: 'groq_primary',
+        name: 'Conta Groq Principal',
+        key: groqApiKey,
+        provider: 'groq',
+        isActive: true,
+        addedAt: new Date().toISOString(),
+        status: 'unknown',
+      });
+    }
+
+    return {
+      groqApiKey,
+      openRouterApiKey,
+      groqKeyPool,
+      openRouterKeyPool,
+      autoRotateOnRateLimit,
+      prioritizeGroq,
+    };
   } catch (e) {
     console.error('Erro ao ler chaves do localStorage:', e);
   }

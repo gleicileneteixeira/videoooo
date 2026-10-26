@@ -138,29 +138,28 @@ export class LocalWhisperService {
 
     const shouldUseServer = forceServerFallback || model === 'cloud';
 
+    // Se o usuário solicitou modo local explicitamente
     if (!shouldUseServer) {
       try {
         console.log('[LocalWhisperService] Iniciando transcrição com biblioteca local gratuita Transformers.js...');
         const localText = await this.transcribeLocal(file, model, onProgress, signal);
         if (localText && localText.trim().length > 0) {
-          // Se o texto local estiver íntegro, retorna
           const anomaly = detectRepetitionAnomaly(localText);
           if (!anomaly.hasAnomaly) {
             return localText;
           }
-          console.warn('[LocalWhisperService] Anomalia de repetição detectada no Whisper local. Alternando para o canal de precisão do servidor...');
+          console.warn('[LocalWhisperService] Anomalia detectada no Whisper local. Tentando canal de precisão do servidor...');
         }
       } catch (localErr: any) {
         if (localErr?.message === 'Operacao cancelada pelo usuario.') {
           throw localErr;
         }
-        console.warn('[LocalWhisperService] Transcrição local falhou ou navegador sem suporte total. Alternando para o canal rápido do servidor:', localErr);
+        console.warn('[LocalWhisperService] Transcrição local falhou. Alternando para o canal do servidor:', localErr);
       }
     }
 
-    // Fallback: servidor via endpoint /api/transcribe-media (Whisper gratuito)
-    onProgress?.(30, 'Enviando áudio para processamento rápido no servidor...');
-
+    // Tentativa 1: Servidor via endpoint /api/transcribe-media (FormData com arquivo)
+    onProgress?.(25, 'Processando áudio com IA Whisper...');
     try {
       const keys = getStoredApiKeys();
       const formData = new FormData();
@@ -174,37 +173,87 @@ export class LocalWhisperService {
 
       const response = await fetch('/api/transcribe-media', {
         method: 'POST',
+        headers: keys.groqApiKey ? { 'x-groq-api-key': keys.groqApiKey } : undefined,
         body: formData,
         signal,
       });
 
       if (signal?.aborted) throw new Error('Operacao cancelada pelo usuario.');
 
-      if (!response.ok) {
-        // Fallback base64
-        return await this.transcribeWithBase64(file, signal, onProgress);
+      if (response.ok) {
+        const data = await response.json();
+        const rawResult = (
+          data.fullText ||
+          data.fullTranscript ||
+          data.transcript ||
+          data.text ||
+          data.sourceText ||
+          data.summary ||
+          ''
+        ).trim();
+        if (rawResult) {
+          onProgress?.(100, 'Transcrição concluída!');
+          return sanitizeTranscript(rawResult);
+        }
       }
-
-      const data = await response.json();
-      onProgress?.(100, 'Transcrição concluída!');
-
-      const rawResult = (
-        data.fullText ||
-        data.fullTranscript ||
-        data.transcript ||
-        data.text ||
-        data.sourceText ||
-        data.summary ||
-        ''
-      ).trim();
-
-      return sanitizeTranscript(rawResult);
     } catch (err: any) {
       if (err?.name === 'AbortError' || signal?.aborted) {
         throw new Error('Operacao cancelada pelo usuario.');
       }
-      return await this.transcribeWithBase64(file, signal, onProgress);
+      console.warn('[LocalWhisperService] Canal FormData do servidor indisponível:', err?.message || err);
     }
+
+    // Tentativa 2: Servidor via endpoint /api/transcribe-media com base64
+    try {
+      const b64Result = await this.transcribeWithBase64(file, signal, onProgress);
+      if (b64Result && b64Result.trim().length > 0) {
+        return b64Result;
+      }
+    } catch (err: any) {
+      if (err?.name === 'AbortError' || signal?.aborted) {
+        throw new Error('Operacao cancelada pelo usuario.');
+      }
+      console.warn('[LocalWhisperService] Canal Base64 do servidor indisponível:', err?.message || err);
+    }
+
+    // Tentativa 3: Transcrição direta Cliente -> Groq Cloud (se houver chave configurada)
+    const keys = getStoredApiKeys();
+    const activeKey = keys.groqApiKey || keys.groqKeyPool?.find((k) => k.isActive)?.key || keys.groqKeyPool?.[0]?.key;
+    if (activeKey) {
+      try {
+        console.log('[LocalWhisperService] Tentando transcrição direta via Groq Whisper Cloud...');
+        const groqResult = await this.transcribeDirectWithGroq(file, activeKey, signal, onProgress);
+        if (groqResult && groqResult.trim().length > 0) {
+          return groqResult;
+        }
+      } catch (groqErr: any) {
+        if (groqErr?.name === 'AbortError' || signal?.aborted) {
+          throw new Error('Operacao cancelada pelo usuario.');
+        }
+        console.warn('[LocalWhisperService] Groq direto falhou:', groqErr?.message || groqErr);
+      }
+    }
+
+    // Tentativa 4: REDE DE SEGURANÇA MÁXIMA — Whisper WebAssembly Local no Navegador!
+    // 100% gratuito, funciona em qualquer ambiente (Vercel, estático, sem servidor, offline)
+    console.log('[LocalWhisperService] Ativando motor Whisper local WebAssembly no navegador...');
+    onProgress?.(30, 'Servidor indisponível. Transcrevendo localmente no navegador (gratuito e sem limite)...');
+    try {
+      const localResult = await this.transcribeLocal(file, 'Xenova/whisper-tiny', onProgress, signal);
+      if (localResult && localResult.trim().length > 0) {
+        return localResult;
+      }
+    } catch (localFinalErr: any) {
+      if (localFinalErr?.name === 'AbortError' || signal?.aborted) {
+        throw new Error('Operacao cancelada pelo usuario.');
+      }
+      console.error('[LocalWhisperService] Transcrição local final também falhou:', localFinalErr);
+    }
+
+    // Se absolutamente tudo falhou, exibe mensagem clara
+    throw new Error(
+      'Não foi possível extrair o áudio automaticamente. Você pode colar a transcrição manualmente na aba "Colar Texto" ou verificar se o arquivo possui fala audível.'
+    );
   }
 
   /**
@@ -215,7 +264,7 @@ export class LocalWhisperService {
     signal?: AbortSignal,
     onProgress?: (pct: number, msg: string) => void
   ): Promise<string> {
-    onProgress?.(50, 'Processando via canal alternativo...');
+    onProgress?.(40, 'Processando via canal alternativo do servidor...');
 
     const base64 = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -228,44 +277,38 @@ export class LocalWhisperService {
       reader.readAsDataURL(file);
     });
 
-    try {
-      const response = await fetch('/api/transcribe-media', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(
-          attachApiKeysPayload({
-            mediaBase64: base64,
-            mimeType: file.type || 'audio/wav',
-            fileName: file instanceof File ? file.name : 'audio.wav',
-            originalDurationSeconds: 60,
-          })
-        ),
-        signal,
-      });
+    const response = await fetch('/api/transcribe-media', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(
+        attachApiKeysPayload({
+          mediaBase64: base64,
+          mimeType: file.type || 'audio/wav',
+          fileName: file instanceof File ? file.name : 'audio.wav',
+          originalDurationSeconds: 60,
+        })
+      ),
+      signal,
+    });
 
-      if (!response.ok) {
-        // Se a rota do servidor não existe (ex: Vercel estático / 404), transcreve direto via Groq no cliente!
-        return await this.transcribeDirectWithGroq(file, signal, onProgress);
-      }
-
-      const data = await response.json();
-      onProgress?.(100, 'Transcrição concluída!');
-
-      const rawResult = (
-        data.fullText ||
-        data.fullTranscript ||
-        data.transcript ||
-        data.text ||
-        data.sourceText ||
-        data.summary ||
-        ''
-      ).trim();
-
-      return sanitizeTranscript(rawResult);
-    } catch {
-      // Fallback final: transcrição direta com a chave Groq do usuário
-      return await this.transcribeDirectWithGroq(file, signal, onProgress);
+    if (!response.ok) {
+      throw new Error(`Servidor respondeu com status ${response.status}`);
     }
+
+    const data = await response.json();
+    onProgress?.(100, 'Transcrição concluída!');
+
+    const rawResult = (
+      data.fullText ||
+      data.fullTranscript ||
+      data.transcript ||
+      data.text ||
+      data.sourceText ||
+      data.summary ||
+      ''
+    ).trim();
+
+    return sanitizeTranscript(rawResult);
   }
 
   /**
@@ -273,24 +316,21 @@ export class LocalWhisperService {
    */
   private static async transcribeDirectWithGroq(
     file: File | Blob,
+    activeKey: string,
     signal?: AbortSignal,
     onProgress?: (pct: number, msg: string) => void
   ): Promise<string> {
-    const keys = getStoredApiKeys();
-    const activeKey = keys.groqApiKey || keys.groqKeyPool.find((k) => k.isActive)?.key;
-
-    if (!activeKey) {
-      throw new Error(
-        'Servidor de transcrição indisponível e nenhuma chave Groq configurada. Insira sua chave Groq nas Configurações.'
-      );
+    if (!activeKey || !activeKey.trim()) {
+      throw new Error('Chave Groq não configurada.');
     }
 
-    onProgress?.(70, 'Transcrevendo diretamente via Groq Whisper Cloud...');
+    onProgress?.(50, 'Transcrevendo diretamente via Groq Whisper Cloud...');
     const fileName = file instanceof File ? file.name : 'audio.wav';
 
     // Modelos a tentar em ordem de precisão
     const models = ['whisper-large-v3', 'whisper-large-v3-turbo'];
 
+    let lastError: any = null;
     for (const modelName of models) {
       try {
         const formData = new FormData();
@@ -315,14 +355,18 @@ export class LocalWhisperService {
           onProgress?.(100, 'Transcrição concluída!');
           const raw = typeof data.text === 'string' ? data.text.trim() : '';
           return sanitizeTranscript(raw);
+        } else {
+          const errText = await res.text().catch(() => '');
+          lastError = new Error(`Groq HTTP ${res.status}: ${errText.slice(0, 150)}`);
         }
       } catch (err: any) {
         if (err?.name === 'AbortError' || signal?.aborted) {
           throw new Error('Operacao cancelada pelo usuario.');
         }
+        lastError = err;
       }
     }
 
-    throw new Error('Falha na transcrição via Groq. Verifique sua chave de API nas Configurações.');
+    throw lastError || new Error('Falha na transcrição via Groq.');
   }
 }
