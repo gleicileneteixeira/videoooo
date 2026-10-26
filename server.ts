@@ -5239,6 +5239,168 @@ app.post("/api/video/merge-session", async (req, res) => {
   }
 });
 
+// ==========================================
+// POOL BATCH VIDEO ENGINE (JUNÇÃO EM MASSA ULTRA-RÁPIDA)
+// Envia clipes únicos apenas 1 VEZ e renderiza variações em ~0.2s cada
+// ==========================================
+
+// 1. Upload de partes de um clipe único para o pool da sessão
+app.post("/api/video/upload-pool-chunk", chunkUpload.single("chunk"), async (req, res) => {
+  try {
+    const rawSessionId = req.body?.sessionId || "";
+    const sessionId = String(rawSessionId).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40);
+    const rawClipId = req.body?.clipId || "";
+    const clipId = String(rawClipId).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 60);
+    const chunkIndex = parseInt(req.body?.chunkIndex, 10);
+    const totalChunks = parseInt(req.body?.totalChunks, 10);
+
+    if (!sessionId || !clipId || isNaN(chunkIndex) || isNaN(totalChunks) || !req.file) {
+      if (req.file) { try { fs.unlinkSync(req.file.path); } catch {} }
+      return res.status(400).json({ error: "Parâmetros inválidos para upload no pool." });
+    }
+
+    const sessionDir = path.join(os.tmpdir(), `vs_pool_${sessionId}`);
+    fs.mkdirSync(sessionDir, { recursive: true });
+
+    const destPath = path.join(sessionDir, `clip_${clipId}.mp4`);
+
+    if (chunkIndex === 0) {
+      fs.copyFileSync(req.file.path, destPath);
+    } else {
+      const chunkData = fs.readFileSync(req.file.path);
+      fs.appendFileSync(destPath, chunkData);
+    }
+
+    try { fs.unlinkSync(req.file.path); } catch {}
+
+    return res.json({ success: true, clipId, chunkIndex, totalChunks });
+  } catch (err: any) {
+    console.error("Erro no upload do pool:", err?.message || err);
+    if (req.file) { try { fs.unlinkSync(req.file.path); } catch {} }
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Falha ao gravar parte do vídeo no pool." });
+    }
+  }
+});
+
+// 2. Renderização instantânea de uma variação a partir do pool (~0.2s)
+app.post("/api/video/merge-pool-variation", async (req, res) => {
+  const rawSessionId = req.body?.sessionId || "";
+  const sessionId = String(rawSessionId).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40);
+  const clipIds: string[] = Array.isArray(req.body?.clipIds) ? req.body.clipIds : [];
+
+  if (!sessionId || clipIds.length === 0) {
+    return res.status(400).send("Sessão ou lista de clipes vazia.");
+  }
+
+  const sessionDir = path.join(os.tmpdir(), `vs_pool_${sessionId}`);
+  if (!fs.existsSync(sessionDir)) {
+    return res.status(404).send("Sessão pool não encontrada no servidor.");
+  }
+
+  const outFileName = `var_out_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.mp4`;
+  const outputPath = path.join(sessionDir, outFileName);
+  const concatTxtName = `concat_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.txt`;
+  const concatTxtPath = path.join(sessionDir, concatTxtName);
+
+  try {
+    const inputPaths: string[] = [];
+    for (const cId of clipIds) {
+      const cleanId = String(cId).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 60);
+      const p = path.join(sessionDir, `clip_${cleanId}.mp4`);
+      if (!fs.existsSync(p)) {
+        return res.status(404).send(`Clipe ${cleanId} ausente na sessão.`);
+      }
+      inputPaths.push(p);
+    }
+
+    const concatContent = inputPaths.map((p) => `file '${p.replace(/'/g, "'\\''")}'`).join("\n");
+    fs.writeFileSync(concatTxtPath, concatContent, "utf-8");
+
+    let success = false;
+
+    // Tentativa 1: -c copy puro (0.1 a 0.3s)
+    try {
+      await execFileAsync("ffmpeg", [
+        "-f", "concat",
+        "-safe", "0",
+        "-i", concatTxtPath,
+        "-c", "copy",
+        "-fflags", "+genpts",
+        "-avoid_negative_ts", "make_zero",
+        "-movflags", "+faststart",
+        "-y",
+        outputPath,
+      ], { timeout: 35000 });
+
+      if (fs.existsSync(outputPath) && fs.statSync(outputPath).size > 1000) {
+        success = true;
+      }
+    } catch {}
+
+    // Tentativa 2: -c:v copy -c:a aac (0.4s) para compatibilidade de áudio
+    if (!success) {
+      try {
+        await execFileAsync("ffmpeg", [
+          "-f", "concat",
+          "-safe", "0",
+          "-i", concatTxtPath,
+          "-c:v", "copy",
+          "-c:a", "aac",
+          "-b:a", "128k",
+          "-ar", "44100",
+          "-avoid_negative_ts", "make_zero",
+          "-movflags", "+faststart",
+          "-y",
+          outputPath,
+        ], { timeout: 35000 });
+
+        if (fs.existsSync(outputPath) && fs.statSync(outputPath).size > 1000) {
+          success = true;
+        }
+      } catch {}
+    }
+
+    try { fs.unlinkSync(concatTxtPath); } catch {}
+
+    if (!success || !fs.existsSync(outputPath)) {
+      return res.status(500).send("Falha na junção ultra-rápida do servidor.");
+    }
+
+    res.setHeader("Content-Type", "video/mp4");
+    res.setHeader("Content-Disposition", 'attachment; filename="variacao.mp4"');
+
+    const readStream = fs.createReadStream(outputPath);
+    readStream.pipe(res);
+    readStream.on("close", () => {
+      try { fs.unlinkSync(outputPath); } catch {}
+    });
+  } catch (err: any) {
+    try { fs.unlinkSync(concatTxtPath); } catch {}
+    try { fs.unlinkSync(outputPath); } catch {}
+    if (!res.headersSent) {
+      res.status(500).send("Erro ao processar variação no pool.");
+    }
+  }
+});
+
+// 3. Limpeza do pool após finalizar todas as variações do lote
+app.post("/api/video/cleanup-pool-session", express.json(), async (req, res) => {
+  try {
+    const rawSessionId = req.body?.sessionId || "";
+    const sessionId = String(rawSessionId).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40);
+    if (sessionId) {
+      const sessionDir = path.join(os.tmpdir(), `vs_pool_${sessionId}`);
+      if (fs.existsSync(sessionDir)) {
+        fs.rmSync(sessionDir, { recursive: true, force: true });
+      }
+    }
+    return res.json({ success: true });
+  } catch {
+    return res.json({ success: false });
+  }
+});
+
 // Handler global: multer, JSON grande, tipos inválidos — sem vazar stack
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

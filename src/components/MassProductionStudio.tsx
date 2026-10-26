@@ -21,6 +21,7 @@ import {
   Clock,
   HardDrive,
   FileVideo,
+  Shuffle,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import JSZip from 'jszip';
@@ -66,9 +67,11 @@ export interface GeneratedVariationResult {
   blob: Blob;
   duration: number;
   sizeBytes: number;
+  formula?: string;
   combination: {
     slotName: string;
     clipName: string;
+    clipIndex?: number;
   }[];
 }
 
@@ -191,6 +194,116 @@ const SLOT_DEFINITIONS: Record<SlotMode, SlotConfig[]> = {
 
 const MAX_VIDEOS_PER_CATEGORY = 50;
 
+export type DistributionStrategy = 'smart_dispersion' | 'shuffle' | 'sequential';
+
+/**
+ * Distribui e ordena as combinações para que vídeos consecutivos NUNCA
+ * comecem com o mesmo gancho nem compartilhem as mesmas partes em sequência.
+ *
+ * Exemplo desejado:
+ * Vídeo 01: Gancho 1 + Dor 2 + Solução 1 + CTA 3
+ * Vídeo 02: Gancho 2 + Dor 1 + Solução 3 + CTA 1
+ * Vídeo 03: Gancho 3 + Dor 3 + Solução 2 + CTA 2
+ */
+export function orderCombinationsWithDispersion(
+  rawCombinations: UploadedSlotItem[][],
+  strategy: DistributionStrategy,
+  seed: number = 0
+): UploadedSlotItem[][] {
+  if (!rawCombinations || rawCombinations.length <= 1) return rawCombinations || [];
+
+  if (strategy === 'sequential') {
+    return [...rawCombinations];
+  }
+
+  if (strategy === 'shuffle') {
+    const shuffled = [...rawCombinations];
+    let s = (seed + 1) * 1664525 + 1013904223;
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      s = (s * 9301 + 49297) % 233280;
+      const rnd = Math.abs(s) / 233280;
+      const j = Math.floor(rnd * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
+  // ESTRATÉGIA PADRÃO: SMART DISPERSION (Anti-Repetição Consecutiva)
+  // Garante que cada vídeo vizinho tenha Gancho, Corpo e CTA alternados.
+  const pool = [...rawCombinations];
+  const ordered: UploadedSlotItem[][] = [];
+
+  const startIdx = Math.abs(seed) % pool.length;
+  ordered.push(pool.splice(startIdx, 1)[0]);
+
+  const clipUsageCount = new Map<string, number>();
+  for (const item of ordered[0]) {
+    clipUsageCount.set(item.id, 1);
+  }
+
+  while (pool.length > 0) {
+    const last1 = ordered[ordered.length - 1];
+    const last2 = ordered.length > 1 ? ordered[ordered.length - 2] : null;
+    const last3 = ordered.length > 2 ? ordered[ordered.length - 3] : null;
+
+    let bestIdx = 0;
+    let bestScore = -Infinity;
+
+    for (let i = 0; i < pool.length; i++) {
+      const candidate = pool[i];
+      let score = 0;
+
+      // 1. Gancho (Slot 0): Regra principal de retenção
+      if (candidate[0]?.id !== last1[0]?.id) {
+        score += 200; // Prioridade máxima: Gancho NUNCA igual ao anterior
+      } else {
+        score -= 500; // Penalidade pesada para não repetir o mesmo gancho em sequência
+      }
+
+      if (last2 && candidate[0]?.id !== last2[0]?.id) {
+        score += 60; // Bônus para rotacionar ganchos (H1 -> H2 -> H3 -> H1)
+      }
+      if (last3 && candidate[0]?.id !== last3[0]?.id) {
+        score += 20;
+      }
+
+      // 2. Diversidade nos demais slots (Corpo, Dor, Solução, CTA)
+      for (let sIdx = 1; sIdx < candidate.length; sIdx++) {
+        if (candidate[sIdx]?.id !== last1[sIdx]?.id) {
+          score += 40;
+        } else {
+          score -= 50; // Penaliza partes iguais lado a lado
+        }
+
+        if (last2 && candidate[sIdx]?.id !== last2[sIdx]?.id) {
+          score += 15;
+        }
+      }
+
+      // 3. Equilíbrio de Frequência (distribui todos os clipes igualmente)
+      let usageSum = 0;
+      for (const item of candidate) {
+        usageSum += clipUsageCount.get(item.id) || 0;
+      }
+      score -= usageSum * 5;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestIdx = i;
+      }
+    }
+
+    const chosen = pool.splice(bestIdx, 1)[0];
+    ordered.push(chosen);
+
+    for (const item of chosen) {
+      clipUsageCount.set(item.id, (clipUsageCount.get(item.id) || 0) + 1);
+    }
+  }
+
+  return ordered;
+}
+
 export const MassProductionStudio: React.FC = () => {
   // Aba ativa: Upload vs Resultados
   const [activeTab, setActiveTab] = useState<'upload' | 'resultados'>('upload');
@@ -221,6 +334,11 @@ export const MassProductionStudio: React.FC = () => {
   const [quantityToGenerate, setQuantityToGenerate] = useState<number>(1);
   const [userManuallySetQuantity, setUserManuallySetQuantity] = useState<boolean>(false);
 
+  // Estratégia de Distribuição e Randomização Anti-Repetição
+  const [distributionStrategy, setDistributionStrategy] = useState<DistributionStrategy>('smart_dispersion');
+  const [shuffleSeed, setShuffleSeed] = useState<number>(0);
+  const [showSequencePreview, setShowSequencePreview] = useState<boolean>(true);
+
   // Estados de Processamento
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentProgress, setCurrentProgress] = useState<{
@@ -247,8 +365,8 @@ export const MassProductionStudio: React.FC = () => {
 
   const maxTotalPossible = activeSlots.length * MAX_VIDEOS_PER_CATEGORY;
 
-  // Cálculo do Produto Cartesiano
-  const cartesianCombinations = useMemo(() => {
+  // 1. Cálculo do Produto Cartesiano bruto
+  const rawCombinations = useMemo(() => {
     // Para ter combinações válidas, cada slot ativo precisa ter pelo menos 1 vídeo
     const slotLists = activeSlots.map((slot) => ({
       slot,
@@ -271,6 +389,11 @@ export const MassProductionStudio: React.FC = () => {
     }
     return combinations;
   }, [activeSlots, slotItems]);
+
+  // 2. Ordenação com Distribuição Anti-Repetição / Randomização Inteligente
+  const cartesianCombinations = useMemo(() => {
+    return orderCombinationsWithDispersion(rawCombinations, distributionStrategy, shuffleSeed);
+  }, [rawCombinations, distributionStrategy, shuffleSeed]);
 
   const totalPossibleVariations = cartesianCombinations.length;
 
@@ -417,6 +540,14 @@ export const MassProductionStudio: React.FC = () => {
         },
         (mergeResult, plan, idx) => {
           const combo = targetCombinations[idx];
+          const indices = combo.map((item, cIdx) => {
+            const slotKey = activeSlots[cIdx]?.key;
+            const slotList = slotItems[slotKey] || [];
+            const foundIdx = slotList.findIndex((x) => x.id === item.id);
+            return foundIdx >= 0 ? foundIdx + 1 : 1;
+          });
+          const formula = indices.join(' + ');
+
           const generatedItem: GeneratedVariationResult = {
             id: `var-res-${Date.now()}-${idx}`,
             variationIndex: plan.variationIndex,
@@ -425,9 +556,11 @@ export const MassProductionStudio: React.FC = () => {
             blob: mergeResult.blob,
             duration: mergeResult.realDuration || combo.reduce((acc, c) => acc + c.duration, 0),
             sizeBytes: mergeResult.sizeBytes,
+            formula,
             combination: combo.map((item, cIdx) => ({
               slotName: activeSlots[cIdx]?.title || `Slot ${cIdx + 1}`,
               clipName: item.name,
+              clipIndex: indices[cIdx],
             })),
           };
 
@@ -1112,6 +1245,173 @@ export const MassProductionStudio: React.FC = () => {
                   className="w-full accent-pink-500 cursor-pointer"
                 />
               </div>
+
+              {/* DISTRIBUIÇÃO & RANDOMIZAÇÃO INTELIGENTE (Anti-Repetição de Ganchos) */}
+              <div className="border-t border-slate-800/80 pt-3 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                    DISTRIBUIÇÃO & RANDOMIZAÇÃO
+                  </label>
+                  {distributionStrategy !== 'sequential' && (
+                    <button
+                      type="button"
+                      onClick={() => setShuffleSeed((prev) => prev + 1)}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-pink-400 hover:text-pink-300 transition cursor-pointer"
+                      title="Gera uma nova ordem aleatória para a sequência de vídeos"
+                    >
+                      <Shuffle className="h-3 w-3" />
+                      <span>Reembaralhar Ordem</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Seletor de Estratégia */}
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setDistributionStrategy('smart_dispersion')}
+                    className={`flex flex-col items-center justify-center rounded-xl p-2 text-center transition border ${
+                      distributionStrategy === 'smart_dispersion'
+                        ? 'border-pink-500 bg-gradient-to-b from-pink-500/20 to-purple-500/20 text-white shadow-sm ring-1 ring-pink-500/50'
+                        : 'border-slate-800 bg-slate-950 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <span className="text-xs font-bold flex items-center gap-1">
+                      🎯 Anti-Repetição
+                    </span>
+                    <span className="text-[9px] text-pink-300/80 mt-0.5">
+                      Ganchos alternados
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDistributionStrategy('shuffle')}
+                    className={`flex flex-col items-center justify-center rounded-xl p-2 text-center transition border ${
+                      distributionStrategy === 'shuffle'
+                        ? 'border-pink-500 bg-gradient-to-b from-pink-500/20 to-purple-500/20 text-white shadow-sm ring-1 ring-pink-500/50'
+                        : 'border-slate-800 bg-slate-950 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <span className="text-xs font-bold flex items-center gap-1">
+                      🔀 Shuffle Total
+                    </span>
+                    <span className="text-[9px] text-slate-400 mt-0.5">
+                      100% Aleatório
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDistributionStrategy('sequential')}
+                    className={`flex flex-col items-center justify-center rounded-xl p-2 text-center transition border ${
+                      distributionStrategy === 'sequential'
+                        ? 'border-pink-500 bg-gradient-to-b from-pink-500/20 to-purple-500/20 text-white shadow-sm ring-1 ring-pink-500/50'
+                        : 'border-slate-800 bg-slate-950 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <span className="text-xs font-bold flex items-center gap-1">
+                      📋 Sequencial
+                    </span>
+                    <span className="text-[9px] text-slate-400 mt-0.5">
+                      Ordem 1, 2, 3...
+                    </span>
+                  </button>
+                </div>
+
+                {/* Explicação contextual */}
+                <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-2.5 text-[11px] text-slate-300 leading-relaxed">
+                  {distributionStrategy === 'smart_dispersion' && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                        <CheckCircle2 className="h-3 w-3" />
+                        <span>Distribuição Inteligente Anti-Repetição Ativa:</span>
+                      </div>
+                      <p className="text-slate-400 text-[10px]">
+                        Alterna automaticamente os ganchos (Slot 1) e blocos em cada vídeo consecutivo (ex: <strong>1+2+1+3</strong> seguido de <strong>2+1+3+1</strong>). Assim, ao baixar e postar a sequência no TikTok/Reels, nenhum vídeo consecutivo começará com a mesma fala!
+                      </p>
+                    </div>
+                  )}
+                  {distributionStrategy === 'shuffle' && (
+                    <p className="text-slate-400 text-[10px]">
+                      Embaralha de forma completamente imprevisível todas as combinações cartesiano. Clique em <em>Reembaralhar</em> para sortear uma nova ordem.
+                    </p>
+                  )}
+                  {distributionStrategy === 'sequential' && (
+                    <p className="text-slate-400 text-[10px]">
+                      Mantém o produto cartesiano direto tradicional (Gancho 1 com todas as variações, depois Gancho 2...).
+                    </p>
+                  )}
+                </div>
+
+                {/* PRÉVIA VISUAL DA SEQUÊNCIA DE POSTAGEM */}
+                {cartesianCombinations.length > 0 && (
+                  <div className="rounded-xl border border-pink-500/20 bg-gradient-to-b from-slate-950 to-slate-900 p-3 space-y-2">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-bold text-white flex items-center gap-1">
+                        <span>👀</span> Prévia da Ordem de Postagem:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowSequencePreview(!showSequencePreview)}
+                        className="text-[10px] text-pink-400 hover:text-pink-300 font-medium cursor-pointer"
+                      >
+                        {showSequencePreview ? 'Ocultar' : 'Ver Detalhes'}
+                      </button>
+                    </div>
+
+                    {showSequencePreview && (
+                      <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 text-[10px]">
+                        {cartesianCombinations.slice(0, Math.min(5, effectiveTargetCount)).map((combo, cIdx) => {
+                          const indices = combo.map((item, sIdx) => {
+                            const slotKey = activeSlots[sIdx]?.key;
+                            const slotList = slotItems[slotKey] || [];
+                            const idx = slotList.findIndex((x) => x.id === item.id);
+                            return idx >= 0 ? idx + 1 : 1;
+                          });
+                          const formulaStr = indices.join(' + ');
+
+                          return (
+                            <div
+                              key={`preview-combo-${cIdx}`}
+                              className="flex items-center justify-between rounded-lg border border-slate-800/80 bg-slate-900/80 px-2.5 py-1.5"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono font-bold text-pink-400">
+                                  Vídeo {String(cIdx + 1).padStart(2, '0')}:
+                                </span>
+                                <span className="font-mono px-1.5 py-0.5 rounded bg-pink-500/20 text-pink-300 font-bold border border-pink-500/30">
+                                  {formulaStr}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 truncate max-w-[150px]">
+                                {combo.map((item, sIdx) => (
+                                  <span
+                                    key={`badge-${cIdx}-${sIdx}`}
+                                    className={`truncate text-[9px] px-1 py-0.5 rounded ${
+                                      sIdx === 0
+                                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                        : 'bg-slate-800 text-slate-300'
+                                    }`}
+                                    title={`${activeSlots[sIdx]?.title}: ${item.name}`}
+                                  >
+                                    {activeSlots[sIdx]?.title.split(' ')[0][0]}:#{indices[sIdx]}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {effectiveTargetCount > 5 && (
+                          <div className="text-center text-[10px] text-slate-500 py-0.5 font-mono">
+                            ... e mais {effectiveTargetCount - 5} vídeos na sequência alternada
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -1235,6 +1535,17 @@ export const MassProductionStudio: React.FC = () => {
                           #{res.variationIndex}
                         </span>
                       </div>
+
+                      {/* Fórmula Combinatória da Variação */}
+                      {res.formula && (
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <span className="text-[10px] text-slate-400 font-medium">Distribuição:</span>
+                          <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                            {res.formula}
+                          </span>
+                        </div>
+                      )}
+
                       <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono mt-1">
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
@@ -1251,8 +1562,15 @@ export const MassProductionStudio: React.FC = () => {
                       <div className="mt-3 space-y-1 text-[10px] border-t border-slate-800/80 pt-2 text-slate-400">
                         {res.combination.map((c, idx) => (
                           <div key={idx} className="flex justify-between items-center truncate">
-                            <span className="text-slate-500">{c.slotName}:</span>
-                            <span className="text-slate-300 truncate max-w-[140px]">{c.clipName}</span>
+                            <span className="text-slate-500 flex items-center gap-1">
+                              {c.clipIndex && (
+                                <span className="px-1 py-0.2 rounded bg-slate-800 text-pink-300 font-mono text-[9px] font-bold">
+                                  #{c.clipIndex}
+                                </span>
+                              )}
+                              <span>{c.slotName}:</span>
+                            </span>
+                            <span className="text-slate-300 truncate max-w-[130px]">{c.clipName}</span>
                           </div>
                         ))}
                       </div>
