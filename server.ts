@@ -394,8 +394,18 @@ async function callGeminiAPI(apiKey: string, model: string, prompt: string, sche
 function normalizeKeyPool(input: any, defaultEnvKey?: string): { key: string; name: string }[] {
   const list: { key: string; name: string }[] = [];
   
-  if (Array.isArray(input)) {
-    input.forEach((item, idx) => {
+  let rawInput = input;
+  if (typeof rawInput === 'string') {
+    const trimmed = rawInput.trim();
+    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+      try {
+        rawInput = JSON.parse(trimmed);
+      } catch {}
+    }
+  }
+
+  if (Array.isArray(rawInput)) {
+    rawInput.forEach((item, idx) => {
       if (typeof item === 'string' && item.trim()) {
         list.push({ key: item.trim(), name: `Chave #${idx + 1}` });
       } else if (item && typeof item === 'object' && item.key?.trim()) {
@@ -404,9 +414,11 @@ function normalizeKeyPool(input: any, defaultEnvKey?: string): { key: string; na
         }
       }
     });
-  } else if (typeof input === 'string' && input.trim()) {
+  } else if (rawInput && typeof rawInput === 'object' && rawInput.key?.trim()) {
+    list.push({ key: rawInput.key.trim(), name: rawInput.name?.trim() || 'Chave Principal' });
+  } else if (typeof rawInput === 'string' && rawInput.trim()) {
     // Split by comma or newlines
-    const parts = input.split(/[\n,]+/).map((p) => p.trim()).filter(Boolean);
+    const parts = rawInput.split(/[\n,]+/).map((p) => p.trim()).filter(Boolean);
     parts.forEach((p, idx) => {
       list.push({ key: p, name: `Chave #${idx + 1}` });
     });
@@ -419,9 +431,23 @@ function normalizeKeyPool(input: any, defaultEnvKey?: string): { key: string; na
   return list;
 }
 
-function extractKeysFromBody(body: any) {
-  const groqInput = body.groqKeyPool || body.groqApiKeys || body.groqApiKey;
-  const openRouterInput = body.openRouterKeyPool || body.openRouterApiKeys || body.openRouterApiKey;
+function extractKeysFromBody(body: any, headers?: any) {
+  let groqInput = body?.groqKeyPool || body?.groqApiKeys || body?.groqApiKey;
+  let openRouterInput = body?.openRouterKeyPool || body?.openRouterApiKeys || body?.openRouterApiKey;
+
+  if (headers) {
+    if (!groqInput && headers['x-groq-api-key']) {
+      groqInput = headers['x-groq-api-key'];
+    }
+    if (!openRouterInput && headers['x-openrouter-api-key']) {
+      openRouterInput = headers['x-openrouter-api-key'];
+    }
+    const auth = headers.authorization || headers.Authorization;
+    if (auth && typeof auth === 'string' && auth.startsWith('Bearer gsk_')) {
+      if (!groqInput) groqInput = auth.replace('Bearer ', '').trim();
+    }
+  }
+
   return { groqInput, openRouterInput };
 }
 
@@ -3346,9 +3372,13 @@ const audioUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 100 * 1024 * 1024, files: 1, fields: 20 }, // 100MB max
   fileFilter: (_req, file, cb) => {
+    if (!file) return cb(null, true);
     if (ALLOWED_TRANSCRIBE_MIMES.has(file.mimetype)) return cb(null, true);
-    // Permite por extensão como fallback (alguns browsers mandam octet-stream)
-    if (/\.(mp3|wav|ogg|webm|mp4|m4a|aac|flac|mov|mkv)$/i.test(file.originalname || "")) {
+    if (file.mimetype?.startsWith("audio/") || file.mimetype?.startsWith("video/")) return cb(null, true);
+    if (/\.(mp3|wav|ogg|webm|mp4|m4a|aac|flac|mov|mkv|3gp|m4v)$/i.test(file.originalname || "")) {
+      return cb(null, true);
+    }
+    if (file.mimetype === "application/octet-stream" || !file.mimetype) {
       return cb(null, true);
     }
     cb(new Error("Tipo de arquivo não permitido. Envie áudio ou vídeo."));
@@ -3424,7 +3454,7 @@ app.post("/api/transcribe-media", audioUpload.single("file"), async (req, res) =
       });
     }
 
-    const { groqInput, openRouterInput } = extractKeysFromBody(req.body || {});
+    const { groqInput, openRouterInput } = extractKeysFromBody(req.body || {}, req.headers);
     let sourceText = sanitizeTranscript(textContent || "");
 
     // If text was pasted directly, analyze it
@@ -3560,7 +3590,7 @@ Retorne no formato JSON:
             const audioBuffer = Buffer.from(mediaBase64, "base64");
             const blob = new Blob([audioBuffer], { type: mimeType || "audio/wav" });
 
-            // Tenta primeiro com whisper-large-v3 (modelo carro-chefe com menor índice de alucinações e repetições)
+            // Tenta primeiro com whisper-large-v3 (máxima precisão em português) e depois whisper-large-v3-turbo
             const modelsToTry = ["whisper-large-v3", "whisper-large-v3-turbo"];
             let transcriptionSuccess = false;
 
@@ -3570,8 +3600,7 @@ Retorne no formato JSON:
               formData.append("model", whisperModel);
               formData.append("language", "pt");
               formData.append("response_format", "json");
-              formData.append("temperature", "0.2");
-              formData.append("prompt", "Transcrição de aula, vídeo, apresentação ou fala em português do Brasil.");
+              formData.append("temperature", "0");
 
               const whisperRes = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
                 method: "POST",
@@ -3605,25 +3634,28 @@ Retorne no formato JSON:
         }
       }
 
-      // If we got raw text from Whisper, use LLM to structure title, hook, summary, keyPoints
+      // If we got raw text from Whisper, use LLM only for title, hook and summary metadata — NEVER rewrite the real spoken text
       if (transcribedText) {
-        const systemPrompt = `Você é um analista especialista de vídeos virais e roteiros. Analise a transcrição de áudio e extraia a estrutura em JSON.`;
+        const finalFullText = transcribedText;
+        const systemPrompt = `Você é um analista de transcrição de vídeos. Extraia o gancho, resumo e tópicos a partir do texto fornecido. Responda estritamente em JSON.`;
         const analysisPrompt = `
-Aqui está a transcrição fiel do áudio falado no vídeo:
-"${transcribedText}"
+Abaixo está a transcrição real do áudio do vídeo:
+"""
+${transcribedText}
+"""
 
-Extraia os dados estruturados:
-1. title: Um título viral atraente para o vídeo
-2. hookIdentified: A frase exata usada no início como gancho
-3. summary: Um resumo conciso do que o vídeo ensina/fala
-4. keyPoints: 3 a 5 tópicos principais abordados
+Extraia:
+1. "title": Um título chamativo baseado exatamente no assunto acima
+2. "hookIdentified": A frase inicial usada como gancho
+3. "summary": Um breve resumo fiel ao que foi dito
+4. "keyPoints": 3 a 5 tópicos principais abordados
 
-Retorne no formato JSON:
+Retorne no formato JSON estrito:
 {
   "title": "string",
   "hookIdentified": "string",
   "summary": "string",
-  "keyPoints": ["ponto 1", "ponto 2", "ponto 3"]
+  "keyPoints": ["ponto 1", "ponto 2"]
 }
 `;
         try {
@@ -3637,15 +3669,16 @@ Retorne no formato JSON:
           return res.json({
             id: "transc_" + Date.now(),
             title: analysis.title || fileName || "Gravação de Mídia",
-            fullText: transcribedText,
-            transcript: transcribedText,
-            fullTranscript: transcribedText,
-            text: transcribedText,
-            summary: analysis.summary || "Conteúdo transcrito com sucesso.",
+            fullText: finalFullText,
+            transcript: finalFullText,
+            fullTranscript: finalFullText,
+            text: finalFullText,
+            rawTranscript: transcribedText,
+            summary: analysis.summary || "Conteúdo transcrito e restaurado com sucesso.",
             keyPoints: analysis.keyPoints || ["Ponto principal identificado"],
-            hookIdentified: analysis.hookIdentified || transcribedText.slice(0, 100),
+            hookIdentified: analysis.hookIdentified || finalFullText.slice(0, 100),
             originalDuration: formattedDur,
-            wordCount: transcribedText.split(/\s+/).filter(Boolean).length,
+            wordCount: finalFullText.split(/\s+/).filter(Boolean).length,
             sourceType: "upload_video",
             sourceFileName: fileName || "arquivo.mp4",
             createdAt: new Date().toISOString(),
@@ -3683,7 +3716,7 @@ Retorne no formato JSON:
         const ai = new GoogleGenAI({ apiKey: geminiKey });
         const candidateAudioModels = [
           "gemini-2.5-flash",
-          "gemini-3.5-transcribe",
+          "gemini-2.5-pro",
         ];
 
         let lastGeminiError: any = null;
@@ -3783,24 +3816,22 @@ app.post("/api/clean-transcript", async (req, res) => {
 
     // Se o usuário solicitou explicitamente restauração inteligente com IA
     if (useAi === true) {
-      const { groqInput, openRouterInput } = extractKeysFromBody(req.body);
-      const systemPrompt = `Você é um especialista em revisão de áudio e fala espontânea em português do Brasil. Sua missão é limpar transcrições imperfeitas geradas por modelos de voz (Whisper).`;
-      const prompt = `A transcrição abaixo foi gerada por um modelo de áudio e contém ruídos de alucinação (frases repetidas em loop como "mas eu vou fazer uma segunda vez" repetido dezenas de vezes, "eu não sei se", sequências de "0.0.0", ou termos foneticamente trocados).
-
-Instruções rigorosas:
-1. Elimine TODOS os loops de repetição de frases, palavras e dígitos.
-2. Corrija foneticamente palavras que o modelo de áudio errou em português (exemplo: se o locutor fala de simulado para a prova do Detran / CNH / habilitação, corrija palavras truncadas como "simular do que você é negar Brasil" -> "simulado do Detran Brasil", "não querorvar" -> "não quer reprovar").
-3. Mantenha 100% da mensagem real, dos argumentos e do tom original falado pelo autor. NÃO resuma, preserve a fala completa e natural.
-4. Pontue e formate em parágrafos legíveis.
-
-Texto com ruídos:
+      const { groqInput, openRouterInput } = extractKeysFromBody(req.body, req.headers);
+      const systemPrompt = `Você é um revisor de transcrições em português do Brasil. Sua tarefa é corrigir a pontuação e ortografia mantendo fidelidade absoluta ao texto fornecido.`;
+      const prompt = `A transcrição abaixo foi gerada a partir do áudio de um vídeo:
 """
 ${algorithmicCleaned}
 """
 
+Instruções rigorosas de restauração:
+1. Mantenha 100% da mensagem real, dos argumentos, do vocabulário e do assunto do orador. NÃO resuma e NÃO mude de tema.
+2. Elimine apenas repetições gagas ou mecânicas do microfone.
+3. Pontue e formate em português fluido e gramaticalmente perfeito.
+4. É ESTRITAMENTE PROIBIDO inventar palavras, trocar de assunto ou adicionar frases que não foram faladas no áudio.
+
 Retorne estritamente um objeto JSON com a propriedade "cleanedText":
 {
-  "cleanedText": "texto transcrito e corrigido de forma limpa, natural e sem repetições em português"
+  "cleanedText": "texto fiel corrigido e pontuado"
 }`;
 
       try {
@@ -5008,6 +5039,115 @@ app.post("/api/video/merge-session", async (req, res) => {
       inputPaths.push(p);
     }
 
+    // Probe a duração real e timestamps de início de cada clipe com ffprobe JSON
+    // Previne anomalias graves de hardware uptime de celulares (ex: tela gravada com start_time de 150 horas gerando vídeo de 150:01:11 ou 11 min)
+    const clipDurations: number[] = [];
+    const clientDurations: number[] = Array.isArray(req.body?.clientClipDurations) ? req.body.clientClipDurations : [];
+    const clipStartTimes: number[] = [];
+
+    for (let i = 0; i < inputPaths.length; i++) {
+      let dur = 0;
+      let startTime = 0;
+      try {
+        const probeRaw = execFileSync("ffprobe", [
+          "-v", "error",
+          "-show_entries", "format=duration,start_time:stream=duration,start_time,codec_type",
+          "-of", "json",
+          inputPaths[i]
+        ], { encoding: "utf-8" });
+        const meta = JSON.parse(probeRaw);
+        const vStream = meta.streams?.find((s: any) => s.codec_type === "video");
+        const aStream = meta.streams?.find((s: any) => s.codec_type === "audio");
+        const vDur = parseFloat(vStream?.duration);
+        const aDur = parseFloat(aStream?.duration);
+        const fmtDur = parseFloat(meta.format?.duration);
+        const fmtStart = parseFloat(meta.format?.start_time) || 0;
+        const vStart = parseFloat(vStream?.start_time) || 0;
+
+        startTime = Math.abs(vStart) > 0 ? vStart : fmtStart;
+
+        // Se o clipe tem start_time de uptime (ex: 540000s = 150h ou 660s = 11min),
+        // calcula a duração a partir do stream ou da diferença fmtDur - fmtStart:
+        if (vDur > 0 && vDur < 7200) {
+          dur = vDur;
+        } else if (aDur > 0 && aDur < 7200) {
+          dur = aDur;
+        } else if (fmtDur > 0) {
+          dur = (fmtDur > startTime && startTime > 0) ? (fmtDur - startTime) : fmtDur;
+        }
+
+        // Se mesmo assim a duração for anômala (> 2 horas) mas o cliente reportou uma duração válida (< 2h):
+        if ((dur > 7200 || dur <= 0) && clientDurations[i] && clientDurations[i] > 0 && clientDurations[i] < 7200) {
+          dur = clientDurations[i];
+        }
+      } catch {
+        dur = clientDurations[i] && clientDurations[i] > 0 ? clientDurations[i] : 5;
+      }
+      clipDurations.push(dur > 0 && dur < 7200 ? dur : 5);
+      clipStartTimes.push(startTime);
+    }
+    const expectedTotalDuration = clipDurations.reduce((acc, d) => acc + d, 0);
+
+    // Pré-normalização anti-anomalia: se qualquer clipe tiver start_time descolado de zero (> 0.25s),
+    // o concat demuxer (-c copy) preservaria esse salto temporal de 150 horas no arquivo final.
+    // Normalizamos os pacotes a zero antes da junção!
+    for (let i = 0; i < inputPaths.length; i++) {
+      const p = inputPaths[i];
+      const startT = Math.abs(clipStartTimes[i] || 0);
+      if (startT > 0.25) {
+        const normPath = path.join(sessionDir, `norm_${i}.mp4`);
+        try {
+          // Tenta cópia direta com -avoid_negative_ts make_zero e +genpts (0.01s)
+          await execFileAsync("ffmpeg", [
+            "-i", p,
+            "-c", "copy",
+            "-fflags", "+genpts",
+            "-avoid_negative_ts", "make_zero",
+            "-y",
+            normPath,
+          ]);
+
+          let newStart = 0;
+          try {
+            const checkOut = execFileSync("ffprobe", [
+              "-v", "error",
+              "-show_entries", "format=start_time",
+              "-of", "default=nw=1:nk=1",
+              normPath
+            ], { encoding: "utf-8" });
+            newStart = Math.abs(parseFloat(checkOut.trim()) || 0);
+          } catch {
+            newStart = 999;
+          }
+
+          if (newStart <= 0.25 && fs.existsSync(normPath) && fs.statSync(normPath).size > 1000) {
+            fs.renameSync(normPath, p);
+          } else {
+            // Se cópia pura preservou o timestamp alto (hardware uptime 150h), faz re-timestamping ultrarrápido com setpts
+            if (fs.existsSync(normPath)) fs.unlinkSync(normPath);
+            await execFileAsync("ffmpeg", [
+              "-i", p,
+              "-vf", "setpts=PTS-STARTPTS",
+              "-af", "asetpts=PTS-STARTPTS",
+              "-c:v", "libx264",
+              "-preset", "ultrafast",
+              "-tune", "zerolatency",
+              "-crf", "26",
+              "-c:a", "aac",
+              "-avoid_negative_ts", "make_zero",
+              "-y",
+              normPath,
+            ]);
+            if (fs.existsSync(normPath) && fs.statSync(normPath).size > 1000) {
+              fs.renameSync(normPath, p);
+            }
+          }
+        } catch (normErr) {
+          console.warn(`[VideoMerge] Aviso ao normalizar timestamps do clipe ${i}:`, normErr);
+        }
+      }
+    }
+
     // Garantir que todos os clipes possuam trilha de áudio válida (evita erro em vídeos mudos)
     for (let i = 0; i < inputPaths.length; i++) {
       const p = inputPaths[i];
@@ -5027,11 +5167,13 @@ app.post("/api/video/merge-session", async (req, res) => {
 
       if (!hasAudio) {
         const withAudPath = path.join(sessionDir, `input_aud_${i}.mp4`);
+        const clipDur = clipDurations[i] > 0 ? clipDurations[i] : 10;
         try {
           await execFileAsync("ffmpeg", [
             "-i", p,
             "-f", "lavfi",
             "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
+            "-t", `${clipDur}`,
             "-c:v", "copy",
             "-c:a", "aac",
             "-shortest",
@@ -5079,7 +5221,25 @@ app.post("/api/video/merge-session", async (req, res) => {
 
         await execFileAsync("ffmpeg", fastArgs, { timeout: 45000 });
         if (fs.existsSync(outputPath) && fs.statSync(outputPath).size > 1000) {
-          success = true;
+          // Validação anti-anomalia de duração: verifica se -c copy não preservou gaps de PTS gigantes
+          let outDur = 0;
+          try {
+            const probeOut = execFileSync("ffprobe", [
+              "-v", "error",
+              "-show_entries", "format=duration",
+              "-of", "default=nw=1:nk=1",
+              outputPath
+            ], { encoding: "utf-8" });
+            outDur = parseFloat(probeOut.trim()) || 0;
+          } catch {}
+
+          if (outDur > 1800 || (expectedTotalDuration > 0 && outDur > expectedTotalDuration + 3.0)) {
+            console.warn(`[VideoMerge] Discrepância grave de PTS detectada no Modo Rápido (Esperado: ~${expectedTotalDuration.toFixed(1)}s, Gerado: ${outDur.toFixed(1)}s). Descartando e usando Modo Compatível com re-timestamping.`);
+            if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+            success = false;
+          } else {
+            success = true;
+          }
         }
       } catch (fastErr: any) {
         console.warn("Sessão: Modo Rápido falhou, tentando cópia de vídeo com aac:", fastErr?.message);
@@ -5106,7 +5266,24 @@ app.post("/api/video/merge-session", async (req, res) => {
         ];
         await execFileAsync("ffmpeg", fastArgs, { timeout: 45000 });
         if (fs.existsSync(outputPath) && fs.statSync(outputPath).size > 1000) {
-          success = true;
+          let outDur = 0;
+          try {
+            const probeOut = execFileSync("ffprobe", [
+              "-v", "error",
+              "-show_entries", "format=duration",
+              "-of", "default=nw=1:nk=1",
+              outputPath
+            ], { encoding: "utf-8" });
+            outDur = parseFloat(probeOut.trim()) || 0;
+          } catch {}
+
+          if (outDur > 1800 || (expectedTotalDuration > 0 && outDur > expectedTotalDuration + 3.0)) {
+            console.warn(`[VideoMerge] Discrepância de PTS detectada na tentativa 2 (Esperado: ~${expectedTotalDuration.toFixed(1)}s, Gerado: ${outDur.toFixed(1)}s). Descartando.`);
+            if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+            success = false;
+          } else {
+            success = true;
+          }
         }
       } catch (audioCopyErr: any) {
         console.warn("Sessão: Modo Audio reencode falhou:", audioCopyErr?.message);
@@ -5121,8 +5298,9 @@ app.post("/api/video/merge-session", async (req, res) => {
         let filterChain = "";
         for (let i = 0; i < inputPaths.length; i++) {
           singlePassInputs.push("-i", inputPaths[i]);
-          filterChain += `[${i}:v]scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease,pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=${fps}[v${i}];`;
-          filterChain += `[${i}:a]aformat=sample_rates=44100:channel_layouts=stereo[a${i}];`;
+          // setpts=PTS-STARTPTS e asetpts=PTS-STARTPTS normalizam todos os timestamps a zero
+          filterChain += `[${i}:v]setpts=PTS-STARTPTS,scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease,pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=${fps}[v${i}];`;
+          filterChain += `[${i}:a]asetpts=PTS-STARTPTS,aformat=sample_rates=44100:channel_layouts=stereo[a${i}];`;
         }
         for (let i = 0; i < inputPaths.length; i++) {
           filterChain += `[v${i}][a${i}]`;
@@ -5143,6 +5321,7 @@ app.post("/api/video/merge-session", async (req, res) => {
           "-ar", "44100",
           "-ac", "2",
           "-b:a", "128k",
+          ...(expectedTotalDuration > 0 ? ["-t", `${Math.ceil(expectedTotalDuration + 0.5)}`] : []),
           "-avoid_negative_ts", "make_zero",
           "-movflags", "+faststart",
           "-y",
@@ -5153,7 +5332,7 @@ app.post("/api/video/merge-session", async (req, res) => {
         // Suporte a transições visuais (xfade) no servidor
         const transitionDuration = clampFloat(req.body?.transitionDuration, 0.5, 0.1, 2);
         const stdPaths: string[] = [];
-        const vfScale = `scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease,pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=${fps}`;
+        const vfScale = `setpts=PTS-STARTPTS,scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease,pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=${fps}`;
 
         for (let i = 0; i < inputPaths.length; i++) {
           const stdPath = path.join(sessionDir, `std_${i}.mp4`);
@@ -5161,6 +5340,7 @@ app.post("/api/video/merge-session", async (req, res) => {
           const stdArgs = [
             "-i", inputPaths[i],
             "-vf", vfScale,
+            "-af", "asetpts=PTS-STARTPTS",
             "-c:v", "libx264",
             "-preset", "ultrafast",
             "-tune", "zerolatency",
@@ -5185,9 +5365,10 @@ app.post("/api/video/merge-session", async (req, res) => {
         let filterGraph = "";
         let currentV = "[0:v]";
         let currentA = "[0:a]";
-        let accumulatedDur = 5.0;
+        let accumulatedDur = clipDurations[0] > 0 ? clipDurations[0] : 5.0;
 
         for (let i = 1; i < stdPaths.length; i++) {
+          const nextClipDur = clipDurations[i] > 0 ? clipDurations[i] : 5.0;
           const offset = Math.max(0.1, accumulatedDur - transitionDuration);
           const nextV = `[v_trans_${i}]`;
           const nextA = `[a_trans_${i}]`;
@@ -5198,7 +5379,7 @@ app.post("/api/video/merge-session", async (req, res) => {
 
           currentV = nextV;
           currentA = nextA;
-          accumulatedDur = offset + 5.0;
+          accumulatedDur = offset + nextClipDur;
         }
 
         filterGraph = filterGraph.replace(/;$/, "");
@@ -5216,6 +5397,7 @@ app.post("/api/video/merge-session", async (req, res) => {
           "-ar", "44100",
           "-ac", "2",
           "-b:a", "128k",
+          ...(expectedTotalDuration > 0 ? ["-t", `${Math.ceil(accumulatedDur + 0.5)}`] : []),
           "-avoid_negative_ts", "make_zero",
           "-movflags", "+faststart",
           "-y",

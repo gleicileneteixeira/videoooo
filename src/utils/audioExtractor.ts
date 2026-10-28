@@ -29,93 +29,79 @@ export async function extractAudioFloat32Mono(
   let audioBuffer: AudioBuffer;
   try {
     audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-  } catch (decodeErr: any) {
+  } catch {
+    audioCtx.close?.();
     throw new Error(
       'Navegador não conseguiu decodificar o contêiner de áudio diretamente. Alternando para o canal de precisão do servidor com ffmpeg...'
     );
   }
-  const numChannels = audioBuffer.numberOfChannels;
-  let monoSamples: Float32Array;
+  audioCtx.close?.();
 
-  if (numChannels > 1) {
-    monoSamples = new Float32Array(audioBuffer.length);
-    for (let c = 0; c < numChannels; c++) {
-      const cData = audioBuffer.getChannelData(c);
-      for (let i = 0; i < audioBuffer.length; i++) {
-        monoSamples[i] += cData[i] / numChannels;
-      }
-    }
-  } else {
-    monoSamples = audioBuffer.getChannelData(0);
-  }
-
-  // Resample to 16kHz if necessary
-  if (audioBuffer.sampleRate === targetSampleRate) {
-    return { samples: monoSamples, duration: audioBuffer.duration };
-  }
-
-  const ratio = audioBuffer.sampleRate / targetSampleRate;
-  const newLength = Math.round(monoSamples.length / ratio);
-  const resampled = new Float32Array(newLength);
-
-  for (let i = 0; i < newLength; i++) {
-    const srcIndex = Math.floor(i * ratio);
-    resampled[i] = monoSamples[srcIndex] || 0;
-  }
-
-  return { samples: resampled, duration: audioBuffer.duration };
-}
-
-/**
- * Encodes an AudioBuffer into standard 16-bit PCM WAV format.
- */
-function encodeWav(audioBuffer: AudioBuffer, targetSampleRate = 16000): Blob {
-  const numChannels = 1; // Mono for voice/transcription
-  const sampleRate = targetSampleRate;
-  const format = 1; // PCM
-  const bitDepth = 16;
-
-  // Resample & mix down to mono
-  const offlineCtx = new OfflineAudioContext(
-    1,
-    Math.ceil(audioBuffer.duration * targetSampleRate),
-    targetSampleRate
-  );
+  // Use OfflineAudioContext for high-fidelity anti-aliased resampling to 16kHz mono
+  const targetLength = Math.max(1, Math.ceil(audioBuffer.duration * targetSampleRate));
+  const offlineCtx = new OfflineAudioContext(1, targetLength, targetSampleRate);
 
   const source = offlineCtx.createBufferSource();
   source.buffer = audioBuffer;
   source.connect(offlineCtx.destination);
   source.start(0);
 
-  // Synchronous conversion if already matching or create simple wav header
-  const channelData = audioBuffer.getChannelData(0);
-  let finalSamples: Float32Array;
+  const renderedBuffer = await offlineCtx.startRendering();
+  let samples = renderedBuffer.getChannelData(0);
 
-  if (audioBuffer.numberOfChannels > 1) {
-    // Average all channels
-    finalSamples = new Float32Array(audioBuffer.length);
-    for (let c = 0; c < audioBuffer.numberOfChannels; c++) {
-      const cData = audioBuffer.getChannelData(c);
-      for (let i = 0; i < audioBuffer.length; i++) {
-        finalSamples[i] += cData[i] / audioBuffer.numberOfChannels;
-      }
+  // Peak audio normalization: amplifies quiet speech up to standard 0.95 peak
+  // Whisper models fail or hallucinate when input audio is quiet or clipped
+  let maxAmp = 0;
+  for (let i = 0; i < samples.length; i++) {
+    const abs = Math.abs(samples[i]);
+    if (abs > maxAmp) maxAmp = abs;
+  }
+  if (maxAmp > 0.005 && maxAmp < 0.9) {
+    const gain = Math.min(0.95 / maxAmp, 5.0);
+    const boosted = new Float32Array(samples.length);
+    for (let i = 0; i < samples.length; i++) {
+      boosted[i] = samples[i] * gain;
     }
-  } else {
-    finalSamples = channelData;
+    samples = boosted;
   }
 
-  // Downsample to targetSampleRate if needed
-  let resampled: Float32Array;
-  if (audioBuffer.sampleRate !== targetSampleRate) {
-    const ratio = audioBuffer.sampleRate / targetSampleRate;
-    const newLength = Math.round(finalSamples.length / ratio);
-    resampled = new Float32Array(newLength);
-    for (let i = 0; i < newLength; i++) {
-      const srcIndex = Math.floor(i * ratio);
-      resampled[i] = finalSamples[srcIndex] || 0;
+  return { samples, duration: audioBuffer.duration };
+}
+
+/**
+ * Encodes an AudioBuffer into standard 16-bit PCM WAV format.
+ */
+async function encodeWav(audioBuffer: AudioBuffer, targetSampleRate = 16000): Promise<Blob> {
+  const numChannels = 1; // Mono for voice/transcription
+  const sampleRate = targetSampleRate;
+  const format = 1; // PCM
+  const bitDepth = 16;
+
+  // Resample with anti-aliasing via OfflineAudioContext
+  const targetLength = Math.max(1, Math.ceil(audioBuffer.duration * targetSampleRate));
+  const offlineCtx = new OfflineAudioContext(1, targetLength, targetSampleRate);
+
+  const source = offlineCtx.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(offlineCtx.destination);
+  source.start(0);
+
+  const rendered = await offlineCtx.startRendering();
+  let resampled = rendered.getChannelData(0);
+
+  // Normalize gain
+  let maxAmp = 0;
+  for (let i = 0; i < resampled.length; i++) {
+    const abs = Math.abs(resampled[i]);
+    if (abs > maxAmp) maxAmp = abs;
+  }
+  if (maxAmp > 0.005 && maxAmp < 0.9) {
+    const gain = Math.min(0.95 / maxAmp, 5.0);
+    const boosted = new Float32Array(resampled.length);
+    for (let i = 0; i < resampled.length; i++) {
+      boosted[i] = resampled[i] * gain;
     }
-  } else {
-    resampled = finalSamples;
+    resampled = boosted;
   }
 
   const bytesPerSample = bitDepth / 8;
@@ -194,7 +180,8 @@ export async function extractAndCompressAudio(
     const durationSec = Math.round(decodedBuffer.duration);
 
     onProgress?.(`Otimizando áudio (16kHz mono) para transcrição ultra rápida...`);
-    const wavBlob = encodeWav(decodedBuffer, 16000);
+    const wavBlob = await encodeWav(decodedBuffer, 16000);
+    audioCtx.close?.();
     const optimizedSizeMb = Number((wavBlob.size / (1024 * 1024)).toFixed(2));
     const base64 = await blobToBase64(wavBlob);
 

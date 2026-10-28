@@ -1,7 +1,7 @@
 /**
  * Utilitário especializado em higienização e remoção de loops de repetição / alucinações de transcrições de áudio.
  * Resolve problemas clássicos do Whisper como:
- * 1. Frases repetidas dezenas de vezes em loop ('Então, para isso, você não precisa fazer uma prova de a única aplicação...')
+ * 1. Frases repetidas dezenas de vezes em loop causadas por repetição do Whisper
  * 2. Repetições de n-gramas e gagueira artificial ('para isso, para isso, para isso...')
  * 3. Alucinações de fim de áudio / silêncio do Whisper ('paraamente, rapidamente, apenas sempre jamais, cardá-astegarante, ou a próxima...')
  * 4. Sequências de zeros ('0.0.0.0.0.0') e ruídos de pontuação repetida.
@@ -36,7 +36,11 @@ export function removeWhisperHallucinationArtifacts(text: string): string {
   // Palavras inexistentes geradas pelo colapso de BPE do Whisper em pausas
   cleaned = cleaned.replace(/\b(?:paraamente|cardá-astegarante|carda-astegarante)\b/gi, '');
 
-  // Pilhas de advérbios/termos desconexos repetidos consecutivamente pelo Whisper no silêncio
+  // Frases e pilhas de advérbios alucinadas em silêncios/pausas do Whisper
+  cleaned = cleaned.replace(/\b(?:ou a próxima(?: vez)?|ou até a próxima|até a próxima)\b/gi, '');
+  cleaned = cleaned.replace(/\b(?:rapidamente,?\s*apenas,?\s*sempre,?\s*jamais)\b/gi, '');
+  cleaned = cleaned.replace(/\b(?:apenas,?\s*sempre,?\s*jamais)\b/gi, '');
+  cleaned = cleaned.replace(/\b(?:sempre,?\s*jamais)\b/gi, '');
   cleaned = cleaned.replace(/(?:[,\s]+(?:rapidamente|apenas|sempre|jamais)){2,}/gi, '');
 
   // Clichês comuns de legendas do YouTube alucinados pelo Whisper em silêncios
@@ -74,9 +78,7 @@ export function removeConsecutiveWordLoops(rawText: string): string {
   }
 
   // Passo 3: Deduplicação de frases inteiras e orações
-  // Resolve o caso onde o Whisper repete orações inteiras como:
-  // "Então, para isso, você não precisa fazer uma prova de a única aplicação. Então, para isso, você não precisa fazer..."
-  const rawParts = text.split(/(?<=[.!?\n;])\s+|(?=,\s*Então)/i);
+  const rawParts = text.split(/(?<=[.!?\n;])\s+/);
   const keptSentences: string[] = [];
   let lastNormSentence = '';
 
@@ -169,7 +171,7 @@ export function removeConsecutiveWordLoops(rawText: string): string {
     cleaned = resultTokens.join(' ');
   }
 
-  // Passo 5: Normalização e polimento final de pontuação
+  // Passo 5: Normalização e polimento final de pontuação e espaçamentos
   cleaned = cleaned
     .replace(/\s+([,.:;?!])/g, '$1')
     .replace(/,\s*,/g, ',')

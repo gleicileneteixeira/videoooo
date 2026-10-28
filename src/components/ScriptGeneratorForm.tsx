@@ -373,7 +373,7 @@ Pontos de Atenção e Argumentação do Roteiro:
           
           const transcribedText = await LocalWhisperService.transcribeFile(
             audioFile,
-            'Xenova/whisper-tiny' as WhisperModelId,
+            'cloud',
             (pct, msg) => {
               setRecordingProgress(msg);
             },

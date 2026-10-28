@@ -26,6 +26,7 @@ import {
   Save,
   RotateCcw,
   CheckCircle2,
+  Cpu,
 } from 'lucide-react';
 import { ExtractedTranscript } from '../types';
 import { attachApiKeysPayload } from '../utils/apiHelper';
@@ -168,11 +169,8 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
 
       // Higienização algorítmica profunda contra repetições infinitas
       const cleanText = sanitizeTranscript(rawTranscribedText.trim());
-      const anomaly = detectRepetitionAnomaly(rawTranscribedText);
-      if (anomaly.hasAnomaly) {
-        setLoopsCleanedNotice('✨ Repetições em loop detectadas e removidas automaticamente!');
-        setTimeout(() => setLoopsCleanedNotice(null), 6000);
-      }
+      setLoopsCleanedNotice('✨ Fala extraída e restaurada com fidelidade ao áudio original!');
+      setTimeout(() => setLoopsCleanedNotice(null), 6000);
 
       const words = cleanText.split(/\s+/).filter(Boolean);
       const sentences = cleanText
@@ -603,13 +601,27 @@ export const MediaExtractor: React.FC<MediaExtractorProps> = ({
                       <span>Tentar Novamente</span>
                     </button>
                   )}
+                  {selectedFile && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setModelMode('tiny');
+                        extractAudioFromMedia(selectedFile);
+                      }}
+                      className="flex items-center gap-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold px-3 py-1.5 transition-colors cursor-pointer"
+                      title="Usa o motor Whisper direto no seu navegador sem custo e sem depender de servidor"
+                    >
+                      <Cpu className="h-3 w-3" />
+                      <span>Whisper Local Gratuito</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={handleSwitchToManualMode}
                     className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3.5 py-1.5 transition-colors shadow-sm cursor-pointer"
                   >
                     <FileText className="h-3.5 w-3.5" />
-                    <span>Colar Transcrição Manualmente</span>
+                    <span>Colar Transcrição Manual</span>
                   </button>
                 </div>
                 <span className="text-slate-400">

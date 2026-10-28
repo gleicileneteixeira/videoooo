@@ -203,7 +203,18 @@ export async function getBlobRealDuration(blob: Blob): Promise<number> {
       };
 
       video.onloadedmetadata = () => {
-        const dur = isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+        let dur = isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+        try {
+          // Proteção contra timestamps de hardware uptime de celulares (onde start_time vem 150 horas)
+          if (video.seekable && video.seekable.length > 0) {
+            const sStart = video.seekable.start(0);
+            const sEnd = video.seekable.end(video.seekable.length - 1);
+            const span = sEnd - sStart;
+            if (span > 0 && (dur > 7200 || sStart > 1.0)) {
+              dur = span;
+            }
+          }
+        } catch {}
         cleanUp();
         resolve(dur);
       };
@@ -236,8 +247,20 @@ export async function extractVideoMeta(file: File | Blob): Promise<{ duration: n
     video.muted = true;
 
     const onMeta = () => {
+      let dur = isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+      try {
+        if (video.seekable && video.seekable.length > 0) {
+          const sStart = video.seekable.start(0);
+          const sEnd = video.seekable.end(video.seekable.length - 1);
+          const span = sEnd - sStart;
+          if (span > 0 && (dur > 7200 || sStart > 1.0)) {
+            dur = span;
+          }
+        }
+      } catch {}
+
       resolve({
-        duration: isFinite(video.duration) ? video.duration : 0,
+        duration: dur,
         width: video.videoWidth || 1080,
         height: video.videoHeight || 1920,
         previewUrl: url,
@@ -454,9 +477,17 @@ export async function concatenateVideosFFmpeg(
             const checkData = await ffmpeg.readFile('output.mp4');
             const checkBytes = checkData instanceof Uint8Array ? checkData.byteLength : (checkData as any)?.length || 0;
             if (checkBytes > 1024) {
-              log(`✓ Junção Rápida (-c copy puro) concluída com sucesso em ~0.3s! (${(checkBytes / (1024 * 1024)).toFixed(2)} MB)`);
-              modeUsed = 'fast';
-              success = true;
+              const expectedTotalDuration = clips.reduce((acc, c) => acc + (c.duration || 0), 0);
+              const testBlob = new Blob([checkData], { type: 'video/mp4' });
+              const fastDur = await getBlobRealDuration(testBlob);
+              if (fastDur > 1800 || (expectedTotalDuration > 0 && fastDur > expectedTotalDuration + 3.0)) {
+                log(`Aviso: Fast Mode gerou discrepância de PTS (${fastDur.toFixed(1)}s para esperados ${expectedTotalDuration.toFixed(1)}s). Descartando para re-timestamping compatível.`);
+                await safeUnlink(ffmpeg, 'output.mp4');
+              } else {
+                log(`✓ Junção Rápida (-c copy puro) concluída com sucesso em ~0.3s! (${(checkBytes / (1024 * 1024)).toFixed(2)} MB)`);
+                modeUsed = 'fast';
+                success = true;
+              }
             } else {
               await safeUnlink(ffmpeg, 'output.mp4');
             }
@@ -467,7 +498,6 @@ export async function concatenateVideosFFmpeg(
 
         // Tentativa 1.5: Se -c copy puro falhou por discrepância de áudio (ex: 48kHz vs 44.1kHz),
         // copia o vídeo (-c:v copy) e recodifica apenas o áudio (-c:a aac em ~0.4s).
-        // Isso é ~50x mais rápido do que reprocessar o vídeo inteiro!
         if (!success) {
           try {
             log('Tentando Modo Rápido com normalização de áudio (-c:v copy -c:a aac em ~0.5s)...');
@@ -489,9 +519,17 @@ export async function concatenateVideosFFmpeg(
               const checkData = await ffmpeg.readFile('output.mp4');
               const checkBytes = checkData instanceof Uint8Array ? checkData.byteLength : (checkData as any)?.length || 0;
               if (checkBytes > 1024) {
-                log(`✓ Junção Rápida com áudio normalizado concluída em ~0.6s! (${(checkBytes / (1024 * 1024)).toFixed(2)} MB)`);
-                modeUsed = 'fast';
-                success = true;
+                const expectedTotalDuration = clips.reduce((acc, c) => acc + (c.duration || 0), 0);
+                const testBlob = new Blob([checkData], { type: 'video/mp4' });
+                const fastDur = await getBlobRealDuration(testBlob);
+                if (fastDur > 1800 || (expectedTotalDuration > 0 && fastDur > expectedTotalDuration + 3.0)) {
+                  log(`Aviso: Fast Mode com áudio gerou anomalia de PTS (${fastDur.toFixed(1)}s). Descartando.`);
+                  await safeUnlink(ffmpeg, 'output.mp4');
+                } else {
+                  log(`✓ Junção Rápida com áudio normalizado concluída em ~0.6s! (${(checkBytes / (1024 * 1024)).toFixed(2)} MB)`);
+                  modeUsed = 'fast';
+                  success = true;
+                }
               } else {
                 await safeUnlink(ffmpeg, 'output.mp4');
               }
@@ -512,13 +550,14 @@ export async function concatenateVideosFFmpeg(
     // Acionado se:
     // - O usuário escolheu mode='compatible'
     // - Ou há transições visuais (fade, wipe, dissolve)
-    // - Ou o Modo Rápido falhou por codecs/resoluções divergentes
+    // - Ou o Modo Rápido falhou por codecs/resoluções divergentes ou gaps de PTS
     if (!success) {
       modeUsed = 'compatible';
       updateProgress('standardizing', 35, 'Modo Compatível: Padronizando resolução e áudio...');
 
       const targetW = resolution.width;
       const targetH = resolution.height;
+      const expectedTotalDuration = clips.reduce((acc, c) => acc + (c.duration || 0), 0);
 
       if (transition === 'none') {
         // Junção direta em passo único com filter_complex (2x mais rápido que re-encode individual em loop)
@@ -528,8 +567,8 @@ export async function concatenateVideosFFmpeg(
 
         for (let i = 0; i < clips.length; i++) {
           concatInputs.push('-i', `input_${i}.mp4`);
-          filterGraph += `[${i}:v]scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease,pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=${fps}[v${i}];`;
-          filterGraph += `[${i}:a]aformat=sample_rates=44100:channel_layouts=stereo[a${i}];`;
+          filterGraph += `[${i}:v]setpts=PTS-STARTPTS,scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease,pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=${fps}[v${i}];`;
+          filterGraph += `[${i}:a]asetpts=PTS-STARTPTS,aformat=sample_rates=44100:channel_layouts=stereo[a${i}];`;
         }
 
         for (let i = 0; i < clips.length; i++) {
@@ -551,6 +590,7 @@ export async function concatenateVideosFFmpeg(
           '-ar', '44100',
           '-ac', '2',
           '-b:a', '96k',
+          ...(expectedTotalDuration > 0 ? ['-t', `${Math.ceil(expectedTotalDuration + 0.5)}`] : []),
           '-avoid_negative_ts', 'make_zero',
           '-movflags', '+faststart',
           'output.mp4',
@@ -570,10 +610,11 @@ export async function concatenateVideosFFmpeg(
           const stdName = `std_${i}.mp4`;
           temporaryFiles.push(stdName);
 
-          const vfScale = `scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease,pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=${fps}`;
+          const vfScale = `setpts=PTS-STARTPTS,scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease,pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=${fps}`;
           const stdArgs = [
             '-i', inputName,
             '-vf', vfScale,
+            '-af', 'asetpts=PTS-STARTPTS',
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
@@ -1036,9 +1077,16 @@ export async function concatenateBatchVariations(
               const checkData = await ffmpeg.readFile('output.mp4');
               const checkBytes = checkData instanceof Uint8Array ? checkData.byteLength : (checkData as any)?.length || 0;
               if (checkBytes > 1024) {
-                varModeUsed = 'fast';
-                varSuccess = true;
-                log(`[Vídeo ${plan.variationIndex}] ✓ Junção Rápida (-c copy direto) concluída em ~0.2s (${(checkBytes / 1024 / 1024).toFixed(2)} MB)`);
+                const testBlob = new Blob([checkData], { type: 'video/mp4' });
+                const fastDur = await getBlobRealDuration(testBlob);
+                if (fastDur > 1800 || (totalVarDuration > 0 && fastDur > totalVarDuration + 3.0)) {
+                  log(`[Vídeo ${plan.variationIndex}] Aviso: Fast Mode gerou anomalia de PTS (${fastDur.toFixed(1)}s). Descartando.`);
+                  await safeUnlink(ffmpeg, 'output.mp4');
+                } else {
+                  varModeUsed = 'fast';
+                  varSuccess = true;
+                  log(`[Vídeo ${plan.variationIndex}] ✓ Junção Rápida (-c copy direto) concluída em ~0.2s (${(checkBytes / 1024 / 1024).toFixed(2)} MB)`);
+                }
               } else {
                 await safeUnlink(ffmpeg, 'output.mp4');
               }
@@ -1070,9 +1118,16 @@ export async function concatenateBatchVariations(
                 const checkData = await ffmpeg.readFile('output.mp4');
                 const checkBytes = checkData instanceof Uint8Array ? checkData.byteLength : (checkData as any)?.length || 0;
                 if (checkBytes > 1024) {
-                  varModeUsed = 'fast';
-                  varSuccess = true;
-                  log(`[Vídeo ${plan.variationIndex}] ✓ Junção Rápida (-c:v copy + áudio AAC) concluída em ~0.4s! (${(checkBytes / 1024 / 1024).toFixed(2)} MB)`);
+                  const testBlob = new Blob([checkData], { type: 'video/mp4' });
+                  const fastDur = await getBlobRealDuration(testBlob);
+                  if (fastDur > 1800 || (totalVarDuration > 0 && fastDur > totalVarDuration + 3.0)) {
+                    log(`[Vídeo ${plan.variationIndex}] Aviso: Fast Mode com áudio gerou anomalia de PTS (${fastDur.toFixed(1)}s). Descartando.`);
+                    await safeUnlink(ffmpeg, 'output.mp4');
+                  } else {
+                    varModeUsed = 'fast';
+                    varSuccess = true;
+                    log(`[Vídeo ${plan.variationIndex}] ✓ Junção Rápida (-c:v copy + áudio AAC) concluída em ~0.4s! (${(checkBytes / 1024 / 1024).toFixed(2)} MB)`);
+                  }
                 } else {
                   await safeUnlink(ffmpeg, 'output.mp4');
                 }
@@ -1306,6 +1361,7 @@ async function concatenateVideosServerFallback(
         targetWidth: options.resolution?.width || 1080,
         targetHeight: options.resolution?.height || 1920,
         fps: options.fps || 30,
+        clientClipDurations: clips.map((c) => (c.duration && c.duration > 0 && c.duration < 7200 ? c.duration : 0)),
       }),
     });
   } catch (netErr: any) {
