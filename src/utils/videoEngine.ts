@@ -193,10 +193,15 @@ export async function getBlobRealDuration(blob: Blob): Promise<number> {
     try {
       const video = document.createElement('video');
       video.preload = 'metadata';
+      video.playsInline = true;
+      video.muted = true;
       const url = URL.createObjectURL(blob);
       video.src = url;
 
+      let resolved = false;
       const cleanUp = () => {
+        if (resolved) return;
+        resolved = true;
         URL.revokeObjectURL(url);
         video.onloadedmetadata = null;
         video.onerror = null;
@@ -228,7 +233,11 @@ export async function getBlobRealDuration(blob: Blob): Promise<number> {
       setTimeout(() => {
         cleanUp();
         resolve(0);
-      }, 5000);
+      }, 4000);
+
+      try {
+        video.load();
+      } catch {}
     } catch {
       resolve(0);
     }
@@ -243,10 +252,25 @@ export async function extractVideoMeta(file: File | Blob): Promise<{ duration: n
     const url = URL.createObjectURL(file);
     const video = document.createElement('video');
     video.preload = 'metadata';
-    video.src = url;
+    video.playsInline = true;
     video.muted = true;
+    video.src = url;
 
-    const onMeta = () => {
+    let resolved = false;
+    const finish = (dur: number, w: number, h: number) => {
+      if (resolved) return;
+      resolved = true;
+      video.onloadedmetadata = null;
+      video.onerror = null;
+      resolve({
+        duration: dur,
+        width: w || 1080,
+        height: h || 1920,
+        previewUrl: url,
+      });
+    };
+
+    video.onloadedmetadata = () => {
       let dur = isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
       try {
         if (video.seekable && video.seekable.length > 0) {
@@ -259,32 +283,20 @@ export async function extractVideoMeta(file: File | Blob): Promise<{ duration: n
         }
       } catch {}
 
-      resolve({
-        duration: dur,
-        width: video.videoWidth || 1080,
-        height: video.videoHeight || 1920,
-        previewUrl: url,
-      });
+      finish(dur, video.videoWidth, video.videoHeight);
     };
 
-    video.onloadedmetadata = onMeta;
     video.onerror = () => {
-      resolve({
-        duration: 0,
-        width: 1080,
-        height: 1920,
-        previewUrl: url,
-      });
+      finish(0, 1080, 1920);
     };
 
     setTimeout(() => {
-      resolve({
-        duration: 0,
-        width: 1080,
-        height: 1920,
-        previewUrl: url,
-      });
+      finish(0, 1080, 1920);
     }, 4000);
+
+    try {
+      video.load();
+    } catch {}
   });
 }
 
@@ -350,6 +362,7 @@ export async function concatenateVideosFFmpeg(
   };
 
   let serverAlreadyAttempted = false;
+  let lastServerErr: Error | null = null;
 
   // 1. SELETOR DE MOTOR DE RENDERIZAÇÃO:
   // Se o servidor nativo C++ estiver disponível, une vídeos em ~1 segundo usando -c copy direto.
@@ -362,6 +375,7 @@ export async function concatenateVideosFFmpeg(
       return serverResult;
     } catch (serverErr: any) {
       serverAlreadyAttempted = true;
+      lastServerErr = serverErr;
       const is404OrNotFound =
         serverErr?.status === 404 ||
         serverErr?.isNotFound ||
@@ -403,7 +417,7 @@ export async function concatenateVideosFFmpeg(
       log('Tentando Servidor Nativo como recuperação final...');
       return await concatenateVideosServerFallback(clips, options);
     }
-    throw initErr;
+    throw (lastServerErr ? new Error(lastServerErr.message) : initErr);
   }
 
   // Monitoramento de progresso do FFmpeg
@@ -1374,7 +1388,14 @@ async function concatenateVideosServerFallback(
 
   if (!mergeRes.ok) {
     const rawErr = await mergeRes.text().catch(() => '');
-    const cleanErr = rawErr.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
+    let cleanErr = '';
+    try {
+      const parsed = JSON.parse(rawErr);
+      if (parsed.error) cleanErr = parsed.error;
+    } catch {}
+    if (!cleanErr) {
+      cleanErr = rawErr.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
+    }
     const is404 =
       mergeRes.status === 404 ||
       cleanErr.includes('NOT_FOUND') ||

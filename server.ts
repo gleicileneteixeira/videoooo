@@ -5088,67 +5088,7 @@ app.post("/api/video/merge-session", async (req, res) => {
     }
     const expectedTotalDuration = clipDurations.reduce((acc, d) => acc + d, 0);
 
-    // Pré-normalização anti-anomalia: se qualquer clipe tiver start_time descolado de zero (> 0.25s),
-    // o concat demuxer (-c copy) preservaria esse salto temporal de 150 horas no arquivo final.
-    // Normalizamos os pacotes a zero antes da junção!
-    for (let i = 0; i < inputPaths.length; i++) {
-      const p = inputPaths[i];
-      const startT = Math.abs(clipStartTimes[i] || 0);
-      if (startT > 0.25) {
-        const normPath = path.join(sessionDir, `norm_${i}.mp4`);
-        try {
-          // Tenta cópia direta com -avoid_negative_ts make_zero e +genpts (0.01s)
-          await execFileAsync("ffmpeg", [
-            "-i", p,
-            "-c", "copy",
-            "-fflags", "+genpts",
-            "-avoid_negative_ts", "make_zero",
-            "-y",
-            normPath,
-          ]);
-
-          let newStart = 0;
-          try {
-            const checkOut = execFileSync("ffprobe", [
-              "-v", "error",
-              "-show_entries", "format=start_time",
-              "-of", "default=nw=1:nk=1",
-              normPath
-            ], { encoding: "utf-8" });
-            newStart = Math.abs(parseFloat(checkOut.trim()) || 0);
-          } catch {
-            newStart = 999;
-          }
-
-          if (newStart <= 0.25 && fs.existsSync(normPath) && fs.statSync(normPath).size > 1000) {
-            fs.renameSync(normPath, p);
-          } else {
-            // Se cópia pura preservou o timestamp alto (hardware uptime 150h), faz re-timestamping ultrarrápido com setpts
-            if (fs.existsSync(normPath)) fs.unlinkSync(normPath);
-            await execFileAsync("ffmpeg", [
-              "-i", p,
-              "-vf", "setpts=PTS-STARTPTS",
-              "-af", "asetpts=PTS-STARTPTS",
-              "-c:v", "libx264",
-              "-preset", "ultrafast",
-              "-tune", "zerolatency",
-              "-crf", "26",
-              "-c:a", "aac",
-              "-avoid_negative_ts", "make_zero",
-              "-y",
-              normPath,
-            ]);
-            if (fs.existsSync(normPath) && fs.statSync(normPath).size > 1000) {
-              fs.renameSync(normPath, p);
-            }
-          }
-        } catch (normErr) {
-          console.warn(`[VideoMerge] Aviso ao normalizar timestamps do clipe ${i}:`, normErr);
-        }
-      }
-    }
-
-    // Garantir que todos os clipes possuam trilha de áudio válida (evita erro em vídeos mudos)
+    // 1. Garantir que todos os clipes possuam trilha de áudio válida (evita erro em vídeos mudos)
     for (let i = 0; i < inputPaths.length; i++) {
       const p = inputPaths[i];
       let hasAudio = false;
@@ -5189,6 +5129,11 @@ app.post("/api/video/merge-session", async (req, res) => {
       }
     }
 
+    // Se algum clipe tiver start_time de hardware uptime descolado de zero (> 0.5s),
+    // -c copy não deve ser usado pois herdaria o salto de 150h. O Modo Compatível reescreve
+    // todos os PTS com setpts=PTS-STARTPTS instantaneamente e com segurança.
+    const hasLargeOffset = clipStartTimes.some((t) => Math.abs(t) > 0.5);
+
     const rawMode = typeof req.body?.mode === "string" ? req.body.mode : "auto";
     const rawTransition = typeof req.body?.transition === "string" ? req.body.transition : "none";
     const mode = ALLOWED_CONCAT_MODES.has(rawMode) ? rawMode : "auto";
@@ -5200,8 +5145,8 @@ app.post("/api/video/merge-session", async (req, res) => {
     const outputPath = path.join(sessionDir, "output.mp4");
     let success = false;
 
-    // 1. Tentar Junção Instantânea (-c copy) — 0.2 a 0.5 segundos!
-    if ((mode === "fast" || mode === "auto") && transition === "none") {
+    // 1. Tentar Junção Instantânea (-c copy) — apenas se sem transição e sem descolamento temporal
+    if ((mode === "fast" || mode === "auto") && transition === "none" && !hasLargeOffset) {
       try {
         const concatTxtPath = path.join(sessionDir, "concat.txt");
         const concatContent = inputPaths.map((p) => `file '${p.replace(/'/g, "'\\''")}'`).join("\n");
@@ -5428,7 +5373,7 @@ app.post("/api/video/merge-session", async (req, res) => {
       fs.rmSync(sessionDir, { recursive: true, force: true });
     } catch {}
     if (!res.headersSent) {
-      res.status(500).send("Erro no servidor de concatenação.");
+      res.status(500).json({ error: err?.message || "Erro no servidor de concatenação." });
     }
   }
 });

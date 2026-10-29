@@ -96,8 +96,12 @@ export const VideoMergerStudio: React.FC<VideoMergerStudioProps> = () => {
       (f) => f.type.startsWith('video/') || f.name.match(/\.(mp4|mov|webm|mkv|avi|m4v)$/i)
     );
 
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+
     if (validFiles.length === 0) {
-      alert('Por favor selecione arquivos de vídeo válidos (MP4, MOV, WEBM, MKV).');
+      setErrorMessage('Por favor selecione arquivos de vídeo válidos (MP4, MOV, WEBM, MKV).');
       return;
     }
 
@@ -181,7 +185,7 @@ export const VideoMergerStudio: React.FC<VideoMergerStudioProps> = () => {
   // Execute Concatenation
   const handleStartConcatenation = async () => {
     if (clips.length < 2) {
-      alert('Adicione pelo menos 2 vídeos para realizar a junção.');
+      setErrorMessage('Adicione pelo menos 2 clipes de vídeo na lista para realizar a junção.');
       return;
     }
 
@@ -669,19 +673,29 @@ export const VideoMergerStudio: React.FC<VideoMergerStudioProps> = () => {
               <button
                 id="btn-start-concatenate"
                 type="button"
-                disabled={isProcessing || clips.length === 0}
+                disabled={isProcessing || clips.length < 2}
                 onClick={handleStartConcatenation}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 via-pink-600 to-purple-600 px-5 py-3 text-sm font-bold text-white shadow-xl shadow-rose-600/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:hover:scale-100 cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 via-pink-600 to-purple-600 px-5 py-3 text-sm font-bold text-white shadow-xl shadow-rose-600/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed cursor-pointer"
               >
                 {isProcessing ? (
                   <>
                     <RefreshCw className="h-4 w-4 animate-spin text-white" />
                     <span>Juntando Vídeos...</span>
                   </>
+                ) : clips.length === 0 ? (
+                  <>
+                    <Upload className="h-4 w-4 text-slate-400" />
+                    <span>Adicione Vídeos para Juntar</span>
+                  </>
+                ) : clips.length === 1 ? (
+                  <>
+                    <Layers className="h-4 w-4 text-amber-300" />
+                    <span>Adicione Mais 1 Vídeo para Juntar</span>
+                  </>
                 ) : (
                   <>
                     <Zap className="h-4 w-4 text-amber-300" />
-                    <span>Juntar Vídeos Agora</span>
+                    <span>Juntar {clips.length} Vídeos Agora</span>
                   </>
                 )}
               </button>
