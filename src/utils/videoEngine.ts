@@ -800,7 +800,7 @@ export interface BatchVariationPlan {
 
 /**
  * 7. Motor de Concatenação em Massa Otimizado (concatenateBatchVariations)
- * - Carrega os clipes únicos no MEMFS apenas 1 vez (economiza até 90% de RAM e tempo de I/O)
+ * - Carrega no MEMFS apenas os clipes da variação atual e os libera após cada saída
  * - No Modo Rápido (-c copy): cada variação une os streams em ~1 a 2 segundos
  * - Recalcula timestamps PTS com +genpts, -avoid_negative_ts make_zero e -t
  * - Fallback inteligente em passo único caso encontre resolução/codec divergente
@@ -823,6 +823,10 @@ export async function concatenateBatchVariations(
   const log = (msg: string) => {
     if (onLog) onLog(msg);
     console.debug('[BatchConcat]', msg);
+  };
+  const isWasmMemoryFailure = (err: unknown) => {
+    const message = err instanceof Error ? err.message : String(err);
+    return /memory access out of bounds|out of memory/i.test(message);
   };
 
   // 1. SELETOR DE MOTOR PARA LOTE:
@@ -996,7 +1000,7 @@ export async function concatenateBatchVariations(
   }
 
   const results: ConcatResult[] = [];
-  const temporaryFiles: string[] = [];
+  const temporaryFiles = new Set<string>();
   let ffmpeg: FFmpeg | null = null;
 
   try {
@@ -1009,38 +1013,6 @@ export async function concatenateBatchVariations(
 
     ffmpeg = await initFFmpeg(options.onLog);
 
-    // Mapeia clipes únicos para carregar no MEMFS apenas uma única vez
-    const uniqueClipMap = new Map<string, VideoClip>();
-    for (const v of variations) {
-      for (const clip of v.clips) {
-        if (!uniqueClipMap.has(clip.id)) {
-          uniqueClipMap.set(clip.id, clip);
-        }
-      }
-    }
-
-    const uniqueClips = Array.from(uniqueClipMap.values());
-    log(`Carregando ${uniqueClips.length} clipes originais no MEMFS virtual...`);
-
-    for (let uIdx = 0; uIdx < uniqueClips.length; uIdx++) {
-      const uClip = uniqueClips[uIdx];
-      const memfsName = `raw_${uClip.id.replace(/[^a-zA-Z0-9_-]/g, '_')}.mp4`;
-      temporaryFiles.push(memfsName);
-
-      const pct = 5 + Math.round(((uIdx + 1) / uniqueClips.length) * 15);
-      onProgress?.({
-        stage: 'writing_fs',
-        percent: pct,
-        logMessage: `Carregando clipe base ${uIdx + 1}/${uniqueClips.length} na memória (${uClip.name})...`,
-        currentClip: uIdx + 1,
-        totalClips: uniqueClips.length,
-      });
-
-      await safeUnlink(ffmpeg, memfsName);
-      const fileData = await fetchFile(uClip.file);
-      await ffmpeg.writeFile(memfsName, fileData);
-    }
-
     // Processa cada variação
     for (let vIdx = 0; vIdx < variations.length; vIdx++) {
       const plan = variations[vIdx];
@@ -1048,7 +1020,33 @@ export async function concatenateBatchVariations(
       const currentComboClips = plan.clips;
       const totalVarDuration = currentComboClips.reduce((acc, c) => acc + (c.duration && c.duration > 0 ? c.duration : 0), 0);
 
+      const variationClipMap = new Map<string, VideoClip>();
+      for (const clip of currentComboClips) {
+        if (!variationClipMap.has(clip.id)) variationClipMap.set(clip.id, clip);
+      }
+      const variationClips = Array.from(variationClipMap.values());
+      const variationFiles = variationClips.map(
+        (clip) => `raw_${clip.id.replace(/[^a-zA-Z0-9_-]/g, '_')}.mp4`
+      );
+
       const basePct = 20 + Math.round((vIdx / variations.length) * 75);
+      log(`[Vídeo ${plan.variationIndex}] Carregando ${variationClips.length} clipes desta variação no MEMFS...`);
+      for (let cIdx = 0; cIdx < variationClips.length; cIdx++) {
+        const clip = variationClips[cIdx];
+        const memfsName = variationFiles[cIdx];
+        temporaryFiles.add(memfsName);
+        onProgress?.({
+          stage: 'writing_fs',
+          percent: basePct,
+          logMessage: `[Vídeo ${plan.variationIndex}/${variations.length}] Carregando clipe ${cIdx + 1}/${variationClips.length} (${clip.name})...`,
+          currentClip: vIdx + 1,
+          totalClips: variations.length,
+        });
+
+        await safeUnlink(ffmpeg, memfsName);
+        await ffmpeg.writeFile(memfsName, await fetchFile(clip.file));
+      }
+
       onProgress?.({
         stage: 'fast_mode',
         percent: basePct,
@@ -1059,6 +1057,7 @@ export async function concatenateBatchVariations(
 
       let varSuccess = false;
       let varModeUsed: 'fast' | 'compatible' = 'fast';
+      let outputBlob: Blob | null = null;
 
       await safeUnlink(ffmpeg, 'concat.txt');
       await safeUnlink(ffmpeg, 'output.mp4');
@@ -1099,12 +1098,14 @@ export async function concatenateBatchVariations(
                 } else {
                   varModeUsed = 'fast';
                   varSuccess = true;
+                  outputBlob = testBlob;
                   log(`[Vídeo ${plan.variationIndex}] ✓ Junção Rápida (-c copy direto) concluída em ~0.2s (${(checkBytes / 1024 / 1024).toFixed(2)} MB)`);
                 }
               } else {
                 await safeUnlink(ffmpeg, 'output.mp4');
               }
-            } catch {
+            } catch (validationErr) {
+              if (isWasmMemoryFailure(validationErr)) throw validationErr;
               await safeUnlink(ffmpeg, 'output.mp4');
             }
           }
@@ -1140,6 +1141,7 @@ export async function concatenateBatchVariations(
                   } else {
                     varModeUsed = 'fast';
                     varSuccess = true;
+                    outputBlob = testBlob;
                     log(`[Vídeo ${plan.variationIndex}] ✓ Junção Rápida (-c:v copy + áudio AAC) concluída em ~0.4s! (${(checkBytes / 1024 / 1024).toFixed(2)} MB)`);
                   }
                 } else {
@@ -1148,14 +1150,20 @@ export async function concatenateBatchVariations(
               } else {
                 await safeUnlink(ffmpeg, 'output.mp4');
               }
-            } catch {
+            } catch (validationErr) {
+              if (isWasmMemoryFailure(validationErr)) throw validationErr;
               await safeUnlink(ffmpeg, 'output.mp4');
             }
           }
         } catch (fastErr: any) {
+          if (isWasmMemoryFailure(fastErr)) throw fastErr;
           log(`[Vídeo ${plan.variationIndex}] Aviso no Modo Rápido: ${fastErr.message}. Usando Modo Compatível...`);
           await safeUnlink(ffmpeg, 'output.mp4');
         }
+      }
+
+      if (varSuccess && outputBlob) {
+        await safeUnlink(ffmpeg, 'output.mp4');
       }
 
       // 2. Fallback Modo Compatível em passo único
@@ -1205,9 +1213,13 @@ export async function concatenateBatchVariations(
       }
 
       // Lê o resultado
-      const rawOut = await ffmpeg.readFile('output.mp4');
-      const outBuf = rawOut instanceof Uint8Array ? rawOut.buffer : (rawOut as any);
-      const varBlob = new Blob([outBuf], { type: 'video/mp4' });
+      let varBlob = outputBlob;
+      if (!varBlob) {
+        const rawOut = await ffmpeg.readFile('output.mp4');
+        await safeUnlink(ffmpeg, 'output.mp4');
+        const outBuf = rawOut instanceof Uint8Array ? rawOut.buffer : (rawOut as any);
+        varBlob = new Blob([outBuf], { type: 'video/mp4' });
+      }
       const realDur = await getBlobRealDuration(varBlob);
       const varRenderTime = Math.round(performance.now() - varStart);
 
@@ -1227,6 +1239,9 @@ export async function concatenateBatchVariations(
 
       await safeUnlink(ffmpeg, 'output.mp4');
       await safeUnlink(ffmpeg, 'concat.txt');
+      for (const memfsName of variationFiles) {
+        await safeUnlink(ffmpeg, memfsName);
+      }
     }
 
     onProgress?.({
@@ -1238,6 +1253,11 @@ export async function concatenateBatchVariations(
 
     return results;
   } catch (err: any) {
+    if (isWasmMemoryFailure(err)) {
+      resetFFmpegInstance();
+      err = new Error('O navegador ficou sem memória durante a junção. Tente reduzir o tamanho dos clipes ou o número de clipes por variação.');
+    }
+
     onProgress?.({
       stage: 'error',
       percent: 100,
