@@ -75,11 +75,31 @@ export function isVercelOrStaticHosting(): boolean {
   );
 }
 
+const VIDEO_RENDERER_BASE_URL = (import.meta.env.VITE_VIDEO_RENDER_API_URL || '').trim().replace(/\/+$/, '');
+
+export function isNativeVideoRendererConfigured(): boolean {
+  return VIDEO_RENDERER_BASE_URL.length > 0;
+}
+
+function videoRendererUrl(path: string): string {
+  return `${VIDEO_RENDERER_BASE_URL}${path}`;
+}
+
+function canUseLocalVideoBackend(): boolean {
+  return isServerBackendAvailable !== false && !isVercelOrStaticHosting();
+}
+
+function canUseBatchVideoBackend(): boolean {
+  return isServerBackendAvailable !== false
+    && (!isVercelOrStaticHosting() || isNativeVideoRendererConfigured());
+}
+
 // Singleton da instância FFmpeg.wasm
 let ffmpegInstance: FFmpeg | null = null;
 let isLoaded = false;
 let loadPromise: Promise<FFmpeg> | null = null;
-let isServerBackendAvailable: boolean | null = isVercelOrStaticHosting() ? false : null;
+let isServerBackendAvailable: boolean | null =
+  isVercelOrStaticHosting() && !isNativeVideoRendererConfigured() ? false : null;
 
 /**
  * 1. Inicialização do FFmpeg.wasm (Singleton)
@@ -368,7 +388,7 @@ export async function concatenateVideosFFmpeg(
   // Se o servidor nativo C++ estiver disponível, une vídeos em ~1 segundo usando -c copy direto.
   // Em hospedagens serverless/estáticas (como Vercel, onde rotas C++ retornam 404 NOT_FOUND),
   // fazemos fallback automático transparente para o motor WebAssembly local no navegador.
-  if ((engine === 'server' || engine === 'auto') && isServerBackendAvailable !== false && !isVercelOrStaticHosting()) {
+  if ((engine === 'server' || engine === 'auto') && canUseLocalVideoBackend()) {
     try {
       updateProgress('fast_mode', 15, 'Iniciando Junção Rápida no Motor Nativo do Servidor...');
       const serverResult = await concatenateVideosServerFallback(clips, options);
@@ -413,7 +433,7 @@ export async function concatenateVideosFFmpeg(
     ffmpeg = await initFFmpeg(onLog);
   } catch (initErr: any) {
     log(`Erro ao carregar FFmpeg.wasm: ${initErr.message}.`);
-    if (!serverAlreadyAttempted && isServerBackendAvailable !== false && !isVercelOrStaticHosting() && options.useServerFallbackIfFails !== false) {
+    if (!serverAlreadyAttempted && canUseLocalVideoBackend() && options.useServerFallbackIfFails !== false) {
       log('Tentando Servidor Nativo como recuperação final...');
       return await concatenateVideosServerFallback(clips, options);
     }
@@ -768,7 +788,7 @@ export async function concatenateVideosFFmpeg(
     }
 
     // Fallback de alta disponibilidade no servidor (somente se não tiver sido tentado e se o servidor estiver disponível)
-    if (options.useServerFallbackIfFails !== false && !serverAlreadyAttempted && isServerBackendAvailable !== false) {
+    if (options.useServerFallbackIfFails !== false && !serverAlreadyAttempted && canUseLocalVideoBackend()) {
       log('Acionando processamento no Servidor FFmpeg nativo...');
       return await concatenateVideosServerFallback(clips, options);
     }
@@ -801,9 +821,9 @@ export interface BatchVariationPlan {
 /**
  * 7. Motor de Concatenação em Massa Otimizado (concatenateBatchVariations)
  * - Carrega no MEMFS apenas os clipes da variação atual e os libera após cada saída
- * - No Modo Rápido (-c copy): cada variação une os streams em ~1 a 2 segundos
+ * - Com serviço nativo configurado, o modo rápido concatena sem reencodar os frames
  * - Recalcula timestamps PTS com +genpts, -avoid_negative_ts make_zero e -t
- * - Fallback inteligente em passo único caso encontre resolução/codec divergente
+ * - No navegador, usa FFmpeg WebAssembly quando não há serviço nativo disponível
  */
 export async function concatenateBatchVariations(
   variations: BatchVariationPlan[],
@@ -829,13 +849,13 @@ export async function concatenateBatchVariations(
     return /memory access out of bounds|out of memory/i.test(message);
   };
 
-  // 1. SELETOR DE MOTOR PARA LOTE:
-  // Se o servidor nativo C++ estiver disponível, processa as variações com alta performance e sem limite de 25MB via chunks.
-  // Em hospedagens serverless (Vercel), onde endpoints retornam 404, fazemos fallback automático transparente para o navegador.
-  if ((engine === 'server' || engine === 'auto') && isServerBackendAvailable !== false && !isVercelOrStaticHosting()) {
+  // 1. Seletor de motor para lote. Hospedagens estáticas usam o serviço nativo configurado
+  // ou o FFmpeg WebAssembly local; o serviço só aceita modo rápido sem transições.
+  const nativeBatchSupportsOptions = mode === 'fast' && transition === 'none';
+  if ((engine === 'server' || engine === 'auto') && canUseBatchVideoBackend() && nativeBatchSupportsOptions) {
     try {
       log(`Iniciando geração de ${variations.length} variações via Servidor Nativo (Pool Otimizado)...`);
-      const poolSessionId = `pool_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const poolSessionId = `pool_${crypto.randomUUID().replace(/-/g, '')}`;
       const CHUNK_SIZE = 5 * 1024 * 1024;
 
       // 1. Mapeia clipes únicos para transferir cada arquivo ao servidor apenas UMA VEZ
@@ -870,7 +890,7 @@ export async function concatenateBatchVariations(
           chunkForm.append('totalChunks', String(totalChunks));
           chunkForm.append('chunk', chunkBlob, `clip_${cleanClipId}.mp4`);
 
-          const uploadRes = await fetch('/api/video/upload-pool-chunk', {
+          const uploadRes = await fetch(videoRendererUrl('/api/video/upload-pool-chunk'), {
             method: 'POST',
             body: chunkForm,
           });
@@ -878,7 +898,9 @@ export async function concatenateBatchVariations(
           if (!uploadRes.ok) {
             const rawErr = await uploadRes.text().catch(() => '');
             const cleanErr = rawErr.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim().slice(0, 150);
-            const is404 = uploadRes.status === 404 || cleanErr.includes('NOT_FOUND') || cleanErr.includes('could not be found');
+            const is404 = uploadRes.status === 404
+              || cleanErr.includes('NOT_FOUND')
+              || cleanErr.includes('could not be found');
             if (is404) isServerBackendAvailable = false;
             const err = new Error(is404 ? 'Servidor de renderização indisponível (404).' : `Falha no upload do clipe ${uI + 1}: ${cleanErr}`);
             (err as any).isNotFound = is404;
@@ -911,7 +933,7 @@ export async function concatenateBatchVariations(
           totalClips: variations.length,
         });
 
-        const mergeRes = await fetch('/api/video/merge-pool-variation', {
+        const mergeRes = await fetch(videoRendererUrl('/api/video/merge-pool-variation'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -923,7 +945,9 @@ export async function concatenateBatchVariations(
         if (!mergeRes.ok) {
           const rawErr = await mergeRes.text().catch(() => '');
           const cleanErr = rawErr.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim().slice(0, 150);
-          const is404 = mergeRes.status === 404 || cleanErr.includes('NOT_FOUND');
+          const is404 = mergeRes.status === 404
+            || cleanErr.includes('NOT_FOUND')
+            || cleanErr.includes('could not be found');
           if (is404) isServerBackendAvailable = false;
           throw new Error(`Falha no merge da variação ${plan.variationIndex}: ${cleanErr}`);
         }
@@ -948,7 +972,7 @@ export async function concatenateBatchVariations(
       }
 
       // 3. Limpeza da sessão pool no servidor
-      fetch('/api/video/cleanup-pool-session', {
+      fetch(videoRendererUrl('/api/video/cleanup-pool-session'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: poolSessionId }),
@@ -975,9 +999,7 @@ export async function concatenateBatchVariations(
         (batchServerErr?.message &&
           (batchServerErr.message.includes('NOT_FOUND') ||
             batchServerErr.message.includes('404') ||
-            batchServerErr.message.includes('The page could not be found') ||
-            batchServerErr.message.includes('não está disponível') ||
-            batchServerErr.message.includes('indisponível')));
+          batchServerErr.message.includes('The page could not be found')));
 
       if (is404) {
         isServerBackendAvailable = false;
@@ -1289,7 +1311,7 @@ async function concatenateVideosServerFallback(
   clips: VideoClip[],
   options: ConcatOptions = {}
 ): Promise<ConcatResult> {
-  if (isServerBackendAvailable === false || isVercelOrStaticHosting()) {
+  if (!canUseLocalVideoBackend()) {
     const disabledErr = new Error('Hospedagem Vercel detectada: servidor C++ indisponível. Renderização deve ocorrer localmente via WebAssembly.');
     (disabledErr as any).isNotFound = true;
     (disabledErr as any).status = 404;

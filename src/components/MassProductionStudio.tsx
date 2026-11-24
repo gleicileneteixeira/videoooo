@@ -33,6 +33,7 @@ import {
   VideoClip,
   ConcatProgress,
   isVercelOrStaticHosting,
+  isNativeVideoRendererConfigured,
 } from '../utils/videoEngine';
 
 // Tipos para os slots
@@ -324,8 +325,13 @@ export const MassProductionStudio: React.FC = () => {
 
   // Configurações de Renderização & Formato
   const isVercel = useMemo(() => isVercelOrStaticHosting(), []);
+  const hasNativeVideoRenderer = useMemo(() => isNativeVideoRendererConfigured(), []);
   const [engine, setEngine] = useState<'auto' | 'server' | 'ffmpeg_wasm'>(() =>
-    isVercelOrStaticHosting() ? 'ffmpeg_wasm' : 'auto'
+    isNativeVideoRendererConfigured()
+      ? 'server'
+      : isVercelOrStaticHosting()
+      ? 'ffmpeg_wasm'
+      : 'auto'
   );
   const [renderMode, setRenderMode] = useState<'fast' | 'compatible'>('fast');
   const [aspectRatio, setAspectRatio] = useState<'9:16' | '16:9' | '1:1' | '4:5'>('9:16');
@@ -529,6 +535,7 @@ export const MassProductionStudio: React.FC = () => {
         {
           engine,
           mode: renderMode,
+          useServerFallbackIfFails: hasNativeVideoRenderer && engine === 'server' ? false : undefined,
           resolution,
           transition: transition === 'none' ? 'none' : transition,
           transitionDuration: transition === 'none' ? 0 : 0.5,
@@ -892,7 +899,7 @@ export const MassProductionStudio: React.FC = () => {
                     MOTOR DE PROCESSAMENTO
                   </label>
                   <span className="text-[10px] text-emerald-400 font-bold">
-                    {isVercel
+                    {isVercel && !hasNativeVideoRenderer
                       ? '🌐 Modo Vercel (WebAssembly)'
                       : engine === 'auto'
                       ? '⚡ Automático Inteligente'
@@ -904,7 +911,11 @@ export const MassProductionStudio: React.FC = () => {
                 {isVercel && (
                   <div className="mb-2 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-300 flex items-center gap-1.5">
                     <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                    <span>Hospedagem Vercel detectada: renderização direta e segura no navegador via WebAssembly ativa.</span>
+                    <span>
+                      {hasNativeVideoRenderer
+                        ? 'Servidor FFmpeg nativo configurado: modo rápido sem reencode de vídeo disponível.'
+                        : 'Hospedagem Vercel detectada: renderização direta e segura no navegador via WebAssembly ativa.'}
+                    </span>
                   </div>
                 )}
                 <div className="grid grid-cols-3 gap-2">
