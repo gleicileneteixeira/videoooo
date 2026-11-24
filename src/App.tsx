@@ -39,6 +39,7 @@ import { SAMPLE_VIRAL_SCRIPT, DETRAN_SIMULADO_SCRIPT } from './data/presets';
 import { Sparkles, AlertCircle, ArrowLeft, Cpu } from 'lucide-react';
 import { getStoredApiKeys, saveStoredApiKeys, attachApiKeysPayload } from './utils/apiHelper';
 import { sanitizeTranscript } from './utils/transcriptSanitizer';
+import { isVercelOrStaticHosting } from './utils/videoEngine';
 
 const STORAGE_SCRIPTS = 'viralscript_saved_list_v3';
 const LEGACY_STORAGE_KEYS = [
@@ -157,6 +158,7 @@ const SAMPLE_TRANSCRIPTS: ExtractedTranscript[] = [
 ];
 
 export default function App() {
+  const isStaticDeployment = isVercelOrStaticHosting();
   const [currentRoute, setCurrentRoute] = useState<AppRoute>(getInitialRoute);
   const [activeTab, setActiveTab] = useState<ActiveTab>('generator');
   const [currentScript, setCurrentScript] = useState<ViralScript | null>(null);
@@ -215,6 +217,7 @@ export default function App() {
 
   // Sync server saved-scripts on mount and allow manual refresh
   const syncScriptsWithServer = async () => {
+    if (isStaticDeployment) return;
     setIsSyncingHistory(true);
     try {
       const res = await fetch('/api/saved-scripts');
@@ -282,6 +285,7 @@ export default function App() {
       });
       return Array.from(map.values());
     });
+    if (isStaticDeployment) return;
     try {
       await fetch('/api/save-script', {
         method: 'POST',
@@ -393,11 +397,13 @@ export default function App() {
 
       // Add to saved history
       setSavedScripts((prev) => [generatedScript, ...prev.filter((s) => s.id !== generatedScript.id)]);
-      fetch('/api/save-script', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script: generatedScript }),
-      }).catch(console.error);
+      if (!isStaticDeployment) {
+        fetch('/api/save-script', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ script: generatedScript }),
+        }).catch(console.error);
+      }
 
       confetti({
         particleCount: 80,
@@ -439,11 +445,13 @@ export default function App() {
 
       // Update in saved list
       setSavedScripts((prev) => [remixedScript, ...prev.filter((s) => s.id !== remixedScript.id)]);
-      fetch('/api/save-script', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script: remixedScript }),
-      }).catch(console.error);
+      if (!isStaticDeployment) {
+        fetch('/api/save-script', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ script: remixedScript }),
+        }).catch(console.error);
+      }
 
       confetti({
         particleCount: 50,
@@ -506,11 +514,13 @@ export default function App() {
       }
       return [updatedScript, ...prev];
     });
-    fetch('/api/save-script', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ script: updatedScript }),
-    }).catch(console.error);
+    if (!isStaticDeployment) {
+      fetch('/api/save-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script: updatedScript }),
+      }).catch(console.error);
+    }
   };
 
   // Delete Script
@@ -519,7 +529,9 @@ export default function App() {
     if (currentScript?.id === id) {
       setCurrentScript(null);
     }
-    fetch(`/api/saved-scripts/${id}`, { method: 'DELETE' }).catch(console.error);
+    if (!isStaticDeployment) {
+      fetch(`/api/saved-scripts/${id}`, { method: 'DELETE' }).catch(console.error);
+    }
   };
 
   // Toggle Favorite
@@ -527,7 +539,7 @@ export default function App() {
     setSavedScripts((prev) => {
       const updated = prev.map((s) => (s.id === id ? { ...s, isFavorite: !s.isFavorite } : s));
       const target = updated.find((s) => s.id === id);
-      if (target) {
+      if (target && !isStaticDeployment) {
         fetch('/api/save-script', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
