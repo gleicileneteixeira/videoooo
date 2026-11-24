@@ -4712,6 +4712,23 @@ const ALLOWED_TRANSITIONS = new Set([
   "distance",
 ]);
 
+async function probeConcatMedia(filePath: string): Promise<{ duration: number; hasAudio: boolean }> {
+  const { stdout } = await execFileAsync("ffprobe", [
+    "-v", "error",
+    "-show_entries", "format=duration:stream=codec_type",
+    "-of", "json",
+    filePath,
+  ], { timeout: 30000, maxBuffer: 1024 * 1024 });
+  const data = JSON.parse(stdout);
+  const duration = clampFloat(data?.format?.duration, 0, 0.1, 3600);
+  if (!duration) {
+    throw new Error(`Não foi possível determinar a duração de ${path.basename(filePath)}.`);
+  }
+  const hasAudio = Array.isArray(data?.streams)
+    && data.streams.some((stream: { codec_type?: string }) => stream.codec_type === "audio");
+  return { duration, hasAudio };
+}
+
 // Video Concatenation API Endpoint (Server Fallback)
 app.post("/api/video/concatenate", videoUpload.any(), async (req, res) => {
   const tempDir = path.join(os.tmpdir(), `vs_concat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`);
@@ -4755,14 +4772,15 @@ app.post("/api/video/concatenate", videoUpload.any(), async (req, res) => {
     const outputPath = path.join(tempDir, "output.mp4");
     let success = false;
 
-    // 1. Tentar Modo Rápido se sem transição e modo fast ou auto
+    // Quando os fluxos são compatíveis, copia os dados sem decodificar nem
+    // re-encode; se não forem, o fallback abaixo sincroniza e padroniza A/V.
     if ((mode === "fast" || mode === "auto") && transition === "none") {
       try {
         const concatTxtPath = path.join(tempDir, "concat.txt");
         const concatContent = inputPaths.map((p) => `file '${p}'`).join("\n");
         fs.writeFileSync(concatTxtPath, concatContent, "utf-8");
 
-        const fastArgs = [
+        await execFileAsync("ffmpeg", [
           "-f", "concat",
           "-safe", "0",
           "-i", concatTxtPath,
@@ -4772,27 +4790,35 @@ app.post("/api/video/concatenate", videoUpload.any(), async (req, res) => {
           "-movflags", "+faststart",
           "-y",
           outputPath,
-        ];
-
-        await execFileAsync("ffmpeg", fastArgs, { timeout: 120000 });
-        if (fs.existsSync(outputPath) && fs.statSync(outputPath).size > 1000) {
-          success = true;
-        }
+        ], { timeout: 120000 });
+        success = fs.existsSync(outputPath) && fs.statSync(outputPath).size > 1000;
       } catch (fastErr: any) {
         console.warn("Servidor: Modo Rápido falhou, alternando para Modo Compatível:", fastErr?.message);
         if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
       }
     }
 
-    // 2. Modo Compatível (Padronização + Concat em passo único ultra-rápido)
-    if (!success) {
-      if (transition === "none") {
+    // Concatenação compatível em um único passe, com timestamps reiniciados por clipe,
+    // vídeo padronizado e áudio sempre presente (silêncio é criado quando necessário).
+    if (!success && transition === "none") {
         const singlePassInputs: string[] = [];
         let filterChain = "";
+        const clipInfo = await Promise.all(inputPaths.map((inputPath) => probeConcatMedia(inputPath)));
+        let nextInputIndex = 0;
+
         for (let i = 0; i < inputPaths.length; i++) {
+          const videoInputIndex = nextInputIndex++;
           singlePassInputs.push("-i", inputPaths[i]);
-          filterChain += `[${i}:v]scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease,pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=${fps}[v${i}];`;
-          filterChain += `[${i}:a]aformat=sample_rates=44100:channel_layouts=stereo[a${i}];`;
+          const duration = clipInfo[i].duration;
+          filterChain += `[${videoInputIndex}:v:0]trim=duration=${duration.toFixed(3)},setpts=PTS-STARTPTS,scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease,pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=${fps}[v${i}];`;
+
+          if (clipInfo[i].hasAudio) {
+            filterChain += `[${videoInputIndex}:a:0]atrim=duration=${duration.toFixed(3)},asetpts=PTS-STARTPTS,aresample=44100:async=1:first_pts=0,aformat=sample_rates=44100:channel_layouts=stereo,apad=whole_dur=${duration.toFixed(3)}[a${i}];`;
+          } else {
+            const silenceIndex = nextInputIndex++;
+            singlePassInputs.push("-f", "lavfi", "-t", duration.toFixed(3), "-i", "anullsrc=channel_layout=stereo:sample_rate=44100");
+            filterChain += `[${silenceIndex}:a]asetpts=PTS-STARTPTS,atrim=duration=${duration.toFixed(3)},aformat=sample_rates=44100:channel_layouts=stereo[a${i}];`;
+          }
         }
         for (let i = 0; i < inputPaths.length; i++) {
           filterChain += `[v${i}][a${i}]`;
@@ -4824,7 +4850,7 @@ app.post("/api/video/concatenate", videoUpload.any(), async (req, res) => {
         if (fs.existsSync(outputPath) && fs.statSync(outputPath).size > 1000) {
           success = true;
         }
-      } else {
+      } else if (!success) {
         // xfade transition (padroniza e aplica xfade)
         const stdPaths: string[] = [];
         const vfScale = `scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease,pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=${fps}`;
@@ -4902,7 +4928,6 @@ app.post("/api/video/concatenate", videoUpload.any(), async (req, res) => {
 
         await execFileAsync("ffmpeg", xfadeArgs, { timeout: 180000 });
       }
-    }
 
     if (!fs.existsSync(outputPath)) {
       throw new Error("Arquivo de saída não foi gerado pelo FFmpeg.");
@@ -4925,6 +4950,10 @@ app.post("/api/video/concatenate", videoUpload.any(), async (req, res) => {
       fs.rmSync(tempDir, { recursive: true, force: true });
     } catch {}
     if (!res.headersSent) {
+      if (err?.code === "ENOENT" || /spawn (ffmpeg|ffprobe) ENOENT/i.test(err?.message || "")) {
+        const tool = /ffprobe/i.test(err?.message || "") ? "ffprobe" : "FFmpeg";
+        return res.status(503).send(`${tool} não está instalado ou configurado no servidor.`);
+      }
       res.status(500).send("Erro no servidor de concatenação.");
     }
   }
