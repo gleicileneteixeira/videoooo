@@ -5485,38 +5485,20 @@ app.post("/api/video/merge-pool-variation", async (req, res) => {
     const concatContent = inputPaths.map((p) => `file '${p.replace(/'/g, "'\\''")}'`).join("\n");
     fs.writeFileSync(concatTxtPath, concatContent, "utf-8");
 
+    const clipInfo = await Promise.all(inputPaths.map((inputPath) => probeConcatMedia(inputPath)));
+    const hasMixedAudio = clipInfo.some((clip) => clip.hasAudio)
+      && clipInfo.some((clip) => !clip.hasAudio);
     let success = false;
 
-    // Tentativa 1: -c copy puro (0.1 a 0.3s)
-    try {
-      await execFileAsync("ffmpeg", [
-        "-f", "concat",
-        "-safe", "0",
-        "-i", concatTxtPath,
-        "-c", "copy",
-        "-fflags", "+genpts",
-        "-avoid_negative_ts", "make_zero",
-        "-movflags", "+faststart",
-        "-y",
-        outputPath,
-      ], { timeout: 35000 });
-
-      if (fs.existsSync(outputPath) && fs.statSync(outputPath).size > 1000) {
-        success = true;
-      }
-    } catch {}
-
-    // Tentativa 2: -c:v copy -c:a aac (0.4s) para compatibilidade de áudio
-    if (!success) {
+    if (!hasMixedAudio) {
+      // Tentativa 1: -c copy puro (0.1 a 0.3s)
       try {
         await execFileAsync("ffmpeg", [
           "-f", "concat",
           "-safe", "0",
           "-i", concatTxtPath,
-          "-c:v", "copy",
-          "-c:a", "aac",
-          "-b:a", "128k",
-          "-ar", "44100",
+          "-c", "copy",
+          "-fflags", "+genpts",
           "-avoid_negative_ts", "make_zero",
           "-movflags", "+faststart",
           "-y",
@@ -5527,6 +5509,76 @@ app.post("/api/video/merge-pool-variation", async (req, res) => {
           success = true;
         }
       } catch {}
+
+      // Tentativa 2: preserva vídeo e normaliza áudio sem re-encode de frames.
+      if (!success) {
+        try {
+          await execFileAsync("ffmpeg", [
+            "-f", "concat",
+            "-safe", "0",
+            "-i", concatTxtPath,
+            "-c:v", "copy",
+            "-c:a", "aac",
+            "-b:a", "128k",
+            "-ar", "44100",
+            "-avoid_negative_ts", "make_zero",
+            "-movflags", "+faststart",
+            "-y",
+            outputPath,
+          ], { timeout: 35000 });
+
+          if (fs.existsSync(outputPath) && fs.statSync(outputPath).size > 1000) {
+            success = true;
+          }
+        } catch {}
+      }
+    }
+
+    // Fallback compatível: alinha os timestamps e cria silêncio para clipes sem áudio.
+    if (!success) {
+      const inputs: string[] = [];
+      let filterChain = "";
+      let nextInputIndex = 0;
+
+      for (let i = 0; i < inputPaths.length; i++) {
+        const videoInputIndex = nextInputIndex++;
+        inputs.push("-i", inputPaths[i]);
+        const duration = clipInfo[i].duration;
+        filterChain += `[${videoInputIndex}:v:0]trim=duration=${duration.toFixed(3)},setpts=PTS-STARTPTS,scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=30[v${i}];`;
+
+        if (clipInfo[i].hasAudio) {
+          filterChain += `[${videoInputIndex}:a:0]atrim=duration=${duration.toFixed(3)},asetpts=PTS-STARTPTS,aresample=44100:async=1:first_pts=0,aformat=sample_rates=44100:channel_layouts=stereo,apad=whole_dur=${duration.toFixed(3)}[a${i}];`;
+        } else {
+          const silenceIndex = nextInputIndex++;
+          inputs.push("-f", "lavfi", "-t", duration.toFixed(3), "-i", "anullsrc=channel_layout=stereo:sample_rate=44100");
+          filterChain += `[${silenceIndex}:a]asetpts=PTS-STARTPTS,atrim=duration=${duration.toFixed(3)},aformat=sample_rates=44100:channel_layouts=stereo[a${i}];`;
+        }
+      }
+
+      for (let i = 0; i < inputPaths.length; i++) {
+        filterChain += `[v${i}][a${i}]`;
+      }
+      filterChain += `concat=n=${inputPaths.length}:v=1:a=1[outv][outa]`;
+
+      await execFileAsync("ffmpeg", [
+        ...inputs,
+        "-filter_complex", filterChain,
+        "-map", "[outv]",
+        "-map", "[outa]",
+        "-c:v", "libx264",
+        "-preset", "ultrafast",
+        "-crf", "26",
+        "-pix_fmt", "yuv420p",
+        "-c:a", "aac",
+        "-ar", "44100",
+        "-ac", "2",
+        "-b:a", "128k",
+        "-movflags", "+faststart",
+        "-y",
+        outputPath,
+      ], { timeout: 120000 });
+
+      success = fs.existsSync(outputPath) && fs.statSync(outputPath).size > 1000;
     }
 
     try { fs.unlinkSync(concatTxtPath); } catch {}
@@ -5547,6 +5599,9 @@ app.post("/api/video/merge-pool-variation", async (req, res) => {
     try { fs.unlinkSync(concatTxtPath); } catch {}
     try { fs.unlinkSync(outputPath); } catch {}
     if (!res.headersSent) {
+      if (err?.code === "ENOENT" || /spawn (ffmpeg|ffprobe) ENOENT/i.test(err?.message || "")) {
+        return res.status(503).send("FFmpeg/ffprobe não está instalado ou configurado no servidor.");
+      }
       res.status(500).send("Erro ao processar variação no pool.");
     }
   }
