@@ -993,9 +993,9 @@ export const MassProductionStudio: React.FC = () => {
                   {renderMode === 'fast' ? (
                     <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-2.5 text-[11px] text-emerald-200 leading-relaxed">
                       <strong className="text-emerald-300 flex items-center gap-1 mb-0.5">
-                        <Zap className="h-3 w-3" /> Junção Ultra-Rápida (~1s por variação):
+                        <Zap className="h-3 w-3" /> Junção sem reencodar os frames:
                       </strong>
-                      Copia diretamente os fluxos H.264 e áudio AAC sem decodificar frames. Arquivos são carregados apenas 1 vez na memória virtual. Corte seco de retenção imediata.
+                      Copia o vídeo sem decodificar frames; se necessário, reencoda só o áudio. No Vercel, roda via WebAssembly no navegador, então o tempo depende do tamanho dos clipes. Se os formatos forem incompatíveis, para em vez de reencodar o vídeo.
                     </div>
                   ) : (
                     <div className="rounded-xl border border-purple-500/30 bg-purple-950/20 p-2.5 text-[11px] text-purple-200 leading-relaxed">

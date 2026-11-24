@@ -1080,7 +1080,6 @@ export async function concatenateBatchVariations(
             '-c', 'copy',
             '-fflags', '+genpts',
             '-avoid_negative_ts', 'make_zero',
-            '-movflags', '+faststart',
             'output.mp4',
           ];
 
@@ -1125,7 +1124,6 @@ export async function concatenateBatchVariations(
                 '-ac', '2',
                 '-b:a', '128k',
                 '-avoid_negative_ts', 'make_zero',
-                '-movflags', '+faststart',
                 'output.mp4',
               ];
               const audioExit = await ffmpeg.exec(audioCopyArgs);
@@ -1160,6 +1158,12 @@ export async function concatenateBatchVariations(
           log(`[Vídeo ${plan.variationIndex}] Aviso no Modo Rápido: ${fastErr.message}. Usando Modo Compatível...`);
           await safeUnlink(ffmpeg, 'output.mp4');
         }
+      }
+
+      if (!varSuccess && mode === 'fast') {
+        throw new Error(
+          `Não foi possível copiar os streams da variação ${plan.variationIndex}. Verifique se os clipes têm codecs e parâmetros compatíveis. O modo rápido não reencoda o vídeo.`
+        );
       }
 
       if (varSuccess && outputBlob) {
